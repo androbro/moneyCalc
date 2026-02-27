@@ -229,12 +229,23 @@ const INFO = {
       Negative early on is normal — as rent is indexed upward and loans are repaid, cash flow typically turns positive.
     </>
   ),
+  totalReturn: (
+    <>
+      <strong className="text-white block mb-1">Total Return</strong>
+      Your true all-in return: equity <em>plus</em> every euro of rent received (or cost paid) so far.
+      <br /><br />
+      <code className="text-brand-300">Total Return = Net Worth + Cumulative Cash Flow</code>
+      <br /><br />
+      When this line rises above Net Worth, your rental income is adding meaningful real-world value on top of paper equity.
+    </>
+  ),
   cfTable: {
     propertyValue:  'Appreciated portfolio value at the start of that year.',
     loanBalance:    'Total outstanding debt across all loans at the start of that year.',
     netWorth:       'Property Value minus Loan Balance — your equity position.',
     annualCF:       'Net cash for this year: indexed rent minus all costs and loan payments.',
     cumulativeCF:   'Running total of all annual cash flows from Year 0 up to this row.',
+    totalReturn:    'Net Worth + Cumulative Cash Flow — your true all-in return including both equity and cash generated.',
   },
   breakdownTable: {
     currentValue:  'Market value you entered for this property.',
@@ -281,6 +292,7 @@ function SummaryStrip({ data }) {
   const propGain      = last.propertyValue - first.propertyValue
   const loanReduction = first.loanBalance - last.loanBalance
   const totalCF       = last.cumulativeCF
+  const totalReturn   = last.totalReturn - first.totalReturn
 
   const items = [
     {
@@ -311,10 +323,17 @@ function SummaryStrip({ data }) {
       prefix: totalCF >= 0 ? '+' : '',
       info: INFO.totalCF,
     },
+    {
+      label: 'Total return (20y)',
+      value: formatEUR(totalReturn),
+      color: totalReturn >= 0 ? 'text-amber-400' : 'text-red-400',
+      prefix: totalReturn >= 0 ? '+' : '',
+      info: INFO.totalReturn,
+    },
   ]
 
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-4">
+    <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mt-4">
       {items.map((item) => (
         <div key={item.label} className="bg-slate-700/50 rounded-xl p-3 text-center">
           <p className="text-xs text-slate-400 mb-1 leading-tight flex items-center justify-center gap-0.5">
@@ -399,7 +418,7 @@ function CashFlowTable({ data }) {
           {expanded ? 'Show less' : 'Show all 20 years'}
         </button>
       </div>
-      <table className="w-full text-sm min-w-[520px]">
+      <table className="w-full text-sm min-w-[620px]">
         <thead>
           <tr className="border-b border-slate-700">
             <ThWithInfo left>Year</ThWithInfo>
@@ -408,6 +427,7 @@ function CashFlowTable({ data }) {
             <ThWithInfo info={INFO.cfTable.netWorth}>Net Worth</ThWithInfo>
             <ThWithInfo info={INFO.cfTable.annualCF}>Annual CF</ThWithInfo>
             <ThWithInfo info={INFO.cfTable.cumulativeCF}>Cumulative CF</ThWithInfo>
+            <ThWithInfo info={INFO.cfTable.totalReturn}>Total Return</ThWithInfo>
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-800">
@@ -420,8 +440,11 @@ function CashFlowTable({ data }) {
               <td className={`py-2 px-2 text-right font-medium ${row.annualCashFlow >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                 {row.annualCashFlow >= 0 ? '+' : ''}{formatEUR(row.annualCashFlow)}
               </td>
-              <td className={`py-2 pl-2 text-right font-semibold ${row.cumulativeCF >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+              <td className={`py-2 px-2 text-right font-semibold ${row.cumulativeCF >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                 {row.cumulativeCF >= 0 ? '+' : ''}{formatEUR(row.cumulativeCF)}
+              </td>
+              <td className={`py-2 pl-2 text-right font-bold ${row.totalReturn >= 0 ? 'text-amber-400' : 'text-red-400'}`}>
+                {row.totalReturn >= 0 ? '+' : ''}{formatEUR(row.totalReturn)}
               </td>
             </tr>
           ))}
@@ -488,6 +511,7 @@ export default function ProjectionChart({ properties }) {
             { label: 'Property Value', color: '#10b981', info: INFO.propertyValue },
             { label: 'Loan Balance',   color: '#ef4444', info: INFO.loanBalance },
             { label: 'Net Worth',      color: '#38bdf8', info: INFO.netWorth },
+            { label: 'Total Return',   color: '#f59e0b', info: INFO.totalReturn },
           ]} />
         </div>
 
@@ -506,6 +530,10 @@ export default function ProjectionChart({ properties }) {
                 <stop offset="5%"  stopColor="#38bdf8" stopOpacity={0.40} />
                 <stop offset="95%" stopColor="#38bdf8" stopOpacity={0.02} />
               </linearGradient>
+              <linearGradient id="gTotalReturn" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%"  stopColor="#f59e0b" stopOpacity={0.30} />
+                <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.02} />
+              </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
             <XAxis dataKey="label" tick={{ fill: '#94a3b8', fontSize: 11 }} axisLine={{ stroke: '#1e293b' }} tickLine={false} />
@@ -513,7 +541,8 @@ export default function ProjectionChart({ properties }) {
             <Tooltip content={<CustomTooltip />} />
             <Area type="monotone" dataKey="propertyValue" name="Property Value" stroke="#10b981" strokeWidth={2} fill="url(#gProp)" dot={false} activeDot={{ r: 4 }} />
             <Area type="monotone" dataKey="loanBalance"   name="Loan Balance"   stroke="#ef4444" strokeWidth={2} fill="url(#gLoan)" dot={false} activeDot={{ r: 4 }} />
-            <Area type="monotone" dataKey="netWorth"      name="Net Worth"       stroke="#38bdf8" strokeWidth={2.5} fill="url(#gNW)" dot={false} activeDot={{ r: 5 }} />
+            <Area type="monotone" dataKey="netWorth"      name="Net Worth"       stroke="#38bdf8" strokeWidth={2.5} fill="url(#gNW)"          dot={false} activeDot={{ r: 5 }} />
+            <Area type="monotone" dataKey="totalReturn"   name="Total Return"    stroke="#f59e0b" strokeWidth={2}   fill="url(#gTotalReturn)"  dot={false} activeDot={{ r: 4 }} strokeDasharray="5 3" />
           </AreaChart>
         </ResponsiveContainer>
 
