@@ -1,10 +1,11 @@
 import { useState } from 'react'
 
 const NAV_ITEMS = [
-  { id: 'dashboard',  label: 'Dashboard',  icon: ChartIcon },
-  { id: 'properties', label: 'Properties', icon: BuildingIcon },
-  { id: 'projection', label: 'Projection', icon: TrendingIcon },
-  { id: 'scenario',   label: 'Scenarios',  icon: ScenarioIcon },
+  { id: 'dashboard',   label: 'Dashboard',    icon: ChartIcon },
+  { id: 'properties',  label: 'Properties',   icon: BuildingIcon },
+  { id: 'investments', label: 'Investments',  icon: InvestmentIcon },
+  { id: 'projection',  label: 'Projection',   icon: TrendingIcon },
+  { id: 'scenario',    label: 'Scenarios',    icon: ScenarioIcon },
 ]
 
 function ChartIcon() {
@@ -30,6 +31,15 @@ function TrendingIcon() {
     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
         d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+    </svg>
+  )
+}
+
+function InvestmentIcon() {
+  return (
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+        d="M19 14l-7 7m0 0l-7-7m7 7V3" />
     </svg>
   )
 }

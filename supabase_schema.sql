@@ -85,3 +85,29 @@ alter table amortization_schedules enable row level security;
 create policy "allow_all_properties"           on properties           for all using (true) with check (true);
 create policy "allow_all_loans"                on loans                for all using (true) with check (true);
 create policy "allow_all_amortization"         on amortization_schedules for all using (true) with check (true);
+
+-- ── planned_investments ──────────────────────────────────────
+-- A one-off capital outlay planned for a specific date on a specific property.
+-- cost           – total cash you will spend (reduces cash flow in that year)
+-- value_increase – how much the property's market value rises immediately after
+-- planned_date   – the calendar date of the investment (used to derive the year offset)
+-- description    – optional free-text label (e.g. "Kitchen renovation")
+create table if not exists planned_investments (
+  id             uuid primary key default gen_random_uuid(),
+  property_id    uuid not null references properties(id) on delete cascade,
+  description    text,
+  planned_date   date not null,
+  cost           numeric(14,2) not null default 0,
+  value_increase numeric(14,2) not null default 0,
+  created_at     timestamptz default now(),
+  updated_at     timestamptz default now()
+);
+
+create index if not exists idx_planned_investments_property on planned_investments(property_id);
+
+create trigger trg_planned_investments_updated_at
+  before update on planned_investments
+  for each row execute procedure set_updated_at();
+
+alter table planned_investments enable row level security;
+create policy "allow_all_planned_investments" on planned_investments for all using (true) with check (true);

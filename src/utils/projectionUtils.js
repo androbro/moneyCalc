@@ -104,18 +104,41 @@ export function buildProjection(properties) {
   const points = []
   let cumulativeCF = 0
 
-  for (let year = 0; year <= 20; year++) {
-    const targetDate = new Date(today.getFullYear() + year, today.getMonth(), today.getDate())
+  // Track cumulative value bumps per property from planned investments
+  // as we sweep year by year (bumps are permanent once applied)
+  const valueBumps = {}          // propertyId → running sum of value increases applied so far
+  for (const p of properties) valueBumps[p.id] = 0
 
-    let totalPropertyValue = 0
-    let totalLoanBalance   = 0
-    let totalAnnualIncome  = 0   // indexed rental income
-    let totalAnnualCosts   = 0   // indexed opex + loan payments
+  for (let year = 0; year <= 20; year++) {
+    const yearStart = new Date(today.getFullYear() + year,     today.getMonth(), today.getDate())
+    const yearEnd   = new Date(today.getFullYear() + year + 1, today.getMonth(), today.getDate())
+    const targetDate = yearStart
+
+    let totalPropertyValue   = 0
+    let totalLoanBalance     = 0
+    let totalAnnualIncome    = 0   // indexed rental income
+    let totalAnnualCosts     = 0   // indexed opex + loan payments
+    let plannedInvestCost    = 0   // one-off cash outlays this year
 
     for (const property of properties) {
-      // ── Asset value ──
-      const appreciated = property.currentValue * Math.pow(1 + (property.appreciationRate || 0.02), year)
-      totalPropertyValue += appreciated
+      const appRate = property.appreciationRate || 0.02
+
+      // ── Apply any planned investments falling in this year window ──
+      for (const inv of property.plannedInvestments || []) {
+        const invDate = new Date(inv.plannedDate)
+        if (invDate >= yearStart && invDate < yearEnd) {
+          valueBumps[property.id]  += inv.valueIncrease || 0
+          plannedInvestCost        += inv.cost || 0
+        }
+      }
+
+      // ── Asset value: base appreciation + permanent value bumps ──
+      const appreciated = property.currentValue * Math.pow(1 + appRate, year)
+      // Each bump was added at a certain year; approximate by growing the accumulated
+      // bump from year 0 (conservative — treats bump as if it happened at year 0).
+      // More precise: sum bump_i * (1+r)^(year - bump_year_i), but per-bump tracking
+      // adds complexity. Simple additive approach is used here.
+      totalPropertyValue += appreciated + valueBumps[property.id]
 
       // ── Loan balance ──
       for (const loan of property.loans || []) {
@@ -123,18 +146,16 @@ export function buildProjection(properties) {
       }
 
       // ── Indexed rental income ──
-      const baseRent = (property.startRentalIncome || property.monthlyRentalIncome || 0) * 12
+      const baseRent  = (property.startRentalIncome || property.monthlyRentalIncome || 0) * 12
       const indexRate = property.indexationRate ?? 0.02
       totalAnnualIncome += baseRent * Math.pow(1 + indexRate, year)
 
       // ── Indexed operating costs ──
-      const inflRate = property.inflationRate ?? 0.02
-      const maintenance = (property.annualMaintenanceCost || 0) * Math.pow(1 + inflRate, year)
-      const insurance   = (property.annualInsuranceCost || 0) * Math.pow(1 + inflRate, year)
-      // Legacy catch-all monthly expenses (also inflate)
-      const legacyMonthly = (property.monthlyExpenses || 0) * 12 * Math.pow(1 + inflRate, year)
-      // Property tax — fixed, never indexed
-      const propertyTax = property.annualPropertyTax || 0
+      const inflRate      = property.inflationRate ?? 0.02
+      const maintenance   = (property.annualMaintenanceCost || 0) * Math.pow(1 + inflRate, year)
+      const insurance     = (property.annualInsuranceCost   || 0) * Math.pow(1 + inflRate, year)
+      const legacyMonthly = (property.monthlyExpenses       || 0) * 12 * Math.pow(1 + inflRate, year)
+      const propertyTax   = property.annualPropertyTax || 0   // fixed, never indexed
       totalAnnualCosts += maintenance + insurance + legacyMonthly + propertyTax
 
       // ── Loan payments (actual cash out that year) ──
@@ -143,7 +164,8 @@ export function buildProjection(properties) {
       }
     }
 
-    const annualCashFlow = Math.round(totalAnnualIncome - totalAnnualCosts)
+    // Planned investment costs are a one-off cash outflow (reduce cash flow that year)
+    const annualCashFlow = Math.round(totalAnnualIncome - totalAnnualCosts - plannedInvestCost)
     cumulativeCF += annualCashFlow
 
     const netWorth = Math.round(totalPropertyValue - totalLoanBalance)
@@ -151,13 +173,14 @@ export function buildProjection(properties) {
     points.push({
       year,
       label: year === 0 ? 'Today' : `+${year}y`,
-      propertyValue:  Math.round(totalPropertyValue),
-      loanBalance:    Math.round(totalLoanBalance),
+      propertyValue:       Math.round(totalPropertyValue),
+      loanBalance:         Math.round(totalLoanBalance),
       netWorth,
       annualCashFlow,
-      cumulativeCF:   Math.round(cumulativeCF),
+      cumulativeCF:        Math.round(cumulativeCF),
+      plannedInvestCost:   Math.round(plannedInvestCost),
       // Total return: equity position + all cash collected/spent so far
-      totalReturn:    Math.round(netWorth + cumulativeCF),
+      totalReturn:         Math.round(netWorth + cumulativeCF),
     })
   }
 

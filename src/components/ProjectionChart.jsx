@@ -488,10 +488,33 @@ function EmptyState() {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
+// ─── Derive planned investment reference line labels ──────────────────────────
+
+function getInvestmentMarkers(properties) {
+  const today = new Date()
+  // Collect unique year offsets with a label like "+3y: Kitchen (€15k)"
+  const byYear = {}
+  for (const p of properties) {
+    for (const inv of p.plannedInvestments || []) {
+      const invDate = new Date(inv.plannedDate)
+      const yearOffset = Math.floor(
+        (invDate.getFullYear() - today.getFullYear()) +
+        (invDate.getMonth() - today.getMonth()) / 12
+      )
+      if (yearOffset < 0 || yearOffset > 20) continue
+      const label = yearOffset === 0 ? 'Today' : `+${yearOffset}y`
+      if (!byYear[label]) byYear[label] = []
+      byYear[label].push(inv)
+    }
+  }
+  return byYear  // { "+3y": [inv, ...], ... }
+}
+
 export default function ProjectionChart({ properties }) {
   if (!properties || properties.length === 0) return <EmptyState />
 
   const data = buildProjection(properties)
+  const investmentMarkers = getInvestmentMarkers(properties)
 
   return (
     <div className="space-y-6">
@@ -543,6 +566,21 @@ export default function ProjectionChart({ properties }) {
             <Area type="monotone" dataKey="loanBalance"   name="Loan Balance"   stroke="#ef4444" strokeWidth={2} fill="url(#gLoan)" dot={false} activeDot={{ r: 4 }} />
             <Area type="monotone" dataKey="netWorth"      name="Net Worth"       stroke="#38bdf8" strokeWidth={2.5} fill="url(#gNW)"          dot={false} activeDot={{ r: 5 }} />
             <Area type="monotone" dataKey="totalReturn"   name="Total Return"    stroke="#f59e0b" strokeWidth={2}   fill="url(#gTotalReturn)"  dot={false} activeDot={{ r: 4 }} strokeDasharray="5 3" />
+            {Object.entries(investmentMarkers).map(([label, invs]) => (
+              <ReferenceLine
+                key={label}
+                x={label}
+                stroke="#f59e0b"
+                strokeWidth={1.5}
+                strokeDasharray="4 3"
+                label={{
+                  value: `🔨 ${invs.length > 1 ? `${invs.length} investments` : (invs[0].description || 'Investment')}`,
+                  position: 'insideTopRight',
+                  fill: '#fbbf24',
+                  fontSize: 10,
+                }}
+              />
+            ))}
           </AreaChart>
         </ResponsiveContainer>
 

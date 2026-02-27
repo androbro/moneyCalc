@@ -153,7 +153,15 @@ export async function getPortfolio() {
     scheduleRows = data ?? []
   }
 
-  // 4. Assemble
+  // 4. planned investments for all properties in one query
+  const { data: plannedRows, error: plannedErr } = await supabase
+    .from('planned_investments')
+    .select('*')
+    .in('property_id', propIds)
+    .order('planned_date')
+  check(plannedErr, 'getPortfolio/plannedInvestments')
+
+  // 5. Assemble
   const schedulesByLoan = {}
   for (const row of scheduleRows) {
     if (!schedulesByLoan[row.loan_id]) schedulesByLoan[row.loan_id] = []
@@ -166,9 +174,16 @@ export async function getPortfolio() {
     loansByProperty[row.property_id].push(dbToLoan(row, schedulesByLoan[row.id] ?? []))
   }
 
+  const plannedByProperty = {}
+  for (const row of (plannedRows ?? [])) {
+    if (!plannedByProperty[row.property_id]) plannedByProperty[row.property_id] = []
+    plannedByProperty[row.property_id].push(dbToPlannedInvestment(row))
+  }
+
   const properties = propRows.map((row) => ({
     ...dbToProperty(row),
     loans: loansByProperty[row.id] ?? [],
+    plannedInvestments: plannedByProperty[row.id] ?? [],
   }))
 
   return { properties, meta: defaultMeta() }
@@ -290,6 +305,57 @@ export async function attachAmortizationSchedule(_portfolio, _propertyId, loanId
     const { error: insErr } = await supabase.from('amortization_schedules').insert(chunk)
     check(insErr, 'attachAmortizationSchedule/insert')
   }
+}
+
+// ─── Planned investment mappers ───────────────────────────────────────────────
+
+function dbToPlannedInvestment(row) {
+  return {
+    id:            row.id,
+    propertyId:    row.property_id,
+    description:   row.description ?? '',
+    plannedDate:   row.planned_date ?? '',
+    cost:          Number(row.cost ?? 0),
+    valueIncrease: Number(row.value_increase ?? 0),
+  }
+}
+
+function plannedInvestmentToDb(inv) {
+  return {
+    property_id:    inv.propertyId,
+    description:    inv.description ?? '',
+    planned_date:   inv.plannedDate || null,
+    cost:           inv.cost ?? 0,
+    value_increase: inv.valueIncrease ?? 0,
+  }
+}
+
+// ─── Planned investment CRUD ──────────────────────────────────────────────────
+
+export async function addPlannedInvestment(inv) {
+  const { error } = await supabase
+    .from('planned_investments')
+    .insert(plannedInvestmentToDb(inv))
+  check(error, 'addPlannedInvestment')
+  return getPortfolio()
+}
+
+export async function updatePlannedInvestment(inv) {
+  const { error } = await supabase
+    .from('planned_investments')
+    .update(plannedInvestmentToDb(inv))
+    .eq('id', inv.id)
+  check(error, 'updatePlannedInvestment')
+  return getPortfolio()
+}
+
+export async function deletePlannedInvestment(id) {
+  const { error } = await supabase
+    .from('planned_investments')
+    .delete()
+    .eq('id', id)
+  check(error, 'deletePlannedInvestment')
+  return getPortfolio()
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

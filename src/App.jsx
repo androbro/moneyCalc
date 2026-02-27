@@ -3,12 +3,16 @@ import Layout from './components/Layout'
 import Dashboard from './components/Dashboard'
 import ProjectionChart from './components/ProjectionChart'
 import PropertyForm from './components/PropertyForm'
+import PlannedInvestmentForm from './components/PlannedInvestmentForm'
 import ScenarioPlanner from './components/ScenarioPlanner'
 import {
   getPortfolio,
   addProperty,
   updateProperty,
   deleteProperty,
+  addPlannedInvestment,
+  updatePlannedInvestment,
+  deletePlannedInvestment,
 } from './services/portfolioService'
 
 // ─── Loading screen ───────────────────────────────────────────────────────────
@@ -77,9 +81,11 @@ export default function App() {
   const [saving, setSaving]             = useState(false)
   const [toast, setToast]               = useState(null)
 
-  const [activeTab, setActiveTab]           = useState('dashboard')
-  const [editingProperty, setEditingProperty] = useState(null)
-  const [showForm, setShowForm]             = useState(false)
+  const [activeTab, setActiveTab]               = useState('dashboard')
+  const [editingProperty, setEditingProperty]   = useState(null)
+  const [showForm, setShowForm]                 = useState(false)
+  const [editingInvestment, setEditingInvestment] = useState(null)
+  const [showInvestmentForm, setShowInvestmentForm] = useState(false)
 
   // ── Load portfolio from Supabase ──
   const load = useCallback(async () => {
@@ -148,6 +154,44 @@ export default function App() {
   const handleCancelForm = () => {
     setShowForm(false)
     setEditingProperty(null)
+  }
+
+  // ── Planned investment handlers ──
+  const handleAddInvestment = () => {
+    setEditingInvestment(undefined)
+    setShowInvestmentForm(true)
+    setActiveTab('investments')
+  }
+
+  const handleEditInvestment = (inv) => {
+    setEditingInvestment(inv)
+    setShowInvestmentForm(true)
+    setActiveTab('investments')
+  }
+
+  const handleDeleteInvestment = async (id) => {
+    if (!window.confirm('Delete this planned investment?')) return
+    await withSave(
+      () => deletePlannedInvestment(id),
+      'Investment deleted'
+    )
+  }
+
+  const handleSaveInvestment = async (inv) => {
+    const isEdit = Boolean(editingInvestment)
+    await withSave(
+      () => isEdit
+        ? updatePlannedInvestment(inv)
+        : addPlannedInvestment(inv),
+      isEdit ? 'Investment updated' : 'Investment added'
+    )
+    setShowInvestmentForm(false)
+    setEditingInvestment(null)
+  }
+
+  const handleCancelInvestmentForm = () => {
+    setShowInvestmentForm(false)
+    setEditingInvestment(null)
   }
 
   // ── Render guards ──
@@ -224,6 +268,32 @@ export default function App() {
           </div>
         )}
 
+        {/* ── Investments ── */}
+        {activeTab === 'investments' && !showInvestmentForm && (
+          <InvestmentsPage
+            properties={properties}
+            onAdd={handleAddInvestment}
+            onEdit={handleEditInvestment}
+            onDelete={handleDeleteInvestment}
+          />
+        )}
+
+        {activeTab === 'investments' && showInvestmentForm && (
+          <div className="relative">
+            {saving && (
+              <div className="absolute inset-0 z-10 bg-slate-900/60 rounded-2xl flex items-center justify-center">
+                <div className="w-8 h-8 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
+              </div>
+            )}
+            <PlannedInvestmentForm
+              investment={editingInvestment}
+              properties={properties}
+              onSave={handleSaveInvestment}
+              onCancel={handleCancelInvestmentForm}
+            />
+          </div>
+        )}
+
         {/* ── Projection ── */}
         {activeTab === 'projection' && (
           <ProjectionChart properties={properties} />
@@ -245,6 +315,125 @@ export default function App() {
         />
       )}
     </>
+  )
+}
+
+// ─── Investments page ─────────────────────────────────────────────────────────
+
+function InvestmentsPage({ properties, onAdd, onEdit, onDelete }) {
+  // Flatten all investments with their property name attached
+  const allInvestments = properties.flatMap((p) =>
+    (p.plannedInvestments || []).map((inv) => ({ ...inv, propertyName: p.name }))
+  ).sort((a, b) => new Date(a.plannedDate) - new Date(b.plannedDate))
+
+  const fmt = (n) =>
+    new Intl.NumberFormat('nl-BE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n)
+
+  const today = new Date()
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-white">Planned Investments</h1>
+          <p className="text-slate-400 text-sm mt-0.5">
+            One-off capital outlays that increase a property's value from a specific date.
+          </p>
+        </div>
+        <button onClick={onAdd} className="btn-primary" disabled={properties.length === 0}>
+          <PlusIcon />
+          Add Investment
+        </button>
+      </div>
+
+      {properties.length === 0 && (
+        <div className="card text-center py-12">
+          <p className="text-slate-400">Add at least one property before planning investments.</p>
+        </div>
+      )}
+
+      {properties.length > 0 && allInvestments.length === 0 && (
+        <div className="card flex flex-col items-center justify-center py-16 text-center">
+          <div className="w-12 h-12 rounded-2xl bg-slate-700 flex items-center justify-center mb-4">
+            <svg className="w-6 h-6 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+            </svg>
+          </div>
+          <p className="text-slate-300 font-medium">No planned investments yet</p>
+          <p className="text-slate-500 text-sm mt-1 mb-4">
+            Add a renovation, upgrade, or any capital outlay you plan to make.
+          </p>
+          <button onClick={onAdd} className="btn-primary">
+            <PlusIcon />
+            Add Investment
+          </button>
+        </div>
+      )}
+
+      {allInvestments.length > 0 && (
+        <div className="space-y-3">
+          {allInvestments.map((inv) => {
+            const date    = new Date(inv.plannedDate)
+            const isPast  = date < today
+            const yearOffset = Math.round((date - today) / (365.25 * 24 * 60 * 60 * 1000))
+            const net     = inv.valueIncrease - inv.cost
+
+            return (
+              <div key={inv.id} className="card flex flex-col sm:flex-row sm:items-center gap-4">
+                {/* Date badge */}
+                <div className={`shrink-0 rounded-xl px-3 py-2 text-center min-w-[72px]
+                                  ${isPast ? 'bg-slate-700/50' : 'bg-amber-900/30 border border-amber-700/40'}`}>
+                  <p className="text-xs text-slate-400 leading-tight">
+                    {date.toLocaleDateString('nl-BE', { month: 'short', year: 'numeric' })}
+                  </p>
+                  <p className={`text-sm font-bold ${isPast ? 'text-slate-400' : 'text-amber-300'}`}>
+                    {isPast ? 'Past' : yearOffset === 0 ? 'This year' : `+${yearOffset}y`}
+                  </p>
+                </div>
+
+                {/* Details */}
+                <div className="flex-1 min-w-0">
+                  <p className="font-semibold text-white truncate">
+                    {inv.description || 'Unnamed investment'}
+                  </p>
+                  <p className="text-xs text-slate-400 mt-0.5">{inv.propertyName}</p>
+                </div>
+
+                {/* Financials */}
+                <div className="flex gap-6 shrink-0 text-right">
+                  <div>
+                    <p className="text-xs text-slate-500">Cost</p>
+                    <p className="text-sm font-semibold text-red-400">-{fmt(inv.cost)}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-slate-500">Value +</p>
+                    <p className="text-sm font-semibold text-emerald-400">+{fmt(inv.valueIncrease)}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-slate-500">Net</p>
+                    <p className={`text-sm font-bold ${net >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                      {net >= 0 ? '+' : ''}{fmt(net)}
+                    </p>
+                  </div>
+                </div>
+
+                {/* Actions */}
+                <div className="flex gap-2 shrink-0">
+                  <button onClick={() => onEdit(inv)}
+                    className="text-slate-400 hover:text-brand-400 transition-colors">
+                    <EditIcon />
+                  </button>
+                  <button onClick={() => onDelete(inv.id)}
+                    className="text-slate-400 hover:text-red-400 transition-colors">
+                    <TrashIcon />
+                  </button>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      )}
+    </div>
   )
 }
 
