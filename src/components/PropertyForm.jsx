@@ -28,6 +28,7 @@ const EMPTY_PROPERTY = () => ({
   // Operating costs (new Phase 5)
   annualMaintenanceCost: '',
   annualInsuranceCost: '',
+  annualPropertyTax: '',
   inflationRate: '0.02',
   loans: [],
 })
@@ -182,6 +183,7 @@ export default function PropertyForm({ property: editProperty, onSave, onCancel 
         monthlyExpenses:       String(editProperty.monthlyExpenses ?? ''),
         annualMaintenanceCost: String(editProperty.annualMaintenanceCost ?? ''),
         annualInsuranceCost:   String(editProperty.annualInsuranceCost ?? ''),
+        annualPropertyTax:     String(editProperty.annualPropertyTax ?? ''),
         inflationRate:         String(editProperty.inflationRate ?? 0.02),
       })
       setLoans(
@@ -218,6 +220,7 @@ export default function PropertyForm({ property: editProperty, onSave, onCancel 
       monthlyExpenses:       Number(form.monthlyExpenses) || 0,
       annualMaintenanceCost: Number(form.annualMaintenanceCost) || 0,
       annualInsuranceCost:   Number(form.annualInsuranceCost) || 0,
+      annualPropertyTax:     Number(form.annualPropertyTax) || 0,
       inflationRate:         Number(form.inflationRate) || 0.02,
       loans: loans.map((l) => ({
         ...l,
@@ -306,14 +309,20 @@ export default function PropertyForm({ property: editProperty, onSave, onCancel 
             value={form.annualInsuranceCost} onChange={si('annualInsuranceCost')} />
         </Field>
 
+        <Field label="Annual Property Tax (EUR)"
+          hint="Onroerende voorheffing — fixed amount, never indexed">
+          <input className="input" type="number" min="0" placeholder="800"
+            value={form.annualPropertyTax} onChange={si('annualPropertyTax')} />
+        </Field>
+
         <Field label="Other Monthly Expenses (EUR)"
-          hint="Syndic, property tax, misc — inflated annually">
+          hint="Syndic, misc — inflated annually">
           <input className="input" type="number" min="0" placeholder="150"
             value={form.monthlyExpenses} onChange={si('monthlyExpenses')} />
         </Field>
 
         <Field label="Cost Inflation Rate"
-          hint="Annual increase applied to all operating costs">
+          hint="Annual increase applied to maintenance, insurance &amp; other costs (not property tax)">
           <PctInput value={form.inflationRate} onChange={sf('inflationRate')} />
         </Field>
       </Section>

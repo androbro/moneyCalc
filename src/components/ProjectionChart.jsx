@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect, useCallback } from 'react'
+import { createPortal } from 'react-dom'
 import {
   AreaChart, Area,
   ComposedChart, Bar, Line,
@@ -8,7 +9,243 @@ import {
 } from 'recharts'
 import { buildProjection, formatEUR } from '../utils/projectionUtils'
 
-// ─── Shared helpers ───────────────────────────────────────────────────────────
+// ─── Info popover ─────────────────────────────────────────────────────────────
+// Renders into document.body via a portal so it is never clipped by
+// overflow:hidden parents or table cells.  Position is calculated from
+// getBoundingClientRect and flipped when close to a viewport edge.
+
+const BUBBLE_W  = 256   // matches w-64
+const BUBBLE_H  = 220   // generous estimate; actual height varies
+const GAP       = 8     // px between button and bubble
+const ARROW     = 8     // arrow height
+
+function InfoPopover({ children }) {
+  const [open, setOpen]     = useState(false)
+  const [pos,  setPos]      = useState({ top: 0, left: 0, placement: 'top' })
+  const btnRef              = useRef(null)
+  const bubbleRef           = useRef(null)
+
+  const reposition = useCallback(() => {
+    if (!btnRef.current) return
+    const r   = btnRef.current.getBoundingClientRect()
+    const vw  = window.innerWidth
+    const vh  = window.innerHeight
+    const scrollY = window.scrollY
+    const scrollX = window.scrollX
+
+    // Decide vertical placement: prefer above, fall back to below
+    const spaceAbove = r.top
+    const spaceBelow = vh - r.bottom
+    const placement  = spaceAbove >= BUBBLE_H + GAP + ARROW || spaceAbove >= spaceBelow
+      ? 'top'
+      : 'bottom'
+
+    // Horizontal: centre on button, then clamp to viewport with 8px margin
+    let left = r.left + scrollX + r.width / 2 - BUBBLE_W / 2
+    left = Math.max(8, Math.min(left, scrollX + vw - BUBBLE_W - 8))
+
+    const top = placement === 'top'
+      ? r.top  + scrollY - BUBBLE_H - GAP - ARROW
+      : r.bottom + scrollY + GAP + ARROW
+
+    setPos({ top, left, placement })
+  }, [])
+
+  // Re-run positioning when the actual bubble height is known
+  const bubbleCallbackRef = useCallback((node) => {
+    bubbleRef.current = node
+    if (!node || !btnRef.current) return
+    const r   = btnRef.current.getBoundingClientRect()
+    const vh  = window.innerHeight
+    const vw  = window.innerWidth
+    const scrollY = window.scrollY
+    const scrollX = window.scrollX
+    const actualH = node.offsetHeight
+    const spaceAbove = r.top
+    const spaceBelow = vh - r.bottom
+    const placement  = spaceAbove >= actualH + GAP + ARROW || spaceAbove >= spaceBelow
+      ? 'top'
+      : 'bottom'
+    let left = r.left + scrollX + r.width / 2 - BUBBLE_W / 2
+    left = Math.max(8, Math.min(left, scrollX + vw - BUBBLE_W - 8))
+    const top = placement === 'top'
+      ? r.top  + scrollY - actualH - GAP - ARROW
+      : r.bottom + scrollY + GAP + ARROW
+    setPos({ top, left, placement })
+  }, [])
+
+  // Close on outside click, scroll, or resize
+  useEffect(() => {
+    if (!open) return
+    const close = (e) => {
+      if (
+        btnRef.current && !btnRef.current.contains(e.target) &&
+        bubbleRef.current && !bubbleRef.current.contains(e.target)
+      ) setOpen(false)
+    }
+    const closeImmediate = () => setOpen(false)
+    document.addEventListener('mousedown', close)
+    window.addEventListener('scroll',  closeImmediate, true)
+    window.addEventListener('resize',  closeImmediate)
+    return () => {
+      document.removeEventListener('mousedown', close)
+      window.removeEventListener('scroll',  closeImmediate, true)
+      window.removeEventListener('resize',  closeImmediate)
+    }
+  }, [open])
+
+  const handleClick = (e) => {
+    e.stopPropagation()
+    if (!open) reposition()
+    setOpen((v) => !v)
+  }
+
+  // Arrow points toward the button
+  const arrowStyle = pos.placement === 'top'
+    ? { bottom: -ARROW, left: '50%', transform: 'translateX(-50%)',
+        borderLeft: '6px solid transparent', borderRight: '6px solid transparent',
+        borderTop: `${ARROW}px solid #64748b` }
+    : { top: -ARROW, left: '50%', transform: 'translateX(-50%)',
+        borderLeft: '6px solid transparent', borderRight: '6px solid transparent',
+        borderBottom: `${ARROW}px solid #64748b` }
+
+  return (
+    <span className="relative inline-flex items-center ml-1.5 align-middle">
+      <button
+        ref={btnRef}
+        type="button"
+        onClick={handleClick}
+        className="w-4 h-4 rounded-full bg-slate-600 hover:bg-brand-600 text-slate-300
+                   hover:text-white flex items-center justify-center transition-colors
+                   text-[10px] font-bold leading-none shrink-0"
+        aria-label="Show explanation"
+      >
+        ?
+      </button>
+
+      {open && createPortal(
+        <div
+          ref={bubbleCallbackRef}
+          style={{ position: 'absolute', top: pos.top, left: pos.left, width: BUBBLE_W, zIndex: 9999 }}
+          className="bg-slate-700 border border-slate-500 rounded-xl p-3 shadow-2xl
+                     text-xs text-slate-200 leading-relaxed"
+        >
+          <span style={{ position: 'absolute', width: 0, height: 0, ...arrowStyle }} />
+          {children}
+        </div>,
+        document.body
+      )}
+    </span>
+  )
+}
+
+// ─── Explanation texts (single source of truth) ───────────────────────────────
+
+const INFO = {
+  propertyValue: (
+    <>
+      <strong className="text-white block mb-1">Property Value</strong>
+      Your current market value grown by the appreciation rate you set, compounded yearly.
+      <br /><br />
+      <code className="text-brand-300">Value × (1 + rate)^year</code>
+      <br /><br />
+      Example: €275,000 at 2%/yr → €408,986 after 20 years.
+    </>
+  ),
+  loanBalance: (
+    <>
+      <strong className="text-white block mb-1">Loan Balance</strong>
+      The outstanding capital still owed to the bank at that point in time.
+      <br /><br />
+      Taken directly from the <strong>amortization schedule</strong> you uploaded (last row with a due date ≤ that year). If no CSV was uploaded, estimated with the standard annuity formula.
+    </>
+  ),
+  netWorth: (
+    <>
+      <strong className="text-white block mb-1">Net Worth</strong>
+      What you would walk away with if you sold everything and repaid all loans.
+      <br /><br />
+      <code className="text-brand-300">Net Worth = Property Value − Loan Balance</code>
+      <br /><br />
+      Does <em>not</em> subtract selling costs — see the Scenario Planner for that.
+    </>
+  ),
+  annualCF: (
+    <>
+      <strong className="text-white block mb-1">Annual Cash Flow</strong>
+      The net cash in your pocket for that year, after all income and costs.
+      <br /><br />
+      <code className="text-brand-300">
+        Indexed Rent<br />
+        − Indexed Maintenance<br />
+        − Indexed Insurance<br />
+        − Inflation-adjusted Other Costs<br />
+        − Fixed Property Tax<br />
+        − Loan Payments (from CSV or annuity)
+      </code>
+      <br /><br />
+      Rent and costs increase each year by the rates you configured. Loan payments are fixed (or follow the uploaded schedule). Property tax is always the same amount.
+    </>
+  ),
+  cumulativeCF: (
+    <>
+      <strong className="text-white block mb-1">Cumulative Cash Flow</strong>
+      The running total of all annual cash flows from today up to that year.
+      <br /><br />
+      When this line crosses zero, your rental income has fully covered all costs paid so far — your <strong>cash breakeven point</strong>.
+    </>
+  ),
+  propGain: (
+    <>
+      <strong className="text-white block mb-1">Property Gain (20y)</strong>
+      How much more your portfolio is worth after 20 years of appreciation compared to today.
+      <br /><br />
+      <code className="text-brand-300">Value(+20y) − Value(today)</code>
+    </>
+  ),
+  debtRepaid: (
+    <>
+      <strong className="text-white block mb-1">Debt Repaid (20y)</strong>
+      How much of your total loan principal will have been repaid over 20 years.
+      <br /><br />
+      <code className="text-brand-300">Loan Balance(today) − Loan Balance(+20y)</code>
+    </>
+  ),
+  netWorthGain: (
+    <>
+      <strong className="text-white block mb-1">Net Worth Gain (20y)</strong>
+      Combined effect of appreciation and debt repayment over 20 years.
+      <br /><br />
+      <code className="text-brand-300">Net Worth(+20y) − Net Worth(today)</code>
+      <br /><br />
+      This is your total wealth creation, <em>excluding</em> cash flows.
+    </>
+  ),
+  totalCF: (
+    <>
+      <strong className="text-white block mb-1">Cumulative Cash Flow (20y)</strong>
+      Total cash generated (or consumed) by the portfolio over 20 years.
+      <br /><br />
+      Negative early on is normal — as rent is indexed upward and loans are repaid, cash flow typically turns positive.
+    </>
+  ),
+  cfTable: {
+    propertyValue:  'Appreciated portfolio value at the start of that year.',
+    loanBalance:    'Total outstanding debt across all loans at the start of that year.',
+    netWorth:       'Property Value minus Loan Balance — your equity position.',
+    annualCF:       'Net cash for this year: indexed rent minus all costs and loan payments.',
+    cumulativeCF:   'Running total of all annual cash flows from Year 0 up to this row.',
+  },
+  breakdownTable: {
+    currentValue:  'Market value you entered for this property.',
+    v5:            'Current value × (1 + appreciation rate)^5',
+    v20:           'Current value × (1 + appreciation rate)^20',
+    appRate:       'Annual appreciation rate configured on this property.',
+    rentIndex:     'Annual rent indexation rate — how much rent grows each year.',
+  },
+}
+
+// ─── Shared chart helpers ─────────────────────────────────────────────────────
 
 function formatYAxis(value) {
   const abs = Math.abs(value)
@@ -46,17 +283,44 @@ function SummaryStrip({ data }) {
   const totalCF       = last.cumulativeCF
 
   const items = [
-    { label: 'Property gain (20y)',  value: formatEUR(propGain),      color: 'text-emerald-400', prefix: '+' },
-    { label: 'Debt repaid (20y)',    value: formatEUR(loanReduction),  color: 'text-brand-400',   prefix: '-' },
-    { label: 'Net worth gain (20y)', value: formatEUR(netWorthGain),   color: netWorthGain >= 0 ? 'text-emerald-400' : 'text-red-400', prefix: netWorthGain >= 0 ? '+' : '' },
-    { label: 'Cumulative cash flow', value: formatEUR(totalCF),        color: totalCF >= 0 ? 'text-emerald-400' : 'text-red-400', prefix: totalCF >= 0 ? '+' : '' },
+    {
+      label: 'Property gain (20y)',
+      value: formatEUR(propGain),
+      color: 'text-emerald-400',
+      prefix: '+',
+      info: INFO.propGain,
+    },
+    {
+      label: 'Debt repaid (20y)',
+      value: formatEUR(loanReduction),
+      color: 'text-brand-400',
+      prefix: '-',
+      info: INFO.debtRepaid,
+    },
+    {
+      label: 'Net worth gain (20y)',
+      value: formatEUR(netWorthGain),
+      color: netWorthGain >= 0 ? 'text-emerald-400' : 'text-red-400',
+      prefix: netWorthGain >= 0 ? '+' : '',
+      info: INFO.netWorthGain,
+    },
+    {
+      label: 'Cumulative cash flow',
+      value: formatEUR(totalCF),
+      color: totalCF >= 0 ? 'text-emerald-400' : 'text-red-400',
+      prefix: totalCF >= 0 ? '+' : '',
+      info: INFO.totalCF,
+    },
   ]
 
   return (
     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mt-4">
       {items.map((item) => (
         <div key={item.label} className="bg-slate-700/50 rounded-xl p-3 text-center">
-          <p className="text-xs text-slate-400 mb-1 leading-tight">{item.label}</p>
+          <p className="text-xs text-slate-400 mb-1 leading-tight flex items-center justify-center gap-0.5">
+            {item.label}
+            <InfoPopover>{item.info}</InfoPopover>
+          </p>
           <p className={`text-base font-bold ${item.color}`}>
             {item.prefix}{item.value}
           </p>
@@ -68,6 +332,17 @@ function SummaryStrip({ data }) {
 
 // ─── Property breakdown table ─────────────────────────────────────────────────
 
+function ThWithInfo({ children, info, left = false }) {
+  return (
+    <th className={`py-2 text-slate-400 font-medium text-xs ${left ? 'text-left pr-3' : 'text-right px-2'}`}>
+      <span className="inline-flex items-center gap-0.5">
+        {children}
+        {info && <InfoPopover>{info}</InfoPopover>}
+      </span>
+    </th>
+  )
+}
+
 function PropertyBreakdown({ properties }) {
   return (
     <div className="card overflow-x-auto">
@@ -75,14 +350,18 @@ function PropertyBreakdown({ properties }) {
       <table className="w-full text-sm min-w-[500px]">
         <thead>
           <tr className="border-b border-slate-700">
-            {['Property', 'Current Value', '+5y Value', '+20y Value', 'Appre. Rate', 'Rent Index', 'Loans'].map((h, i) => (
-              <th key={h} className={`py-2 text-slate-400 font-medium text-xs ${i === 0 ? 'text-left pr-3' : 'text-right px-2'}`}>{h}</th>
-            ))}
+            <ThWithInfo left>Property</ThWithInfo>
+            <ThWithInfo info={INFO.breakdownTable.currentValue}>Current Value</ThWithInfo>
+            <ThWithInfo info={INFO.breakdownTable.v5}>+5y Value</ThWithInfo>
+            <ThWithInfo info={INFO.breakdownTable.v20}>+20y Value</ThWithInfo>
+            <ThWithInfo info={INFO.breakdownTable.appRate}>Appre. Rate</ThWithInfo>
+            <ThWithInfo info={INFO.breakdownTable.rentIndex}>Rent Index</ThWithInfo>
+            <ThWithInfo>Loans</ThWithInfo>
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-800">
           {properties.map((p) => {
-            const r  = p.appreciationRate || 0.02
+            const r   = p.appreciationRate || 0.02
             const v5  = p.currentValue * Math.pow(1 + r, 5)
             const v20 = p.currentValue * Math.pow(1 + r, 20)
             return (
@@ -123,9 +402,12 @@ function CashFlowTable({ data }) {
       <table className="w-full text-sm min-w-[520px]">
         <thead>
           <tr className="border-b border-slate-700">
-            {['Year', 'Property Value', 'Loan Balance', 'Net Worth', 'Annual CF', 'Cumulative CF'].map((h, i) => (
-              <th key={h} className={`py-2 text-slate-400 font-medium text-xs ${i === 0 ? 'text-left pr-3' : 'text-right px-2'}`}>{h}</th>
-            ))}
+            <ThWithInfo left>Year</ThWithInfo>
+            <ThWithInfo info={INFO.cfTable.propertyValue}>Property Value</ThWithInfo>
+            <ThWithInfo info={INFO.cfTable.loanBalance}>Loan Balance</ThWithInfo>
+            <ThWithInfo info={INFO.cfTable.netWorth}>Net Worth</ThWithInfo>
+            <ThWithInfo info={INFO.cfTable.annualCF}>Annual CF</ThWithInfo>
+            <ThWithInfo info={INFO.cfTable.cumulativeCF}>Cumulative CF</ThWithInfo>
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-800">
@@ -145,6 +427,22 @@ function CashFlowTable({ data }) {
           ))}
         </tbody>
       </table>
+    </div>
+  )
+}
+
+// ─── Chart legend with info popovers ─────────────────────────────────────────
+
+function ChartLegend({ items }) {
+  return (
+    <div className="flex flex-wrap gap-4 text-xs text-slate-400">
+      {items.map((item) => (
+        <span key={item.label} className="flex items-center gap-1.5">
+          <span className="w-3 h-3 rounded-sm shrink-0" style={{ background: item.color }} />
+          {item.label}
+          <InfoPopover>{item.info}</InfoPopover>
+        </span>
+      ))}
     </div>
   )
 }
@@ -177,13 +475,22 @@ export default function ProjectionChart({ properties }) {
       <div>
         <h1 className="text-2xl font-bold text-white">20-Year Projection</h1>
         <p className="text-slate-400 text-sm mt-0.5">
-          Indexed rental income, inflation-adjusted costs, and amortization-based loan balance
+          Indexed rental income, inflation-adjusted costs, and amortization-based loan balance.
+          Click any <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-slate-600 text-[10px] font-bold text-slate-300 mx-0.5">?</span> for a detailed explanation.
         </p>
       </div>
 
-      {/* Chart 1: Net Worth (area) */}
+      {/* ── Chart 1: Net Worth ── */}
       <div className="card">
-        <h2 className="font-semibold text-slate-100 mb-5">Portfolio Value vs. Debt</h2>
+        <div className="flex flex-wrap items-start justify-between gap-3 mb-5">
+          <h2 className="font-semibold text-slate-100">Portfolio Value vs. Debt</h2>
+          <ChartLegend items={[
+            { label: 'Property Value', color: '#10b981', info: INFO.propertyValue },
+            { label: 'Loan Balance',   color: '#ef4444', info: INFO.loanBalance },
+            { label: 'Net Worth',      color: '#38bdf8', info: INFO.netWorth },
+          ]} />
+        </div>
+
         <ResponsiveContainer width="100%" height={320}>
           <AreaChart data={data} margin={{ top: 10, right: 8, left: 0, bottom: 0 }}>
             <defs>
@@ -204,23 +511,28 @@ export default function ProjectionChart({ properties }) {
             <XAxis dataKey="label" tick={{ fill: '#94a3b8', fontSize: 11 }} axisLine={{ stroke: '#1e293b' }} tickLine={false} />
             <YAxis tickFormatter={formatYAxis} tick={{ fill: '#94a3b8', fontSize: 10 }} axisLine={false} tickLine={false} width={68} />
             <Tooltip content={<CustomTooltip />} />
-            <Legend wrapperStyle={{ fontSize: '12px', color: '#94a3b8', paddingTop: '12px' }} />
             <Area type="monotone" dataKey="propertyValue" name="Property Value" stroke="#10b981" strokeWidth={2} fill="url(#gProp)" dot={false} activeDot={{ r: 4 }} />
             <Area type="monotone" dataKey="loanBalance"   name="Loan Balance"   stroke="#ef4444" strokeWidth={2} fill="url(#gLoan)" dot={false} activeDot={{ r: 4 }} />
             <Area type="monotone" dataKey="netWorth"      name="Net Worth"       stroke="#38bdf8" strokeWidth={2.5} fill="url(#gNW)" dot={false} activeDot={{ r: 5 }} />
           </AreaChart>
         </ResponsiveContainer>
+
         <SummaryStrip data={data} />
       </div>
 
-      {/* Chart 2: Cash Flow (bars + cumulative line) */}
+      {/* ── Chart 2: Cash Flow ── */}
       <div className="card">
         <div className="flex flex-wrap items-start justify-between gap-3 mb-5">
           <div>
             <h2 className="font-semibold text-slate-100">Net Cash Flow per Year</h2>
             <p className="text-xs text-slate-400 mt-0.5">Indexed rent minus indexed costs and loan payments</p>
           </div>
+          <ChartLegend items={[
+            { label: 'Annual CF',    color: '#0ea5e9', info: INFO.annualCF },
+            { label: 'Cumulative CF', color: '#a78bfa', info: INFO.cumulativeCF },
+          ]} />
         </div>
+
         <ResponsiveContainer width="100%" height={300}>
           <ComposedChart data={data} margin={{ top: 10, right: 8, left: 0, bottom: 0 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
@@ -228,31 +540,14 @@ export default function ProjectionChart({ properties }) {
             <YAxis yAxisId="left"  tickFormatter={formatYAxis} tick={{ fill: '#94a3b8', fontSize: 10 }} axisLine={false} tickLine={false} width={68} />
             <YAxis yAxisId="right" tickFormatter={formatYAxis} tick={{ fill: '#94a3b8', fontSize: 10 }} axisLine={false} tickLine={false} width={68} orientation="right" />
             <Tooltip content={<CustomTooltip />} />
-            <Legend wrapperStyle={{ fontSize: '12px', color: '#94a3b8', paddingTop: '12px' }} />
             <ReferenceLine yAxisId="left" y={0} stroke="#475569" strokeDasharray="4 2" />
-            <Bar
-              yAxisId="left"
-              dataKey="annualCashFlow"
-              name="Annual CF"
-              fill="#0ea5e9"
-              radius={[4, 4, 0, 0]}
-              maxBarSize={32}
-            />
-            <Line
-              yAxisId="right"
-              type="monotone"
-              dataKey="cumulativeCF"
-              name="Cumulative CF"
-              stroke="#a78bfa"
-              strokeWidth={2}
-              dot={false}
-              activeDot={{ r: 4, fill: '#a78bfa' }}
-            />
+            <Bar    yAxisId="left"  dataKey="annualCashFlow" name="Annual CF"    fill="#0ea5e9" radius={[4,4,0,0]} maxBarSize={32} />
+            <Line   yAxisId="right" type="monotone" dataKey="cumulativeCF" name="Cumulative CF" stroke="#a78bfa" strokeWidth={2} dot={false} activeDot={{ r: 4, fill: '#a78bfa' }} />
           </ComposedChart>
         </ResponsiveContainer>
       </div>
 
-      {/* Property breakdown + CF table */}
+      {/* ── Tables ── */}
       <PropertyBreakdown properties={properties} />
       <CashFlowTable data={data} />
     </div>

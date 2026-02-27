@@ -1,30 +1,117 @@
-import { useState } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Layout from './components/Layout'
 import Dashboard from './components/Dashboard'
 import ProjectionChart from './components/ProjectionChart'
 import PropertyForm from './components/PropertyForm'
 import ScenarioPlanner from './components/ScenarioPlanner'
-import { useLocalStorage } from './hooks/useLocalStorage'
-import { addProperty, updateProperty, deleteProperty } from './services/portfolioService'
+import {
+  getPortfolio,
+  addProperty,
+  updateProperty,
+  deleteProperty,
+} from './services/portfolioService'
 
-const EMPTY_PORTFOLIO = {
-  properties: [],
-  meta: {
-    version: '1.0.0',
-    lastUpdated: new Date().toISOString(),
-    currency: 'EUR',
-  },
+// ─── Loading screen ───────────────────────────────────────────────────────────
+
+function LoadingScreen() {
+  return (
+    <div className="min-h-screen bg-slate-950 flex items-center justify-center">
+      <div className="text-center space-y-4">
+        <div className="w-10 h-10 border-2 border-brand-500 border-t-transparent rounded-full animate-spin mx-auto" />
+        <p className="text-slate-400 text-sm">Loading portfolio…</p>
+      </div>
+    </div>
+  )
 }
 
+// ─── Error screen ─────────────────────────────────────────────────────────────
+
+function ErrorScreen({ message, onRetry }) {
+  return (
+    <div className="min-h-screen bg-slate-950 flex items-center justify-center p-6">
+      <div className="card max-w-md w-full text-center space-y-4">
+        <div className="w-12 h-12 rounded-2xl bg-red-900/40 flex items-center justify-center mx-auto">
+          <svg className="w-6 h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+              d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+          </svg>
+        </div>
+        <div>
+          <p className="font-semibold text-white">Failed to connect to Supabase</p>
+          <p className="text-slate-400 text-sm mt-1 break-all">{message}</p>
+        </div>
+        <button onClick={onRetry} className="btn-primary mx-auto">
+          Retry
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// ─── Toast notification ───────────────────────────────────────────────────────
+
+function Toast({ message, type = 'error', onDismiss }) {
+  useEffect(() => {
+    const t = setTimeout(onDismiss, 4000)
+    return () => clearTimeout(t)
+  }, [onDismiss])
+
+  return (
+    <div className={`fixed bottom-5 right-5 z-50 flex items-center gap-3 px-4 py-3 rounded-xl shadow-xl
+                     text-sm font-medium border
+                     ${type === 'error'
+                       ? 'bg-red-900/90 border-red-700 text-red-100'
+                       : 'bg-emerald-900/90 border-emerald-700 text-emerald-100'}`}>
+      {message}
+      <button onClick={onDismiss} className="ml-2 opacity-60 hover:opacity-100">✕</button>
+    </div>
+  )
+}
+
+// ─── Main App ─────────────────────────────────────────────────────────────────
+
 export default function App() {
-  const [portfolio, setPortfolio] = useLocalStorage('moneyCalc_portfolio', EMPTY_PORTFOLIO)
-  const [activeTab, setActiveTab] = useState('dashboard')
-  // null = not editing, undefined = new property, object = editing existing
+  const [properties, setProperties]     = useState([])
+  const [loading, setLoading]           = useState(true)
+  const [fatalError, setFatalError]     = useState(null)
+  const [saving, setSaving]             = useState(false)
+  const [toast, setToast]               = useState(null)
+
+  const [activeTab, setActiveTab]           = useState('dashboard')
   const [editingProperty, setEditingProperty] = useState(null)
-  const [showForm, setShowForm] = useState(false)
+  const [showForm, setShowForm]             = useState(false)
 
-  const properties = portfolio.properties || []
+  // ── Load portfolio from Supabase ──
+  const load = useCallback(async () => {
+    setLoading(true)
+    setFatalError(null)
+    try {
+      const portfolio = await getPortfolio()
+      setProperties(portfolio.properties)
+    } catch (err) {
+      setFatalError(err.message)
+    } finally {
+      setLoading(false)
+    }
+  }, [])
 
+  useEffect(() => { load() }, [load])
+
+  // ── Shared save wrapper ──
+  const withSave = async (fn, successMsg) => {
+    setSaving(true)
+    try {
+      const portfolio = await fn()
+      setProperties(portfolio.properties)
+      if (successMsg) setToast({ message: successMsg, type: 'success' })
+    } catch (err) {
+      setToast({ message: err.message, type: 'error' })
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  // ── Handlers ──
   const handleAddProperty = () => {
     setEditingProperty(undefined)
     setShowForm(true)
@@ -37,17 +124,22 @@ export default function App() {
     setActiveTab('properties')
   }
 
-  const handleDeleteProperty = (propertyId) => {
+  const handleDeleteProperty = async (propertyId) => {
     if (!window.confirm('Delete this property and all its loans?')) return
-    setPortfolio(deleteProperty(portfolio, propertyId))
+    await withSave(
+      () => deleteProperty(null, propertyId),
+      'Property deleted'
+    )
   }
 
-  const handleSave = (property) => {
-    if (editingProperty) {
-      setPortfolio(updateProperty(portfolio, property))
-    } else {
-      setPortfolio(addProperty(portfolio, property))
-    }
+  const handleSave = async (property) => {
+    const isEdit = Boolean(editingProperty)
+    await withSave(
+      () => isEdit
+        ? updateProperty(null, property)
+        : addProperty(null, property),
+      isEdit ? 'Property updated' : 'Property added'
+    )
     setShowForm(false)
     setEditingProperty(null)
     setActiveTab('dashboard')
@@ -58,77 +150,106 @@ export default function App() {
     setEditingProperty(null)
   }
 
+  // ── Render guards ──
+  if (loading) return <LoadingScreen />
+  if (fatalError) return <ErrorScreen message={fatalError} onRetry={load} />
+
   return (
-    <Layout activeTab={activeTab} onTabChange={setActiveTab}>
-      {/* Properties tab: show form OR list depending on state */}
-      {activeTab === 'properties' && showForm && (
-        <PropertyForm
-          property={editingProperty}
-          onSave={handleSave}
-          onCancel={handleCancelForm}
-        />
-      )}
+    <>
+      <Layout activeTab={activeTab} onTabChange={setActiveTab}>
 
-      {activeTab === 'properties' && !showForm && (
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <div>
-              <h1 className="text-2xl font-bold text-white">Properties</h1>
-              <p className="text-slate-400 text-sm mt-0.5">Manage your real estate portfolio</p>
-            </div>
-            <button onClick={handleAddProperty} className="btn-primary">
-              <PlusIcon />
-              Add Property
-            </button>
-          </div>
+        {/* ── Dashboard ── */}
+        {activeTab === 'dashboard' && (
+          <Dashboard
+            properties={properties}
+            onAddProperty={handleAddProperty}
+            onEditProperty={handleEditProperty}
+            onDeleteProperty={handleDeleteProperty}
+          />
+        )}
 
-          {properties.length === 0 ? (
-            <div className="card flex flex-col items-center justify-center py-16 text-center">
-              <p className="text-slate-300 font-medium">No properties yet</p>
-              <p className="text-slate-500 text-sm mt-1 mb-4">
-                Add your first property to start tracking your portfolio
-              </p>
+        {/* ── Properties list ── */}
+        {activeTab === 'properties' && !showForm && (
+          <div className="space-y-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-2xl font-bold text-white">Properties</h1>
+                <p className="text-slate-400 text-sm mt-0.5">Manage your real estate portfolio</p>
+              </div>
               <button onClick={handleAddProperty} className="btn-primary">
                 <PlusIcon />
                 Add Property
               </button>
             </div>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-              {properties.map((p) => (
-                <PropertyListCard
-                  key={p.id}
-                  property={p}
-                  onEdit={() => handleEditProperty(p)}
-                  onDelete={() => handleDeleteProperty(p.id)}
-                />
-              ))}
-            </div>
-          )}
-        </div>
-      )}
 
-      {activeTab === 'dashboard' && (
-        <Dashboard
-          properties={properties}
-          onAddProperty={handleAddProperty}
-          onEditProperty={handleEditProperty}
-          onDeleteProperty={handleDeleteProperty}
+            {properties.length === 0 ? (
+              <div className="card flex flex-col items-center justify-center py-16 text-center">
+                <p className="text-slate-300 font-medium">No properties yet</p>
+                <p className="text-slate-500 text-sm mt-1 mb-4">
+                  Add your first property to start tracking your portfolio
+                </p>
+                <button onClick={handleAddProperty} className="btn-primary">
+                  <PlusIcon />
+                  Add Property
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                {properties.map((p) => (
+                  <PropertyListCard
+                    key={p.id}
+                    property={p}
+                    onEdit={() => handleEditProperty(p)}
+                    onDelete={() => handleDeleteProperty(p.id)}
+                  />
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+
+        {/* ── Property form ── */}
+        {activeTab === 'properties' && showForm && (
+          <div className="relative">
+            {saving && (
+              <div className="absolute inset-0 z-10 bg-slate-900/60 rounded-2xl flex items-center justify-center">
+                <div className="w-8 h-8 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
+              </div>
+            )}
+            <PropertyForm
+              property={editingProperty}
+              onSave={handleSave}
+              onCancel={handleCancelForm}
+            />
+          </div>
+        )}
+
+        {/* ── Projection ── */}
+        {activeTab === 'projection' && (
+          <ProjectionChart properties={properties} />
+        )}
+
+        {/* ── Scenarios ── */}
+        {activeTab === 'scenario' && (
+          <ScenarioPlanner properties={properties} />
+        )}
+
+      </Layout>
+
+      {/* Toast */}
+      {toast && (
+        <Toast
+          message={toast.message}
+          type={toast.type}
+          onDismiss={() => setToast(null)}
         />
       )}
-
-      {activeTab === 'projection' && (
-        <ProjectionChart properties={properties} />
-      )}
-
-      {activeTab === 'scenario' && (
-        <ScenarioPlanner properties={properties} />
-      )}
-    </Layout>
+    </>
   )
 }
 
-// Compact card for the Properties list view
+// ─── Property list card ───────────────────────────────────────────────────────
+
 function PropertyListCard({ property, onEdit, onDelete }) {
   return (
     <div className="card space-y-3">
@@ -138,21 +259,14 @@ function PropertyListCard({ property, onEdit, onDelete }) {
           <p className="text-xs text-slate-400 truncate">{property.address}</p>
         </div>
         <div className="flex gap-2 shrink-0">
-          <button
-            onClick={onEdit}
-            className="text-slate-400 hover:text-brand-400 transition-colors"
-          >
+          <button onClick={onEdit} className="text-slate-400 hover:text-brand-400 transition-colors">
             <EditIcon />
           </button>
-          <button
-            onClick={onDelete}
-            className="text-slate-400 hover:text-red-400 transition-colors"
-          >
+          <button onClick={onDelete} className="text-slate-400 hover:text-red-400 transition-colors">
             <TrashIcon />
           </button>
         </div>
       </div>
-
       <div className="grid grid-cols-2 gap-2 text-sm">
         <div>
           <span className="text-slate-400">Value </span>
@@ -181,6 +295,8 @@ function PropertyListCard({ property, onEdit, onDelete }) {
     </div>
   )
 }
+
+// ─── Icons ────────────────────────────────────────────────────────────────────
 
 function PlusIcon() {
   return (

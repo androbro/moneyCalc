@@ -1,39 +1,70 @@
 import { useState, useRef } from 'react'
 
 /**
- * Expected KBC CSV format (semicolon-separated):
+ * Supports multiple KBC / bank export formats:
  *
- * vervaldatum;kapitaalaflossing;intrest;te betalen;kapitaalsaldo
- * 01/05/2022;782,90;373,33;1156,23;229217,10
+ * Format A — semicolon + comma-decimal (classic KBC):
+ *   vervaldatum;kapitaalaflossing;intrest;te betalen;kapitaalsaldo
+ *   01/05/2022;782,90;373,33;1156,23;229217,10
  *
- * - Decimal separator: comma (,)
- * - Date format: DD/MM/YYYY
- * - Encoding: UTF-8 or windows-1252
+ * Format B — tab + dot-decimal (newer KBC / Excel export):
+ *   vervaldatum\tkapitaalaflossing\tinterest\tte betalen\tkapitaalsaldo
+ *   17-02-2022\t644.89\t258.98\t903.87\t229355.11
+ *
+ * Date formats: DD/MM/YYYY, DD-MM-YYYY, YYYY-MM-DD all accepted.
  */
 
-// Parse "01/05/2022" → "2022-05-01"
+// Parse date in any of the supported formats → ISO "YYYY-MM-DD"
 function parseBelgianDate(str) {
   const clean = str.trim()
-  // Support DD/MM/YYYY and DD-MM-YYYY
-  const m = clean.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/)
-  if (!m) return clean // fallback — pass through
-  const [, dd, mm, yyyy] = m
-  return `${yyyy}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}`
+  // DD/MM/YYYY or DD-MM-YYYY
+  const dmy = clean.match(/^(\d{1,2})[\/\-](\d{1,2})[\/\-](\d{4})$/)
+  if (dmy) {
+    const [, dd, mm, yyyy] = dmy
+    return `${yyyy}-${mm.padStart(2, '0')}-${dd.padStart(2, '0')}`
+  }
+  // YYYY-MM-DD already ISO
+  if (/^\d{4}-\d{2}-\d{2}$/.test(clean)) return clean
+  return clean // pass through unknown formats
 }
 
-// "1.234,56" or "1234,56" or "1234.56" → number
+/**
+ * Smart number parser — detects decimal format from the string itself.
+ *
+ * Rules:
+ *  - If string ends with ",XX" (2 digits after comma)  → comma is decimal  e.g. "1.234,56"
+ *  - If string ends with ".XX" (2 digits after dot)    → dot is decimal    e.g. "1234.56" or "644.89"
+ *  - If only dots present and not at end               → thousands dots    e.g. "229.355"  (integer)
+ *  - Comma + dot both present: last one is decimal separator
+ */
 function parseEuroNumber(str) {
   if (!str) return 0
-  const clean = str.trim()
-    .replace(/\./g, '')   // remove thousands dots
-    .replace(',', '.')    // decimal comma → dot
-  return parseFloat(clean) || 0
+  let s = str.trim().replace(/\s/g, '').replace(/['"]/g, '')
+  if (!s) return 0
+
+  const lastComma = s.lastIndexOf(',')
+  const lastDot   = s.lastIndexOf('.')
+
+  if (lastComma > lastDot) {
+    // Comma is decimal separator  →  remove dots (thousands), replace comma with dot
+    s = s.replace(/\./g, '').replace(',', '.')
+  } else if (lastDot > lastComma) {
+    // Dot is decimal separator  →  remove commas (thousands)
+    s = s.replace(/,/g, '')
+  } else {
+    // No separator at all — plain integer
+    s = s.replace(/[,\.]/g, '')
+  }
+
+  return parseFloat(s) || 0
 }
 
+// Detect column separator: tab wins over semicolon wins over comma
 function detectSeparator(header) {
+  if (header.includes('\t')) return '\t'
   if (header.includes(';')) return ';'
   if (header.includes(',')) return ','
-  return ';'
+  return '\t' // fallback
 }
 
 /**
@@ -117,8 +148,10 @@ export default function CSVImporter({ onImport }) {
     setParsed(null)
 
     if (!file) return
-    if (!file.name.endsWith('.csv') && file.type !== 'text/csv') {
-      setError('Please upload a .csv file.')
+    const name = file.name.toLowerCase()
+    const allowed = name.endsWith('.csv') || name.endsWith('.txt') || name.endsWith('.tsv')
+    if (!allowed) {
+      setError('Please upload a .csv, .tsv, or .txt file.')
       return
     }
 
@@ -165,7 +198,7 @@ export default function CSVImporter({ onImport }) {
         <input
           ref={fileRef}
           type="file"
-          accept=".csv,text/csv"
+          accept=".csv,.txt,.tsv,text/csv,text/plain,text/tab-separated-values"
           className="hidden"
           onChange={handleFile}
         />
@@ -175,10 +208,13 @@ export default function CSVImporter({ onImport }) {
               d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
           </svg>
           <p className="text-sm text-slate-300">
-            {dragging ? 'Drop the file here' : 'Drop your KBC CSV here, or click to browse'}
+            {dragging ? 'Drop the file here' : 'Drop your KBC export here, or click to browse'}
           </p>
           <p className="text-xs text-slate-500">
-            Expected columns: vervaldatum · kapitaalaflossing · intrest · te betalen · kapitaalsaldo
+            .csv · .txt · .tsv — semicolon or tab separated, comma or dot decimals
+          </p>
+          <p className="text-xs text-slate-600">
+            Columns: vervaldatum · kapitaalaflossing · interest · te betalen · kapitaalsaldo
           </p>
         </div>
       </div>

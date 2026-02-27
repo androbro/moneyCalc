@@ -133,7 +133,9 @@ export function buildProjection(properties) {
       const insurance   = (property.annualInsuranceCost || 0) * Math.pow(1 + inflRate, year)
       // Legacy catch-all monthly expenses (also inflate)
       const legacyMonthly = (property.monthlyExpenses || 0) * 12 * Math.pow(1 + inflRate, year)
-      totalAnnualCosts += maintenance + insurance + legacyMonthly
+      // Property tax — fixed, never indexed
+      const propertyTax = property.annualPropertyTax || 0
+      totalAnnualCosts += maintenance + insurance + legacyMonthly + propertyTax
 
       // ── Loan payments (actual cash out that year) ──
       for (const loan of property.loans || []) {
@@ -144,14 +146,18 @@ export function buildProjection(properties) {
     const annualCashFlow = Math.round(totalAnnualIncome - totalAnnualCosts)
     cumulativeCF += annualCashFlow
 
+    const netWorth = Math.round(totalPropertyValue - totalLoanBalance)
+
     points.push({
       year,
       label: year === 0 ? 'Today' : `+${year}y`,
       propertyValue:  Math.round(totalPropertyValue),
       loanBalance:    Math.round(totalLoanBalance),
-      netWorth:       Math.round(totalPropertyValue - totalLoanBalance),
+      netWorth,
       annualCashFlow,
       cumulativeCF:   Math.round(cumulativeCF),
+      // Total return: equity position + all cash collected/spent so far
+      totalReturn:    Math.round(netWorth + cumulativeCF),
     })
   }
 
@@ -181,6 +187,7 @@ export function computeSummary(properties) {
     annualCosts += (property.annualMaintenanceCost || 0)
     annualCosts += (property.annualInsuranceCost || 0)
     annualCosts += (property.monthlyExpenses || 0) * 12
+    annualCosts += (property.annualPropertyTax || 0)
 
     for (const loan of property.loans || []) {
       totalLiabilities += getRemainingBalance(loan, today)
