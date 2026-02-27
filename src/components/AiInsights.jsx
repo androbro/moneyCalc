@@ -62,10 +62,10 @@ function buildFinancialContext(properties, profile) {
     portfolioBlock += `${p.loans?.length || 0} loan(s)\n`
   }
 
-  const totalMonthlyIncome =
-    (profile.myNetIncome || 0) +
-    (profile.myInvestmentIncome || 0) +
-    (profile.partnerNetIncome || 0)
+  const members = profile.members || []
+  const totalMemberIncome = members.reduce((s, m) => s + (m.netIncome || 0) + (m.investmentIncome || 0), 0)
+  const totalMemberCash   = members.reduce((s, m) => s + (m.cash || 0), 0)
+
   let monthlyRentalGross = 0
   for (const p of properties) {
     if (p.isRented !== false) monthlyRentalGross += p.startRentalIncome || 0
@@ -80,7 +80,7 @@ function buildFinancialContext(properties, profile) {
       ((p.annualMaintenanceCost || 0) + (p.annualInsuranceCost || 0) + (p.annualPropertyTax || 0)) / 12 +
       (p.monthlyExpenses || 0)
   }
-  const totalInflow = totalMonthlyIncome + monthlyRentalGross
+  const totalInflow = totalMemberIncome + monthlyRentalGross
   const totalOutflow =
     monthlyPropertyLoans + monthlyPropertyOpex +
     (profile.householdExpenses || 0) +
@@ -89,10 +89,14 @@ function buildFinancialContext(properties, profile) {
   const availableCash = totalInflow - totalOutflow
 
   let profileBlock = `\n## Household Financial Profile\n`
-  profileBlock += `- Your net salary: ${fmt(profile.myNetIncome || 0)} /month\n`
-  profileBlock += `- Your investment/trading income: ${fmt(profile.myInvestmentIncome || 0)} /month\n`
-  profileBlock += `- Partner net salary: ${fmt(profile.partnerNetIncome || 0)} /month\n`
-  profileBlock += `- Partner lump-sum cash available: ${fmt(profile.partnerCash || 0)}\n`
+  profileBlock += `- Members: ${members.length}\n`
+  for (const m of members) {
+    profileBlock += `  - **${m.name || 'Unnamed'}**: salary ${fmt(m.netIncome || 0)}/mo, `
+    profileBlock += `investments ${fmt(m.investmentIncome || 0)}/mo, `
+    profileBlock += `cash on hand ${fmt(m.cash || 0)}\n`
+  }
+  profileBlock += `- Combined monthly income (all members): ${fmt(totalMemberIncome)}\n`
+  profileBlock += `- Total household cash on hand: ${fmt(totalMemberCash)}\n`
   profileBlock += `- Joint household living expenses: ${fmt(profile.householdExpenses || 0)} /month\n`
   profileBlock += `- Personal savings rate: ${((profile.personalSavingsRate || 0) * 100).toFixed(0)}%\n\n`
   profileBlock += `### Derived Cash Flow\n`
@@ -439,20 +443,28 @@ export default function AiInsights({ properties, profile }) {
       )}
 
       {/* Data context summary */}
-      <div className="card bg-slate-800/50">
-        <p className="text-xs text-slate-400">
-          <span className="font-semibold text-slate-300">Context provided to AI: </span>
-          {properties.length} propert{properties.length === 1 ? 'y' : 'ies'},{' '}
-          {properties.reduce((s, p) => s + (p.loans?.length || 0), 0)} loan(s),{' '}
-          household income {formatEUR((profile.myNetIncome || 0) + (profile.partnerNetIncome || 0))} /month,{' '}
-          partner cash {formatEUR(profile.partnerCash || 0)}.
-          {!profile.myNetIncome && !profile.partnerNetIncome && (
-            <span className="text-amber-400 ml-1">
-              Income not set — configure your Household Profile for better answers.
-            </span>
-          )}
-        </p>
-      </div>
+      {(() => {
+        const mems = profile.members || []
+        const totalIncome = mems.reduce((s, m) => s + (m.netIncome || 0) + (m.investmentIncome || 0), 0)
+        const totalCash   = mems.reduce((s, m) => s + (m.cash || 0), 0)
+        return (
+          <div className="card bg-slate-800/50">
+            <p className="text-xs text-slate-400">
+              <span className="font-semibold text-slate-300">Context provided to AI: </span>
+              {properties.length} propert{properties.length === 1 ? 'y' : 'ies'},{' '}
+              {properties.reduce((s, p) => s + (p.loans?.length || 0), 0)} loan(s),{' '}
+              {mems.length} household member{mems.length !== 1 ? 's' : ''},{' '}
+              combined income {formatEUR(totalIncome)} /month,{' '}
+              total cash {formatEUR(totalCash)}.
+              {mems.length === 0 && (
+                <span className="text-amber-400 ml-1">
+                  No members configured — set up your Household Profile for better answers.
+                </span>
+              )}
+            </p>
+          </div>
+        )
+      })()}
 
       {/* Chat window */}
       <div className="card min-h-[400px] flex flex-col gap-0 p-0 overflow-hidden">

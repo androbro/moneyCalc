@@ -367,29 +367,58 @@ export async function deletePlannedInvestment(id) {
  * All income/expense values are monthly EUR unless noted otherwise.
  *
  * {
- *   myNetIncome               – your net monthly salary
- *   myInvestmentIncome        – net monthly income from stocks / trading
- *   partnerNetIncome          – partner's net monthly salary
- *   partnerCash               – partner's lump-sum cash available now (one-off)
+ *   members: [               – array of household members (stored as JSONB)
+ *     {
+ *       id                   – uuid string (client-generated)
+ *       name                 – display name (e.g. "Me", "Sarah")
+ *       netIncome            – monthly net salary
+ *       investmentIncome     – monthly net investment / trading income
+ *       cash                 – lump-sum cash available now
+ *     }
+ *   ]
  *   householdExpenses         – joint monthly living costs
  *   personalSavingsRate       – fraction (0–1) of total income kept as savings
  *   targetDownPayment         – cash target for the next property down-payment
  *   targetPurchaseYear        – calendar year you aim to buy the next property
  *   newResidencePrice         – agreed purchase price of new primary home
- *   newResidenceLoanAmount    – loan share you + partner will take
+ *   newResidenceLoanAmount    – loan share taken together
  *   newResidenceMonthlyPayment – estimated monthly repayment
  *   newResidencePurchaseDate  – planned settlement date (ISO string)
+ *
+ * Legacy flat fields (kept for backward-compat with existing Supabase rows;
+ * ignored when members array is present):
+ *   myNetIncome, myInvestmentIncome, partnerNetIncome, partnerCash
  * }
  */
 
 const PROFILE_ID = 'default'
 
 function dbToHousehold(row) {
+  // Migrate legacy flat fields into a members array if no members stored yet
+  let members = Array.isArray(row.members) ? row.members : []
+  if (members.length === 0) {
+    // Build from old flat columns so existing data isn't lost
+    const me = {
+      id: 'member-me',
+      name: 'Me',
+      netIncome:        Number(row.my_net_income ?? 0),
+      investmentIncome: Number(row.my_investment_income ?? 0),
+      cash:             0,
+    }
+    const partner = {
+      id: 'member-partner',
+      name: 'Partner',
+      netIncome:        Number(row.partner_net_income ?? 0),
+      investmentIncome: 0,
+      cash:             Number(row.partner_cash ?? 0),
+    }
+    // Only include if they have any data
+    if (me.netIncome || me.investmentIncome) members.push(me)
+    if (partner.netIncome || partner.cash) members.push(partner)
+  }
+
   return {
-    myNetIncome:                Number(row.my_net_income ?? 0),
-    myInvestmentIncome:         Number(row.my_investment_income ?? 0),
-    partnerNetIncome:           Number(row.partner_net_income ?? 0),
-    partnerCash:                Number(row.partner_cash ?? 0),
+    members,
     householdExpenses:          Number(row.household_expenses ?? 0),
     personalSavingsRate:        Number(row.personal_savings_rate ?? 0.10),
     targetDownPayment:          Number(row.target_down_payment ?? 0),
@@ -402,12 +431,20 @@ function dbToHousehold(row) {
 }
 
 function householdToDb(h) {
+  // Also mirror totals back into legacy columns so old queries still work
+  const totalNetIncome        = (h.members || []).reduce((s, m) => s + (m.netIncome || 0), 0)
+  const totalInvestmentIncome = (h.members || []).reduce((s, m) => s + (m.investmentIncome || 0), 0)
+  const totalCash             = (h.members || []).reduce((s, m) => s + (m.cash || 0), 0)
+
   return {
     id:                           PROFILE_ID,
-    my_net_income:                h.myNetIncome ?? 0,
-    my_investment_income:         h.myInvestmentIncome ?? 0,
-    partner_net_income:           h.partnerNetIncome ?? 0,
-    partner_cash:                 h.partnerCash ?? 0,
+    members:                      h.members ?? [],
+    // Legacy mirrors
+    my_net_income:                totalNetIncome,
+    my_investment_income:         totalInvestmentIncome,
+    partner_net_income:           0,
+    partner_cash:                 totalCash,
+    // Shared fields
     household_expenses:           h.householdExpenses ?? 0,
     personal_savings_rate:        h.personalSavingsRate ?? 0.10,
     target_down_payment:          h.targetDownPayment ?? 0,
@@ -421,10 +458,7 @@ function householdToDb(h) {
 
 export function defaultHousehold() {
   return {
-    myNetIncome: 0,
-    myInvestmentIncome: 0,
-    partnerNetIncome: 0,
-    partnerCash: 0,
+    members: [],
     householdExpenses: 0,
     personalSavingsRate: 0.10,
     targetDownPayment: 0,
