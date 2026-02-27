@@ -3,6 +3,7 @@ import Layout from './components/Layout'
 import Dashboard from './components/Dashboard'
 import ProjectionChart from './components/ProjectionChart'
 import PropertyForm from './components/PropertyForm'
+import ScenarioPlanner from './components/ScenarioPlanner'
 import { useLocalStorage } from './hooks/useLocalStorage'
 import { addProperty, updateProperty, deleteProperty } from './services/portfolioService'
 
@@ -118,6 +119,10 @@ export default function App() {
 
       {activeTab === 'projection' && (
         <ProjectionChart properties={properties} />
+      )}
+
+      {activeTab === 'scenario' && (
+        <ScenarioPlanner properties={properties} />
       )}
     </Layout>
   )
