@@ -17,6 +17,7 @@ create table if not exists properties (
   appreciation_rate     numeric(6,4)  default 0.02,
   purchase_date         date,
   -- rental income
+  is_rented             boolean       default true,
   start_rental_income   numeric(10,2) default 0,
   indexation_rate       numeric(6,4)  default 0.02,
   -- operating costs

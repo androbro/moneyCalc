@@ -26,6 +26,7 @@ function dbToProperty(row) {
     currentValue:          Number(row.current_value ?? 0),
     appreciationRate:      Number(row.appreciation_rate ?? 0.02),
     purchaseDate:          row.purchase_date ?? '',
+    isRented:              row.is_rented ?? true,
     startRentalIncome:     Number(row.start_rental_income ?? 0),
     monthlyRentalIncome:   Number(row.start_rental_income ?? 0), // legacy alias
     indexationRate:        Number(row.indexation_rate ?? 0.02),
@@ -46,6 +47,7 @@ function propertyToDb(p) {
     current_value:          p.currentValue ?? 0,
     appreciation_rate:      p.appreciationRate ?? 0.02,
     purchase_date:          p.purchaseDate || null,
+    is_rented:              p.isRented ?? true,
     start_rental_income:    p.startRentalIncome ?? p.monthlyRentalIncome ?? 0,
     indexation_rate:        p.indexationRate ?? 0.02,
     monthly_expenses:       p.monthlyExpenses ?? 0,

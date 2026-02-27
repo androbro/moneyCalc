@@ -145,10 +145,12 @@ export function buildProjection(properties) {
         totalLoanBalance += getRemainingBalance(loan, targetDate.toISOString())
       }
 
-      // ── Indexed rental income ──
-      const baseRent  = (property.startRentalIncome || property.monthlyRentalIncome || 0) * 12
-      const indexRate = property.indexationRate ?? 0.02
-      totalAnnualIncome += baseRent * Math.pow(1 + indexRate, year)
+      // ── Indexed rental income (only if property is rented out) ──
+      if (property.isRented !== false) {
+        const baseRent  = (property.startRentalIncome || property.monthlyRentalIncome || 0) * 12
+        const indexRate = property.indexationRate ?? 0.02
+        totalAnnualIncome += baseRent * Math.pow(1 + indexRate, year)
+      }
 
       // ── Indexed operating costs ──
       const inflRate      = property.inflationRate ?? 0.02
@@ -206,7 +208,9 @@ export function computeSummary(properties) {
 
   for (const property of properties) {
     totalAssets += property.currentValue || 0
-    annualRentalIncome += (property.startRentalIncome || property.monthlyRentalIncome || 0) * 12
+    if (property.isRented !== false) {
+      annualRentalIncome += (property.startRentalIncome || property.monthlyRentalIncome || 0) * 12
+    }
     annualCosts += (property.annualMaintenanceCost || 0)
     annualCosts += (property.annualInsuranceCost || 0)
     annualCosts += (property.monthlyExpenses || 0) * 12

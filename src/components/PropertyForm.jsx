@@ -21,6 +21,7 @@ const EMPTY_PROPERTY = () => ({
   currentValue: '',
   appreciationRate: '0.02',
   purchaseDate: '',
+  isRented: true,
   // Cash flow
   startRentalIncome: '',
   indexationRate: '0.02',
@@ -175,6 +176,7 @@ export default function PropertyForm({ property: editProperty, onSave, onCancel 
       setForm({
         ...EMPTY_PROPERTY(),
         ...editProperty,
+        isRented:              editProperty.isRented ?? true,
         purchasePrice:         String(editProperty.purchasePrice ?? ''),
         currentValue:          String(editProperty.currentValue ?? ''),
         appreciationRate:      String(editProperty.appreciationRate ?? 0.02),
@@ -211,6 +213,7 @@ export default function PropertyForm({ property: editProperty, onSave, onCancel 
     e.preventDefault()
     const property = {
       ...form,
+      isRented:              form.isRented ?? true,
       purchasePrice:         Number(form.purchasePrice) || 0,
       currentValue:          Number(form.currentValue) || 0,
       appreciationRate:      Number(form.appreciationRate) || 0.02,
@@ -282,18 +285,49 @@ export default function PropertyForm({ property: editProperty, onSave, onCancel 
       </Section>
 
       {/* ── Section 2: Rental Income & Indexation ── */}
-      <Section title="Rental Income & Indexation">
-        <Field label="Monthly Rental Income (EUR)"
-          hint="Current gross rent — starting point for annual indexation">
-          <input className="input" type="number" min="0" placeholder="1200"
-            value={form.startRentalIncome} onChange={si('startRentalIncome')} />
-        </Field>
+      <div className="card space-y-4">
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="section-title mb-0">Rental Income &amp; Indexation</h3>
+          {/* Toggle */}
+          <label className="flex items-center gap-2.5 cursor-pointer select-none">
+            <span className="text-sm text-slate-400">Rented out</span>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={form.isRented}
+              onClick={() => setForm((prev) => ({ ...prev, isRented: !prev.isRented }))}
+              className={`relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent
+                          transition-colors duration-200 focus:outline-none
+                          ${form.isRented ? 'bg-brand-600' : 'bg-slate-600'}`}
+            >
+              <span
+                className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow
+                            transform transition-transform duration-200
+                            ${form.isRented ? 'translate-x-5' : 'translate-x-0'}`}
+              />
+            </button>
+          </label>
+        </div>
 
-        <Field label="Annual Rent Indexation Rate"
-          hint="How much rent rises each year (e.g. 2% ≈ CPI)">
-          <PctInput value={form.indexationRate} onChange={sf('indexationRate')} />
-        </Field>
-      </Section>
+        {form.isRented ? (
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Field label="Monthly Rental Income (EUR)"
+              hint="Current gross rent — starting point for annual indexation">
+              <input className="input" type="number" min="0" placeholder="1200"
+                value={form.startRentalIncome} onChange={si('startRentalIncome')} />
+            </Field>
+
+            <Field label="Annual Rent Indexation Rate"
+              hint="How much rent rises each year (e.g. 2% ≈ CPI)">
+              <PctInput value={form.indexationRate} onChange={sf('indexationRate')} />
+            </Field>
+          </div>
+        ) : (
+          <p className="text-sm text-slate-500 italic">
+            This property is not rented out — rental income will not be included in projections.
+          </p>
+        )}
+      </div>
 
       {/* ── Section 3: Operating Expenses ── */}
       <Section title="Operating Expenses">
