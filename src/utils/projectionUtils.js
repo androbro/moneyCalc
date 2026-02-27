@@ -328,6 +328,184 @@ export function buildScenarioComparison(properties, saleYear, {
   })
 }
 
+// ─── Future Property Simulator ────────────────────────────────────────────────
+
+/**
+ * simulateNewProperty(existingProperties, simulatedProperty, householdProfile)
+ *
+ * Builds two 20-year projection series:
+ *   "baseline"  – existing portfolio as-is
+ *   "withNew"   – existing portfolio + the simulated future property
+ *
+ * Each series has the same shape as buildProjection() output.
+ *
+ * The simulated property is injected from `acquisitionYear` (years from today)
+ * onward.  Before that year every withNew data point equals the baseline.
+ *
+ * simulatedProperty shape:
+ * {
+ *   purchasePrice        – acquisition price
+ *   renovationCost       – one-off upfront cost in the acquisition year
+ *   currentValue         – initial market value (often = purchasePrice)
+ *   appreciationRate     – decimal (e.g. 0.03)
+ *   monthlyRentalIncome  – gross monthly rent from acquisition year onward
+ *   indexationRate       – rent index rate
+ *   annualMaintenanceCost
+ *   annualInsuranceCost
+ *   annualPropertyTax
+ *   monthlyExpenses      – catch-all operating costs
+ *   inflationRate
+ *   loanAmount           – mortgage taken to buy
+ *   loanMonthlyPayment   – monthly repayment
+ *   loanTermMonths       – total loan term
+ *   acquisitionYear      – years from today when the purchase happens (e.g. 2)
+ * }
+ *
+ * Returns: { baseline: ProjectionPoint[], withNew: ProjectionPoint[], delta: ProjectionPoint[] }
+ *   delta = withNew − baseline for key fields (useful for a "impact" chart)
+ */
+export function simulateNewProperty(existingProperties, sim) {
+  const baseline = buildProjection(existingProperties)
+
+  const acquisitionYear = sim.acquisitionYear ?? 0
+  const loanAmount      = sim.loanAmount ?? 0
+  const monthlyPayment  = sim.loanMonthlyPayment ?? 0
+  const termMonths      = sim.loanTermMonths ?? 240
+  const monthlyRate     = (sim.loanInterestRate ?? 0.02) / 12
+
+  // ── Build a synthetic loan object so we can reuse getRemainingBalance ──
+  const today = new Date()
+  const acquisitionDate = new Date(
+    today.getFullYear() + acquisitionYear,
+    today.getMonth(),
+    today.getDate()
+  )
+
+  const syntheticLoan = {
+    originalAmount: loanAmount,
+    interestRate:   sim.loanInterestRate ?? 0.02,
+    startDate:      acquisitionDate.toISOString(),
+    termMonths,
+    monthlyPayment,
+    amortizationSchedule: [],
+  }
+
+  let cumulativeCFWithNew = 0
+
+  const withNew = baseline.map((basePoint, idx) => {
+    const year = basePoint.year
+
+    if (year < acquisitionYear) {
+      // Before purchase: everything matches baseline, but track CF separately
+      cumulativeCFWithNew += (idx === 0 ? 0 : basePoint.annualCashFlow -
+        (idx > 0 ? baseline[idx - 1].annualCashFlow : 0) - basePoint.annualCashFlow +
+        basePoint.annualCashFlow)
+      // Simpler: just sync up to baseline for years before acquisition
+      return { ...basePoint, cumulativeCF: basePoint.cumulativeCF, totalReturn: basePoint.totalReturn }
+    }
+
+    const yearStart = new Date(today.getFullYear() + year, today.getMonth(), today.getDate())
+    const yearEnd   = new Date(today.getFullYear() + year + 1, today.getMonth(), today.getDate())
+
+    // ── New property value ──
+    const yearsOwned = year - acquisitionYear
+    const newPropValue =
+      (sim.currentValue || sim.purchasePrice || 0) *
+      Math.pow(1 + (sim.appreciationRate || 0.02), yearsOwned)
+
+    // ── Loan balance on the new property ──
+    const targetDate = yearStart.toISOString()
+    const newLoanBal = year === acquisitionYear
+      ? loanAmount
+      : getRemainingBalance(syntheticLoan, targetDate)
+
+    // ── Rental income from new property ──
+    const baseRent   = (sim.monthlyRentalIncome || 0) * 12
+    const indexRate  = sim.indexationRate ?? 0.02
+    const newRent    = baseRent * Math.pow(1 + indexRate, yearsOwned)
+
+    // ── Operating costs ──
+    const inflRate   = sim.inflationRate ?? 0.02
+    const newOpex =
+      (sim.annualMaintenanceCost || 0) * Math.pow(1 + inflRate, yearsOwned) +
+      (sim.annualInsuranceCost   || 0) * Math.pow(1 + inflRate, yearsOwned) +
+      (sim.monthlyExpenses       || 0) * 12 * Math.pow(1 + inflRate, yearsOwned) +
+      (sim.annualPropertyTax     || 0)
+
+    // ── Loan payments (new property) ──
+    let newLoanPayment = 0
+    if (monthlyPayment > 0 && loanAmount > 0) {
+      // count active months in this year window
+      const acqMonths    = monthsBetweenPublic(acquisitionDate, yearStart)
+      const acqMonthsEnd = monthsBetweenPublic(acquisitionDate, yearEnd)
+      const active = Math.max(0, Math.min(acqMonthsEnd, termMonths) - Math.max(0, acqMonths))
+      newLoanPayment = active * monthlyPayment
+    }
+
+    // Renovation cost is a one-off hit in the acquisition year
+    const renovationCost = year === acquisitionYear ? (sim.renovationCost || 0) : 0
+
+    // ── Combine with baseline ──
+    const addedCF = Math.round(newRent - newOpex - newLoanPayment - renovationCost)
+
+    const combinedPropValue  = basePoint.propertyValue + Math.round(newPropValue)
+    const combinedLoanBal    = basePoint.loanBalance   + Math.round(newLoanBal)
+    const combinedNetWorth   = combinedPropValue - combinedLoanBal
+    const combinedAnnualCF   = basePoint.annualCashFlow + addedCF
+
+    cumulativeCFWithNew = (idx > 0 && year > acquisitionYear)
+      ? cumulativeCFWithNew + addedCF
+      : basePoint.cumulativeCF + addedCF
+
+    return {
+      ...basePoint,
+      propertyValue: combinedPropValue,
+      loanBalance:   combinedLoanBal,
+      netWorth:      combinedNetWorth,
+      annualCashFlow: combinedAnnualCF,
+      cumulativeCF:  Math.round(basePoint.cumulativeCF + (
+        // track additive CF contribution from new property from year 0 onward
+        // for simplicity: accumulate the per-year extra CF
+        addedCF
+      )),
+      totalReturn:   Math.round(combinedNetWorth + basePoint.cumulativeCF + addedCF),
+    }
+  })
+
+  // Rebuild cumulative CF properly in one pass
+  let runningExtraCF = 0
+  const withNewFixed = withNew.map((pt, idx) => {
+    if (pt.year < acquisitionYear) return pt
+    const basePt = baseline[idx]
+    const extraCF = pt.annualCashFlow - basePt.annualCashFlow
+    runningExtraCF += extraCF
+    const newCumulCF = basePt.cumulativeCF + runningExtraCF
+    return {
+      ...pt,
+      cumulativeCF: Math.round(newCumulCF),
+      totalReturn:  Math.round(pt.netWorth + newCumulCF),
+    }
+  })
+
+  const delta = baseline.map((basePt, i) => ({
+    year:          basePt.year,
+    label:         basePt.label,
+    netWorth:      withNewFixed[i].netWorth      - basePt.netWorth,
+    annualCashFlow: withNewFixed[i].annualCashFlow - basePt.annualCashFlow,
+    cumulativeCF:  withNewFixed[i].cumulativeCF  - basePt.cumulativeCF,
+    totalReturn:   withNewFixed[i].totalReturn   - basePt.totalReturn,
+    propertyValue: withNewFixed[i].propertyValue - basePt.propertyValue,
+    loanBalance:   withNewFixed[i].loanBalance   - basePt.loanBalance,
+  }))
+
+  return { baseline, withNew: withNewFixed, delta }
+}
+
+// Exported so PropertySimulator can use it without importing the private one
+export function monthsBetweenPublic(dateA, dateB) {
+  return (dateB.getFullYear() - dateA.getFullYear()) * 12 + (dateB.getMonth() - dateA.getMonth())
+}
+
 // ─── Formatting ───────────────────────────────────────────────────────────────
 
 /** Format a number as EUR currency string (Belgian locale) */

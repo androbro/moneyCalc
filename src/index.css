@@ -12,6 +12,35 @@
   }
 }
 
+/* ─── Custom scrollbars ───────────────────────────────────────────────────── */
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #334155 transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: #334155;
+  border-radius: 999px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background-color: #475569;
+}
+
+*::-webkit-scrollbar-corner {
+  background: transparent;
+}
+
 @layer components {
   .card {
     @apply bg-slate-800 border border-slate-700 rounded-2xl p-5 shadow-lg;

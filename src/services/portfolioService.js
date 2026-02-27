@@ -360,6 +360,102 @@ export async function deletePlannedInvestment(id) {
   return getPortfolio()
 }
 
+// ─── Household profile ────────────────────────────────────────────────────────
+
+/**
+ * Shape of the household profile object used in JS (camelCase).
+ * All income/expense values are monthly EUR unless noted otherwise.
+ *
+ * {
+ *   myNetIncome               – your net monthly salary
+ *   myInvestmentIncome        – net monthly income from stocks / trading
+ *   partnerNetIncome          – partner's net monthly salary
+ *   partnerCash               – partner's lump-sum cash available now (one-off)
+ *   householdExpenses         – joint monthly living costs
+ *   personalSavingsRate       – fraction (0–1) of total income kept as savings
+ *   targetDownPayment         – cash target for the next property down-payment
+ *   targetPurchaseYear        – calendar year you aim to buy the next property
+ *   newResidencePrice         – agreed purchase price of new primary home
+ *   newResidenceLoanAmount    – loan share you + partner will take
+ *   newResidenceMonthlyPayment – estimated monthly repayment
+ *   newResidencePurchaseDate  – planned settlement date (ISO string)
+ * }
+ */
+
+const PROFILE_ID = 'default'
+
+function dbToHousehold(row) {
+  return {
+    myNetIncome:                Number(row.my_net_income ?? 0),
+    myInvestmentIncome:         Number(row.my_investment_income ?? 0),
+    partnerNetIncome:           Number(row.partner_net_income ?? 0),
+    partnerCash:                Number(row.partner_cash ?? 0),
+    householdExpenses:          Number(row.household_expenses ?? 0),
+    personalSavingsRate:        Number(row.personal_savings_rate ?? 0.10),
+    targetDownPayment:          Number(row.target_down_payment ?? 0),
+    targetPurchaseYear:         row.target_purchase_year ?? null,
+    newResidencePrice:          Number(row.new_residence_price ?? 0),
+    newResidenceLoanAmount:     Number(row.new_residence_loan_amount ?? 0),
+    newResidenceMonthlyPayment: Number(row.new_residence_monthly_payment ?? 0),
+    newResidencePurchaseDate:   row.new_residence_purchase_date ?? '',
+  }
+}
+
+function householdToDb(h) {
+  return {
+    id:                           PROFILE_ID,
+    my_net_income:                h.myNetIncome ?? 0,
+    my_investment_income:         h.myInvestmentIncome ?? 0,
+    partner_net_income:           h.partnerNetIncome ?? 0,
+    partner_cash:                 h.partnerCash ?? 0,
+    household_expenses:           h.householdExpenses ?? 0,
+    personal_savings_rate:        h.personalSavingsRate ?? 0.10,
+    target_down_payment:          h.targetDownPayment ?? 0,
+    target_purchase_year:         h.targetPurchaseYear ?? null,
+    new_residence_price:          h.newResidencePrice ?? 0,
+    new_residence_loan_amount:    h.newResidenceLoanAmount ?? 0,
+    new_residence_monthly_payment: h.newResidenceMonthlyPayment ?? 0,
+    new_residence_purchase_date:  h.newResidencePurchaseDate || null,
+  }
+}
+
+export function defaultHousehold() {
+  return {
+    myNetIncome: 0,
+    myInvestmentIncome: 0,
+    partnerNetIncome: 0,
+    partnerCash: 0,
+    householdExpenses: 0,
+    personalSavingsRate: 0.10,
+    targetDownPayment: 0,
+    targetPurchaseYear: null,
+    newResidencePrice: 0,
+    newResidenceLoanAmount: 0,
+    newResidenceMonthlyPayment: 0,
+    newResidencePurchaseDate: '',
+  }
+}
+
+/** Fetch the single household profile row (creates default if missing). */
+export async function getHouseholdProfile() {
+  const { data, error } = await supabase
+    .from('household_profile')
+    .select('*')
+    .eq('id', PROFILE_ID)
+    .maybeSingle()
+  check(error, 'getHouseholdProfile')
+  return data ? dbToHousehold(data) : defaultHousehold()
+}
+
+/** Upsert the household profile (always writes to the single 'default' row). */
+export async function saveHouseholdProfile(profile) {
+  const { error } = await supabase
+    .from('household_profile')
+    .upsert(householdToDb(profile), { onConflict: 'id' })
+  check(error, 'saveHouseholdProfile')
+  return getHouseholdProfile()
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function defaultMeta() {

@@ -5,6 +5,10 @@ import ProjectionChart from './components/ProjectionChart'
 import PropertyForm from './components/PropertyForm'
 import PlannedInvestmentForm from './components/PlannedInvestmentForm'
 import ScenarioPlanner from './components/ScenarioPlanner'
+import HouseholdForm from './components/HouseholdForm'
+import CashFlowAggregator from './components/CashFlowAggregator'
+import PropertySimulator from './components/PropertySimulator'
+import AiInsights from './components/AiInsights'
 import {
   getPortfolio,
   addProperty,
@@ -13,6 +17,9 @@ import {
   addPlannedInvestment,
   updatePlannedInvestment,
   deletePlannedInvestment,
+  getHouseholdProfile,
+  saveHouseholdProfile,
+  defaultHousehold,
 } from './services/portfolioService'
 
 // ─── Loading screen ───────────────────────────────────────────────────────────
@@ -87,13 +94,21 @@ export default function App() {
   const [editingInvestment, setEditingInvestment] = useState(null)
   const [showInvestmentForm, setShowInvestmentForm] = useState(false)
 
-  // ── Load portfolio from Supabase ──
+  // ── Phase 8: household profile ──
+  const [householdProfile, setHouseholdProfile]     = useState(defaultHousehold())
+  const [showHouseholdForm, setShowHouseholdForm]   = useState(false)
+
+  // ── Load portfolio + household profile from Supabase ──
   const load = useCallback(async () => {
     setLoading(true)
     setFatalError(null)
     try {
-      const portfolio = await getPortfolio()
+      const [portfolio, profile] = await Promise.all([
+        getPortfolio(),
+        getHouseholdProfile(),
+      ])
       setProperties(portfolio.properties)
+      setHouseholdProfile(profile)
     } catch (err) {
       setFatalError(err.message)
     } finally {
@@ -192,6 +207,21 @@ export default function App() {
   const handleCancelInvestmentForm = () => {
     setShowInvestmentForm(false)
     setEditingInvestment(null)
+  }
+
+  // ── Household profile handlers ──
+  const handleSaveHousehold = async (profile) => {
+    setSaving(true)
+    try {
+      const saved = await saveHouseholdProfile(profile)
+      setHouseholdProfile(saved)
+      setToast({ message: 'Household profile saved', type: 'success' })
+      setShowHouseholdForm(false)
+    } catch (err) {
+      setToast({ message: err.message, type: 'error' })
+    } finally {
+      setSaving(false)
+    }
   }
 
   // ── Render guards ──
@@ -302,6 +332,71 @@ export default function App() {
         {/* ── Scenarios ── */}
         {activeTab === 'scenario' && (
           <ScenarioPlanner properties={properties} />
+        )}
+
+        {/* ── Cash-Flow Aggregator ── */}
+        {activeTab === 'cashflow' && !showHouseholdForm && (
+          <CashFlowAggregator
+            properties={properties}
+            profile={householdProfile}
+            onEditProfile={() => setShowHouseholdForm(true)}
+          />
+        )}
+
+        {/* ── Household Form ── */}
+        {activeTab === 'cashflow' && showHouseholdForm && (
+          <div className="relative">
+            {saving && (
+              <div className="absolute inset-0 z-10 bg-slate-900/60 rounded-2xl flex items-center justify-center">
+                <div className="w-8 h-8 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
+              </div>
+            )}
+            <div className="flex items-center gap-3 mb-4">
+              <button
+                onClick={() => setShowHouseholdForm(false)}
+                className="text-slate-400 hover:text-slate-100 transition-colors"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+              </button>
+              <span className="text-slate-400 text-sm">Back to Cash-Flow Aggregator</span>
+            </div>
+            <HouseholdForm
+              profile={householdProfile}
+              onSave={handleSaveHousehold}
+              saving={saving}
+            />
+          </div>
+        )}
+
+        {/* ── Household Profile (standalone nav item) ── */}
+        {activeTab === 'household' && (
+          <div className="relative">
+            {saving && (
+              <div className="absolute inset-0 z-10 bg-slate-900/60 rounded-2xl flex items-center justify-center">
+                <div className="w-8 h-8 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
+              </div>
+            )}
+            <HouseholdForm
+              profile={householdProfile}
+              onSave={handleSaveHousehold}
+              saving={saving}
+            />
+          </div>
+        )}
+
+        {/* ── Property Simulator ── */}
+        {activeTab === 'simulator' && (
+          <PropertySimulator properties={properties} />
+        )}
+
+        {/* ── AI Insights ── */}
+        {activeTab === 'ai' && (
+          <AiInsights
+            properties={properties}
+            profile={householdProfile}
+          />
         )}
 
       </Layout>
