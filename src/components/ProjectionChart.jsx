@@ -229,6 +229,22 @@ const INFO = {
       Negative early on is normal — as rent is indexed upward and loans are repaid, cash flow typically turns positive.
     </>
   ),
+  equityGain: (
+    <>
+      <strong className="text-white block mb-1">Equity Gain</strong>
+      How much your net worth increased in this specific year — the combined effect of property appreciation and loan principal repaid.
+      <br /><br />
+      <code className="text-brand-300">Net Worth(year) − Net Worth(year − 1)</code>
+    </>
+  ),
+  annualCosts: (
+    <>
+      <strong className="text-white block mb-1">Annual Costs</strong>
+      Total cash out for this year: loan payments, maintenance, insurance, property tax, and any other expenses.
+      <br /><br />
+      This is what owning the property costs you in cash — shown as a negative bar so you can compare it against your equity gain.
+    </>
+  ),
   totalReturn: (
     <>
       <strong className="text-white block mb-1">Total Return</strong>
@@ -470,6 +486,76 @@ function ChartLegend({ items }) {
   )
 }
 
+// ─── Chart 2a: Cash flow (rented / mixed) ────────────────────────────────────
+
+function CashFlowChart({ data }) {
+  return (
+    <div className="card">
+      <div className="flex flex-wrap items-start justify-between gap-3 mb-5">
+        <div>
+          <h2 className="font-semibold text-slate-100">Net Cash Flow per Year</h2>
+          <p className="text-xs text-slate-400 mt-0.5">Indexed rent minus indexed costs and loan payments</p>
+        </div>
+        <ChartLegend items={[
+          { label: 'Annual CF',     color: '#0ea5e9', info: INFO.annualCF },
+          { label: 'Cumulative CF', color: '#a78bfa', info: INFO.cumulativeCF },
+        ]} />
+      </div>
+
+      <ResponsiveContainer width="100%" height={300}>
+        <ComposedChart data={data} margin={{ top: 10, right: 8, left: 0, bottom: 0 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+          <XAxis dataKey="label" tick={{ fill: '#94a3b8', fontSize: 11 }} axisLine={{ stroke: '#1e293b' }} tickLine={false} />
+          <YAxis yAxisId="left"  tickFormatter={formatYAxis} tick={{ fill: '#94a3b8', fontSize: 10 }} axisLine={false} tickLine={false} width={68} />
+          <YAxis yAxisId="right" tickFormatter={formatYAxis} tick={{ fill: '#94a3b8', fontSize: 10 }} axisLine={false} tickLine={false} width={68} orientation="right" />
+          <Tooltip content={<CustomTooltip />} />
+          <ReferenceLine yAxisId="left" y={0} stroke="#475569" strokeDasharray="4 2" />
+          <Bar  yAxisId="left"  dataKey="annualCashFlow" name="Annual CF"    fill="#0ea5e9" radius={[4,4,0,0]} maxBarSize={32} />
+          <Line yAxisId="right" type="monotone" dataKey="cumulativeCF" name="Cumulative CF" stroke="#a78bfa" strokeWidth={2} dot={false} activeDot={{ r: 4, fill: '#a78bfa' }} />
+        </ComposedChart>
+      </ResponsiveContainer>
+    </div>
+  )
+}
+
+// ─── Chart 2b: Equity growth (non-rented) ────────────────────────────────────
+
+function EquityGrowthChart({ data }) {
+  return (
+    <div className="card">
+      <div className="flex flex-wrap items-start justify-between gap-3 mb-5">
+        <div>
+          <h2 className="font-semibold text-slate-100">Equity Growth per Year</h2>
+          <p className="text-xs text-slate-400 mt-0.5">
+            Annual equity gain (appreciation + loan paydown) and total annual costs to own
+          </p>
+        </div>
+        <ChartLegend items={[
+          { label: 'Equity Gain',   color: '#10b981', info: INFO.equityGain },
+          { label: 'Annual Costs',  color: '#f87171', info: INFO.annualCosts },
+          { label: 'Net Worth',     color: '#38bdf8', info: INFO.netWorth },
+        ]} />
+      </div>
+
+      <ResponsiveContainer width="100%" height={300}>
+        <ComposedChart data={data.slice(1)} margin={{ top: 10, right: 8, left: 0, bottom: 0 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+          <XAxis dataKey="label" tick={{ fill: '#94a3b8', fontSize: 11 }} axisLine={{ stroke: '#1e293b' }} tickLine={false} />
+          <YAxis yAxisId="left"  tickFormatter={formatYAxis} tick={{ fill: '#94a3b8', fontSize: 10 }} axisLine={false} tickLine={false} width={68} />
+          <YAxis yAxisId="right" tickFormatter={formatYAxis} tick={{ fill: '#94a3b8', fontSize: 10 }} axisLine={false} tickLine={false} width={68} orientation="right" />
+          <Tooltip content={<CustomTooltip />} />
+          <ReferenceLine yAxisId="left" y={0} stroke="#475569" strokeDasharray="4 2" />
+          {/* Stacked bars: equity gain (positive) vs costs (negative) */}
+          <Bar yAxisId="left" dataKey="equityGain"  name="Equity Gain"  fill="#10b981" radius={[4,4,0,0]} maxBarSize={32} />
+          <Bar yAxisId="left" dataKey={(d) => -d.annualCosts} name="Annual Costs" fill="#f87171" radius={[4,4,0,0]} maxBarSize={32} />
+          {/* Net worth on right axis */}
+          <Line yAxisId="right" type="monotone" dataKey="netWorth" name="Net Worth" stroke="#38bdf8" strokeWidth={2} dot={false} activeDot={{ r: 4, fill: '#38bdf8' }} />
+        </ComposedChart>
+      </ResponsiveContainer>
+    </div>
+  )
+}
+
 // ─── Empty state ──────────────────────────────────────────────────────────────
 
 function EmptyState() {
@@ -587,32 +673,13 @@ export default function ProjectionChart({ properties }) {
         <SummaryStrip data={data} />
       </div>
 
-      {/* ── Chart 2: Cash Flow ── */}
-      <div className="card">
-        <div className="flex flex-wrap items-start justify-between gap-3 mb-5">
-          <div>
-            <h2 className="font-semibold text-slate-100">Net Cash Flow per Year</h2>
-            <p className="text-xs text-slate-400 mt-0.5">Indexed rent minus indexed costs and loan payments</p>
-          </div>
-          <ChartLegend items={[
-            { label: 'Annual CF',    color: '#0ea5e9', info: INFO.annualCF },
-            { label: 'Cumulative CF', color: '#a78bfa', info: INFO.cumulativeCF },
-          ]} />
-        </div>
+      {/* ── Chart 2: Cash Flow (only when portfolio has rented properties) ── */}
+      {properties.some((p) => p.isRented !== false) && (
+        <CashFlowChart data={data} />
+      )}
 
-        <ResponsiveContainer width="100%" height={300}>
-          <ComposedChart data={data} margin={{ top: 10, right: 8, left: 0, bottom: 0 }}>
-            <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
-            <XAxis dataKey="label" tick={{ fill: '#94a3b8', fontSize: 11 }} axisLine={{ stroke: '#1e293b' }} tickLine={false} />
-            <YAxis yAxisId="left"  tickFormatter={formatYAxis} tick={{ fill: '#94a3b8', fontSize: 10 }} axisLine={false} tickLine={false} width={68} />
-            <YAxis yAxisId="right" tickFormatter={formatYAxis} tick={{ fill: '#94a3b8', fontSize: 10 }} axisLine={false} tickLine={false} width={68} orientation="right" />
-            <Tooltip content={<CustomTooltip />} />
-            <ReferenceLine yAxisId="left" y={0} stroke="#475569" strokeDasharray="4 2" />
-            <Bar    yAxisId="left"  dataKey="annualCashFlow" name="Annual CF"    fill="#0ea5e9" radius={[4,4,0,0]} maxBarSize={32} />
-            <Line   yAxisId="right" type="monotone" dataKey="cumulativeCF" name="Cumulative CF" stroke="#a78bfa" strokeWidth={2} dot={false} activeDot={{ r: 4, fill: '#a78bfa' }} />
-          </ComposedChart>
-        </ResponsiveContainer>
-      </div>
+      {/* ── Chart 3: Equity Growth (always shown) ── */}
+      <EquityGrowthChart data={data} />
 
       {/* ── Tables ── */}
       <PropertyBreakdown properties={properties} />

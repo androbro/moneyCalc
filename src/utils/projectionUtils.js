@@ -170,7 +170,9 @@ export function buildProjection(properties) {
     const annualCashFlow = Math.round(totalAnnualIncome - totalAnnualCosts - plannedInvestCost)
     cumulativeCF += annualCashFlow
 
-    const netWorth = Math.round(totalPropertyValue - totalLoanBalance)
+    const netWorth    = Math.round(totalPropertyValue - totalLoanBalance)
+    const prevNetWorth = points.length > 0 ? points[points.length - 1].netWorth : netWorth
+    const equityGain  = year === 0 ? 0 : netWorth - prevNetWorth
 
     points.push({
       year,
@@ -178,7 +180,9 @@ export function buildProjection(properties) {
       propertyValue:       Math.round(totalPropertyValue),
       loanBalance:         Math.round(totalLoanBalance),
       netWorth,
+      equityGain,                               // year-on-year equity increase
       annualCashFlow,
+      annualCosts:         Math.round(totalAnnualCosts + plannedInvestCost),
       cumulativeCF:        Math.round(cumulativeCF),
       plannedInvestCost:   Math.round(plannedInvestCost),
       // Total return: equity position + all cash collected/spent so far
