@@ -16,6 +16,10 @@
 
 import { useMemo, useState } from 'react'
 import { buildProjection, computeSummary, getRemainingBalance } from '../utils/projectionUtils'
+import {
+  AreaChart, Area, XAxis, YAxis, CartesianGrid,
+  Tooltip, Legend, ResponsiveContainer,
+} from 'recharts'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -162,6 +166,311 @@ function YearTable({ projection, householdAnnualSurplus }) {
           {showAll ? 'Show fewer years ↑' : `Show all ${projection.length} years ↓`}
         </button>
       )}
+    </div>
+  )
+}
+
+// ─── Palette for investment position series ───────────────────────────────────
+
+const POSITION_COLORS = [
+  '#0ea5e9', // sky-500
+  '#10b981', // emerald-500
+  '#f59e0b', // amber-500
+  '#a78bfa', // violet-400
+  '#f43f5e', // rose-500
+  '#34d399', // emerald-400
+  '#60a5fa', // blue-400
+  '#fb923c', // orange-400
+]
+
+// ─── Investment projection math ───────────────────────────────────────────────
+
+/**
+ * Build a 21-year (year 0 → 20) compound growth projection for a set of
+ * investment positions. Each position contributes monthly, compounding at
+ * its own annualReturn rate.
+ *
+ * Formula per year Y, position P:
+ *   FV = monthlyAmount * [((1+r)^Y - 1) / r]   where r = annualReturn/12
+ *   (future value of a regular monthly annuity, beginning-of-period)
+ *
+ * @param {Array} positions — [{ id, name, monthlyAmount, annualReturn }]
+ * @param {number} years    — horizon (default 20)
+ * @returns Array of { year, label, total, ...positionId: value }
+ */
+function buildInvestmentProjection(positions, years = 20) {
+  const active = (positions || []).filter((p) => p.monthlyAmount > 0)
+  const result = []
+
+  for (let y = 0; y <= years; y++) {
+    const pt = { year: y, label: y === 0 ? 'Today' : `+${y}y`, total: 0 }
+    for (const pos of active) {
+      const r = (pos.annualReturn || 0) / 12
+      let fv
+      if (r === 0) {
+        fv = (pos.monthlyAmount || 0) * y * 12
+      } else {
+        // FV of ordinary annuity × 12 months/yr × y years
+        const n = y * 12
+        fv = (pos.monthlyAmount || 0) * ((Math.pow(1 + r, n) - 1) / r)
+      }
+      pt[pos.id] = Math.round(fv)
+      pt.total += Math.round(fv)
+    }
+    result.push(pt)
+  }
+  return { data: result, active }
+}
+
+// ─── Investment chart tooltip ─────────────────────────────────────────────────
+
+function InvTooltip({ active, payload, label }) {
+  if (!active || !payload?.length) return null
+  const total = payload.reduce((s, p) => s + (p.value || 0), 0)
+  return (
+    <div className="bg-slate-800 border border-slate-600 rounded-xl p-3 shadow-xl text-xs min-w-[200px]">
+      <p className="font-semibold text-white mb-2 text-sm">{label}</p>
+      {[...payload].reverse().map((entry) => (
+        <div key={entry.dataKey} className="flex items-center justify-between gap-4 mb-1">
+          <span className="flex items-center gap-1.5 font-medium" style={{ color: entry.color }}>
+            <span className="w-2 h-2 rounded-full inline-block" style={{ background: entry.color }} />
+            {entry.name}
+          </span>
+          <span className="text-white font-semibold">{fmt(entry.value)}</span>
+        </div>
+      ))}
+      <div className="flex justify-between border-t border-slate-600 pt-1.5 mt-1.5 font-semibold">
+        <span className="text-slate-300">Total</span>
+        <span className="text-brand-300">{fmt(total)}</span>
+      </div>
+    </div>
+  )
+}
+
+// ─── kFmt for axis ────────────────────────────────────────────────────────────
+
+function kFmt(v) {
+  if (Math.abs(v) >= 1_000_000) return `€${(v / 1_000_000).toFixed(1)}M`
+  if (Math.abs(v) >= 1_000) return `€${(v / 1_000).toFixed(0)}k`
+  return `€${v}`
+}
+
+// ─── Investment section ───────────────────────────────────────────────────────
+
+function InvestmentSection({ members }) {
+  // Collect all positions across all members, tagging each with the member name
+  const allPositions = useMemo(() => {
+    const out = []
+    for (const m of members) {
+      for (const pos of (m.investmentPositions || [])) {
+        if ((pos.monthlyAmount || 0) > 0) {
+          out.push({
+            ...pos,
+            memberName: m.name || 'Member',
+            displayName: pos.name
+              ? `${pos.name}${members.length > 1 ? ` (${m.name})` : ''}`
+              : `Position (${m.name || 'Member'})`,
+          })
+        }
+      }
+    }
+    return out
+  }, [members])
+
+  const { data: chartData, active } = useMemo(
+    () => buildInvestmentProjection(allPositions),
+    [allPositions]
+  )
+
+  const [showTable, setShowTable] = useState(false)
+
+  if (allPositions.length === 0) {
+    return (
+      <div className="card text-center py-10">
+        <p className="text-slate-400 text-sm font-medium">No investment positions configured.</p>
+        <p className="text-slate-500 text-xs mt-1">
+          Add positions in the Household Profile → member cards to see your portfolio grow here.
+        </p>
+      </div>
+    )
+  }
+
+  const final = chartData[chartData.length - 1]
+  const totalMonthly = allPositions.reduce((s, p) => s + (p.monthlyAmount || 0), 0)
+  const totalContributed = totalMonthly * 12 * 20
+  const totalGrowth = final.total - totalContributed
+
+  return (
+    <div className="space-y-4">
+      {/* KPI strip */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="card text-center space-y-0.5">
+          <p className="text-xs text-slate-400">Monthly Invested</p>
+          <p className="text-xl font-bold text-emerald-400">{fmt(totalMonthly)}</p>
+          <p className="text-xs text-slate-500">{fmt(totalMonthly * 12)}/yr</p>
+        </div>
+        <div className="card text-center space-y-0.5">
+          <p className="text-xs text-slate-400">Positions</p>
+          <p className="text-xl font-bold text-white">{allPositions.length}</p>
+          <p className="text-xs text-slate-500">active</p>
+        </div>
+        <div className="card text-center space-y-0.5">
+          <p className="text-xs text-slate-400">+20y Portfolio Value</p>
+          <p className="text-xl font-bold text-brand-400">{kFmt(final.total)}</p>
+          <p className="text-xs text-slate-500">projected</p>
+        </div>
+        <div className="card text-center space-y-0.5">
+          <p className="text-xs text-slate-400">+20y Investment Gain</p>
+          <p className={`text-xl font-bold ${totalGrowth >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+            {kFmt(totalGrowth)}
+          </p>
+          <p className="text-xs text-slate-500">vs {kFmt(totalContributed)} contributed</p>
+        </div>
+      </div>
+
+      {/* Positions summary table */}
+      <div className="card overflow-x-auto">
+        <table className="w-full text-xs">
+          <thead>
+            <tr className="border-b border-slate-700 text-slate-400">
+              <th className="text-left py-2 pr-3 font-medium">Position</th>
+              <th className="text-right py-2 pr-3 font-medium">Monthly</th>
+              <th className="text-right py-2 pr-3 font-medium">Annual</th>
+              <th className="text-right py-2 pr-3 font-medium">Return %</th>
+              <th className="text-right py-2 font-medium">+20y Value</th>
+            </tr>
+          </thead>
+          <tbody>
+            {allPositions.map((pos, i) => (
+              <tr key={pos.id} className="border-b border-slate-700/40 last:border-0">
+                <td className="py-2 pr-3">
+                  <span className="flex items-center gap-2">
+                    <span
+                      className="w-2.5 h-2.5 rounded-full shrink-0"
+                      style={{ background: POSITION_COLORS[i % POSITION_COLORS.length] }}
+                    />
+                    <span className="text-slate-200 font-medium">{pos.displayName}</span>
+                  </span>
+                </td>
+                <td className="py-2 pr-3 text-right text-emerald-400 tabular-nums">{fmt(pos.monthlyAmount)}</td>
+                <td className="py-2 pr-3 text-right text-slate-300 tabular-nums">{fmt(pos.monthlyAmount * 12)}</td>
+                <td className="py-2 pr-3 text-right text-amber-400 tabular-nums">
+                  {((pos.annualReturn || 0) * 100).toFixed(1)}%
+                </td>
+                <td className="py-2 text-right font-semibold text-brand-400 tabular-nums">
+                  {kFmt(final[pos.id] || 0)}
+                </td>
+              </tr>
+            ))}
+            {/* Totals row */}
+            <tr className="border-t-2 border-slate-500 font-semibold">
+              <td className="py-2 pr-3 text-white">Total</td>
+              <td className="py-2 pr-3 text-right text-emerald-400 tabular-nums">{fmt(totalMonthly)}</td>
+              <td className="py-2 pr-3 text-right text-slate-300 tabular-nums">{fmt(totalMonthly * 12)}</td>
+              <td className="py-2 pr-3" />
+              <td className="py-2 text-right text-brand-300 tabular-nums">{kFmt(final.total)}</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      {/* Stacked area chart */}
+      <div className="card">
+        <h3 className="text-sm font-semibold text-white mb-1">Portfolio Value Over Time</h3>
+        <p className="text-xs text-slate-500 mb-4">
+          Compound growth of each position assuming constant monthly contributions and fixed annual return.
+          Assumes dividends reinvested. Tax on gains not modelled.
+        </p>
+        <ResponsiveContainer width="100%" height={300}>
+          <AreaChart data={chartData} margin={{ top: 4, right: 4, left: 0, bottom: 0 }}>
+            <defs>
+              {active.map((pos, i) => (
+                <linearGradient key={pos.id} id={`grad-${pos.id}`} x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="5%" stopColor={POSITION_COLORS[i % POSITION_COLORS.length]} stopOpacity={0.4} />
+                  <stop offset="95%" stopColor={POSITION_COLORS[i % POSITION_COLORS.length]} stopOpacity={0.05} />
+                </linearGradient>
+              ))}
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+            <XAxis dataKey="label" tick={{ fill: '#94a3b8', fontSize: 11 }} />
+            <YAxis tickFormatter={kFmt} tick={{ fill: '#94a3b8', fontSize: 11 }} width={60} />
+            <Tooltip content={<InvTooltip />} />
+            <Legend
+              wrapperStyle={{ fontSize: 11, color: '#94a3b8' }}
+              formatter={(value) => <span style={{ color: '#cbd5e1' }}>{value}</span>}
+            />
+            {active.map((pos, i) => (
+              <Area
+                key={pos.id}
+                type="monotone"
+                dataKey={pos.id}
+                name={pos.displayName}
+                stackId="1"
+                stroke={POSITION_COLORS[i % POSITION_COLORS.length]}
+                fill={`url(#grad-${pos.id})`}
+                strokeWidth={1.5}
+              />
+            ))}
+          </AreaChart>
+        </ResponsiveContainer>
+      </div>
+
+      {/* Year-by-year table toggle */}
+      <div className="card overflow-hidden p-0">
+        <button
+          onClick={() => setShowTable((s) => !s)}
+          className="w-full flex items-center justify-between px-4 py-3 text-sm text-slate-300
+                     hover:text-white hover:bg-slate-800/40 transition-colors"
+        >
+          <span className="font-medium">Year-by-Year Breakdown</span>
+          <span className="text-slate-500 text-xs">{showTable ? '↑ hide' : '↓ show'}</span>
+        </button>
+
+        {showTable && (
+          <div className="overflow-x-auto border-t border-slate-700">
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="border-b border-slate-700 bg-slate-800/60 text-slate-400">
+                  <th className="text-left px-4 py-2.5 font-medium whitespace-nowrap">Year</th>
+                  {active.map((pos, i) => (
+                    <th key={pos.id} className="text-right px-3 py-2.5 font-medium whitespace-nowrap">
+                      <span className="flex items-center justify-end gap-1.5">
+                        <span
+                          className="w-2 h-2 rounded-full"
+                          style={{ background: POSITION_COLORS[i % POSITION_COLORS.length] }}
+                        />
+                        {pos.displayName}
+                      </span>
+                    </th>
+                  ))}
+                  <th className="text-right px-3 py-2.5 font-medium text-brand-400/80 whitespace-nowrap">Total</th>
+                </tr>
+              </thead>
+              <tbody>
+                {chartData.map((pt, i) => (
+                  <tr
+                    key={pt.year}
+                    className={`border-b border-slate-700/40 last:border-0 hover:bg-slate-700/20
+                      ${pt.year === 0 ? 'bg-brand-600/10' : i % 2 === 0 ? '' : 'bg-slate-800/20'}`}
+                  >
+                    <td className="px-4 py-2 font-semibold text-white whitespace-nowrap">
+                      {pt.year === 0 ? <span className="text-brand-300">Today</span> : pt.label}
+                    </td>
+                    {active.map((pos) => (
+                      <td key={pos.id} className="px-3 py-2 text-right tabular-nums text-slate-200 whitespace-nowrap">
+                        {kFmt(pt[pos.id] || 0)}
+                      </td>
+                    ))}
+                    <td className="px-3 py-2 text-right tabular-nums font-semibold text-brand-400 whitespace-nowrap">
+                      {kFmt(pt.total)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
     </div>
   )
 }
@@ -467,6 +776,15 @@ export default function MoneyFlow({ properties, profile }) {
         ) : (
           <YearTable projection={projection} householdAnnualSurplus={availableCash * 12} />
         )}
+      </div>
+
+      {/* ── Investment portfolio growth ── */}
+      <div>
+        <SectionHeader
+          title="Investment Portfolio Growth"
+          subtitle="Compound growth of your stock / ETF / savings positions over 20 years. Configure positions in the Household Profile."
+        />
+        <InvestmentSection members={members} />
       </div>
 
       {/* ── Legend ── */}

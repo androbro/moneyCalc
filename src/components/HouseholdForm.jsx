@@ -14,6 +14,9 @@
 import { useState } from 'react'
 import { v4 as uuidv4 } from 'uuid'
 
+// Default annual return rates by common position type (user can override)
+const DEFAULT_RETURN = 0.07   // 7% — broad market ETF baseline
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function num(v) {
@@ -86,10 +89,94 @@ function PctInput({ value, onChange }) {
   )
 }
 
+// ─── Investment position row ──────────────────────────────────────────────────
+
+function PositionRow({ pos, onChange, onRemove }) {
+  return (
+    <div className="grid grid-cols-[1fr_auto_auto_auto] gap-2 items-center">
+      {/* Name */}
+      <input
+        type="text"
+        value={pos.name}
+        onChange={(e) => onChange({ ...pos, name: e.target.value })}
+        placeholder="e.g. SPYI Global, Pension Fund…"
+        className="input text-sm"
+      />
+      {/* Monthly contribution */}
+      <div className="relative w-28">
+        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs">€</span>
+        <input
+          type="number"
+          min="0"
+          step="1"
+          value={pos.monthlyAmount === 0 ? '' : pos.monthlyAmount}
+          onChange={(e) => onChange({ ...pos, monthlyAmount: num(e.target.value) })}
+          placeholder="0"
+          className="input pl-6 pr-2 text-sm w-full"
+          title="Monthly contribution"
+        />
+      </div>
+      {/* Expected annual return */}
+      <div className="relative w-20">
+        <input
+          type="number"
+          min="0"
+          max="100"
+          step="0.5"
+          value={pos.annualReturn === 0 ? '' : +(pos.annualReturn * 100).toFixed(1)}
+          onChange={(e) => {
+            const n = parseFloat(e.target.value)
+            onChange({ ...pos, annualReturn: isNaN(n) ? 0 : n / 100 })
+          }}
+          placeholder="7"
+          className="input pr-6 text-sm w-full"
+          title="Expected annual return %"
+        />
+        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 text-xs">%</span>
+      </div>
+      {/* Remove */}
+      <button
+        type="button"
+        onClick={onRemove}
+        className="text-slate-500 hover:text-red-400 transition-colors shrink-0"
+        title="Remove position"
+      >
+        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+        </svg>
+      </button>
+    </div>
+  )
+}
+
 // ─── Member card ──────────────────────────────────────────────────────────────
 
 function MemberCard({ member, onChange, onRemove, canRemove }) {
   const set = (key) => (value) => onChange({ ...member, [key]: value })
+  const positions = member.investmentPositions || []
+
+  const addPosition = () => {
+    onChange({
+      ...member,
+      investmentPositions: [
+        ...positions,
+        { id: uuidv4(), name: '', monthlyAmount: 0, annualReturn: DEFAULT_RETURN },
+      ],
+    })
+  }
+
+  const updatePosition = (id, updated) => {
+    onChange({
+      ...member,
+      investmentPositions: positions.map((p) => (p.id === id ? updated : p)),
+    })
+  }
+
+  const removePosition = (id) => {
+    onChange({ ...member, investmentPositions: positions.filter((p) => p.id !== id) })
+  }
+
+  const totalMonthlyInvested = positions.reduce((s, p) => s + (p.monthlyAmount || 0), 0)
 
   return (
     <div className="bg-slate-900/60 border border-slate-700 rounded-xl p-4 space-y-4">
@@ -126,7 +213,7 @@ function MemberCard({ member, onChange, onRemove, canRemove }) {
         <Field label="Net Monthly Salary" hint="After tax">
           <MoneyInput value={member.netIncome} onChange={set('netIncome')} />
         </Field>
-        <Field label="Investment Income" hint="Monthly avg (stocks, dividends…)">
+        <Field label="Investment Income" hint="Monthly dividends / realised gains (optional)">
           <MoneyInput value={member.investmentIncome} onChange={set('investmentIncome')} />
         </Field>
         <Field label="Available Cash" hint="Lump-sum savings on hand">
@@ -134,8 +221,51 @@ function MemberCard({ member, onChange, onRemove, canRemove }) {
         </Field>
       </div>
 
+      {/* ── Investment positions ── */}
+      <div className="space-y-2 pt-1 border-t border-slate-700/50">
+        <div className="flex items-center justify-between">
+          <p className="text-xs font-medium text-slate-400">Investment Positions</p>
+          {totalMonthlyInvested > 0 && (
+            <span className="text-xs text-emerald-400 font-semibold">
+              €{totalMonthlyInvested.toLocaleString('nl-BE')}/mo total
+            </span>
+          )}
+        </div>
+
+        {positions.length > 0 && (
+          <div className="space-y-1.5">
+            {/* Column headers */}
+            <div className="grid grid-cols-[1fr_auto_auto_auto] gap-2 text-xs text-slate-500 px-0.5">
+              <span>Name / ticker</span>
+              <span className="w-28 text-center">Monthly (€)</span>
+              <span className="w-20 text-center">Return %</span>
+              <span className="w-4" />
+            </div>
+            {positions.map((pos) => (
+              <PositionRow
+                key={pos.id}
+                pos={pos}
+                onChange={(updated) => updatePosition(pos.id, updated)}
+                onRemove={() => removePosition(pos.id)}
+              />
+            ))}
+          </div>
+        )}
+
+        <button
+          type="button"
+          onClick={addPosition}
+          className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-brand-400 transition-colors py-1"
+        >
+          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+          </svg>
+          Add position
+        </button>
+      </div>
+
       {/* Inline totals */}
-      <div className="flex gap-4 text-xs text-slate-500 pt-1 border-t border-slate-700/50">
+      <div className="flex flex-wrap gap-4 text-xs text-slate-500 pt-1 border-t border-slate-700/50">
         <span>
           Monthly income:{' '}
           <span className="text-emerald-400 font-semibold">
@@ -148,6 +278,14 @@ function MemberCard({ member, onChange, onRemove, canRemove }) {
             €{(member.cash || 0).toLocaleString('nl-BE')}
           </span>
         </span>
+        {totalMonthlyInvested > 0 && (
+          <span>
+            Investing:{' '}
+            <span className="text-amber-400 font-semibold">
+              €{totalMonthlyInvested.toLocaleString('nl-BE')}/mo
+            </span>
+          </span>
+        )}
       </div>
     </div>
   )

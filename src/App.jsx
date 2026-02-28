@@ -10,6 +10,22 @@ import CashFlowAggregator from './components/CashFlowAggregator'
 import PropertySimulator from './components/PropertySimulator'
 import MoneyFlow from './components/MoneyFlow'
 import AiChatOverlay from './components/AiChatOverlay'
+import AuthOverlay from './components/AuthOverlay'
+import { isOwner, login, logout } from './lib/auth'
+import {
+  seedGuestStorage, isGuestSeeded,
+  getPortfolio      as guestGetPortfolio,
+  addProperty       as guestAddProperty,
+  updateProperty    as guestUpdateProperty,
+  deleteProperty    as guestDeleteProperty,
+  addPlannedInvestment    as guestAddPlannedInvestment,
+  updatePlannedInvestment as guestUpdatePlannedInvestment,
+  deletePlannedInvestment as guestDeletePlannedInvestment,
+  getHouseholdProfile  as guestGetHouseholdProfile,
+  saveHouseholdProfile as guestSaveHouseholdProfile,
+  getSimulatorProfile  as guestGetSimulatorProfile,
+  saveSimulatorProfile as guestSaveSimulatorProfile,
+} from './lib/guestStorage'
 import {
   getPortfolio,
   addProperty,
@@ -20,6 +36,8 @@ import {
   deletePlannedInvestment,
   getHouseholdProfile,
   saveHouseholdProfile,
+  getSimulatorProfile,
+  saveSimulatorProfile,
   defaultHousehold,
 } from './services/portfolioService'
 
@@ -102,14 +120,31 @@ export default function App() {
   // ── Phase 9: simulator state (lifted so AiChatOverlay can see it) ──
   const [simState, setSimState] = useState(null)
 
-  // ── Load portfolio + household profile from Supabase ──
+  // ── Auth ──
+  const [ownerAuthed, setOwnerAuthed]   = useState(() => isOwner())
+  const [showAuthOverlay, setShowAuthOverlay] = useState(false)
+
+  // Pick the right data-layer functions based on auth state
+  const db = ownerAuthed
+    ? { getPortfolio, addProperty, updateProperty, deleteProperty,
+        addPlannedInvestment, updatePlannedInvestment, deletePlannedInvestment,
+        getHouseholdProfile, saveHouseholdProfile }
+    : { getPortfolio: guestGetPortfolio, addProperty: guestAddProperty,
+        updateProperty: guestUpdateProperty, deleteProperty: guestDeleteProperty,
+        addPlannedInvestment: guestAddPlannedInvestment,
+        updatePlannedInvestment: guestUpdatePlannedInvestment,
+        deletePlannedInvestment: guestDeletePlannedInvestment,
+        getHouseholdProfile: guestGetHouseholdProfile,
+        saveHouseholdProfile: guestSaveHouseholdProfile }
+
+  // ── Load portfolio + household profile (from Supabase or guest localStorage) ──
   const load = useCallback(async () => {
     setLoading(true)
     setFatalError(null)
     try {
       const [portfolio, profile] = await Promise.all([
-        getPortfolio(),
-        getHouseholdProfile(),
+        db.getPortfolio(),
+        db.getHouseholdProfile(),
       ])
       setProperties(portfolio.properties)
       setHouseholdProfile(profile)
@@ -118,9 +153,60 @@ export default function App() {
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [ownerAuthed]) // eslint-disable-line react-hooks/exhaustive-deps
 
-  useEffect(() => { load() }, [load])
+  useEffect(() => {
+    // For guests: seed localStorage with a real Supabase snapshot on first visit
+    // (or after a reset). For owners: just load from Supabase directly.
+    if (!ownerAuthed && !isGuestSeeded()) {
+      // Fetch from Supabase once, seed guest storage, then load from it
+      Promise.all([getPortfolio(), getHouseholdProfile(), getSimulatorProfile()])
+        .then(([portfolio, household, simulator]) => {
+          seedGuestStorage(portfolio, household, simulator)
+          load()
+        })
+        .catch(() => load())  // if Supabase unreachable, load empty guest state
+    } else {
+      load()
+    }
+  }, [load]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // ── Auth handlers ──
+  const handleLogin = async (password) => {
+    const ok = await login(password)
+    if (ok) {
+      setOwnerAuthed(true)
+      // reload from Supabase now that we're owner
+      setToast({ message: 'Logged in as owner — data reloaded from Supabase', type: 'success' })
+    }
+    return ok
+  }
+
+  const handleLogout = () => {
+    logout()
+    setOwnerAuthed(false)
+    setShowAuthOverlay(false)
+    setToast({ message: 'Switched to guest mode', type: 'success' })
+  }
+
+  // ── Reset guest data to owner's Supabase snapshot ──
+  const handleReset = async () => {
+    try {
+      const [portfolio, household, simulator] = await Promise.all([
+        getPortfolio(), getHouseholdProfile(), getSimulatorProfile(),
+      ])
+      seedGuestStorage(portfolio, household, simulator)
+      // reload guest view
+      const [gPortfolio, gProfile] = await Promise.all([
+        guestGetPortfolio(), guestGetHouseholdProfile(),
+      ])
+      setProperties(gPortfolio.properties)
+      setHouseholdProfile(gProfile)
+      setToast({ message: 'Data reset to owner\'s snapshot', type: 'success' })
+    } catch (err) {
+      setToast({ message: `Reset failed: ${err.message}`, type: 'error' })
+    }
+  }
 
   // ── Shared save wrapper ──
   const withSave = async (fn, successMsg) => {
@@ -152,7 +238,7 @@ export default function App() {
   const handleDeleteProperty = async (propertyId) => {
     if (!window.confirm('Delete this property and all its loans?')) return
     await withSave(
-      () => deleteProperty(null, propertyId),
+      () => db.deleteProperty(null, propertyId),
       'Property deleted'
     )
   }
@@ -161,8 +247,8 @@ export default function App() {
     const isEdit = Boolean(editingProperty)
     await withSave(
       () => isEdit
-        ? updateProperty(null, property)
-        : addProperty(null, property),
+        ? db.updateProperty(null, property)
+        : db.addProperty(null, property),
       isEdit ? 'Property updated' : 'Property added'
     )
     setShowForm(false)
@@ -191,7 +277,7 @@ export default function App() {
   const handleDeleteInvestment = async (id) => {
     if (!window.confirm('Delete this planned investment?')) return
     await withSave(
-      () => deletePlannedInvestment(id),
+      () => db.deletePlannedInvestment(id),
       'Investment deleted'
     )
   }
@@ -200,8 +286,8 @@ export default function App() {
     const isEdit = Boolean(editingInvestment)
     await withSave(
       () => isEdit
-        ? updatePlannedInvestment(inv)
-        : addPlannedInvestment(inv),
+        ? db.updatePlannedInvestment(inv)
+        : db.addPlannedInvestment(inv),
       isEdit ? 'Investment updated' : 'Investment added'
     )
     setShowInvestmentForm(false)
@@ -217,7 +303,7 @@ export default function App() {
   const handleSaveHousehold = async (profile) => {
     setSaving(true)
     try {
-      const saved = await saveHouseholdProfile(profile)
+      const saved = await db.saveHouseholdProfile(profile)
       setHouseholdProfile(saved)
       setToast({ message: 'Household profile saved', type: 'success' })
       setShowHouseholdForm(false)
@@ -234,7 +320,12 @@ export default function App() {
 
   return (
     <>
-      <Layout activeTab={activeTab} onTabChange={setActiveTab}>
+      <Layout
+        activeTab={activeTab}
+        onTabChange={setActiveTab}
+        isOwner={ownerAuthed}
+        onOpenAuth={() => setShowAuthOverlay(true)}
+      >
 
         {/* ── Dashboard ── */}
         {activeTab === 'dashboard' && (
@@ -403,6 +494,8 @@ export default function App() {
           <PropertySimulator
             properties={properties}
             onSimChange={setSimState}
+            getSimulatorProfile={ownerAuthed ? getSimulatorProfile : guestGetSimulatorProfile}
+            saveSimulatorProfile={ownerAuthed ? saveSimulatorProfile : guestSaveSimulatorProfile}
           />
         )}
 
@@ -423,6 +516,17 @@ export default function App() {
         profile={householdProfile}
         activeTab={activeTab}
         simState={simState}
+        isOwner={ownerAuthed}
+      />
+
+      {/* Auth overlay */}
+      <AuthOverlay
+        open={showAuthOverlay}
+        onClose={() => setShowAuthOverlay(false)}
+        onLogin={handleLogin}
+        onLogout={handleLogout}
+        isOwner={ownerAuthed}
+        onReset={handleReset}
       />
     </>
   )

@@ -118,7 +118,7 @@ function CloseIcon() {
   )
 }
 
-export default function Layout({ activeTab, onTabChange, children }) {
+export default function Layout({ activeTab, onTabChange, children, isOwner, onOpenAuth }) {
   const [mobileOpen, setMobileOpen] = useState(false)
 
   const handleNav = (id) => {
@@ -130,7 +130,7 @@ export default function Layout({ activeTab, onTabChange, children }) {
     <div className="min-h-screen flex bg-slate-950">
       {/* ── Desktop sidebar ── */}
       <aside className="hidden md:flex md:w-56 lg:w-64 flex-col bg-slate-900 border-r border-slate-800 fixed inset-y-0 left-0 z-20">
-        <SidebarContent active={activeTab} onNav={handleNav} />
+        <SidebarContent active={activeTab} onNav={handleNav} isOwner={isOwner} onOpenAuth={onOpenAuth} />
       </aside>
 
       {/* ── Mobile overlay ── */}
@@ -153,7 +153,7 @@ export default function Layout({ activeTab, onTabChange, children }) {
         >
           <CloseIcon />
         </button>
-        <SidebarContent active={activeTab} onNav={handleNav} />
+        <SidebarContent active={activeTab} onNav={handleNav} isOwner={isOwner} onOpenAuth={onOpenAuth} />
       </aside>
 
       {/* ── Main content ── */}
@@ -166,7 +166,20 @@ export default function Layout({ activeTab, onTabChange, children }) {
           >
             <MenuIcon />
           </button>
-          <span className="font-semibold text-white">MoneyCalc</span>
+          <span className="font-semibold text-white flex-1">MoneyCalc</span>
+          {/* Mobile auth button */}
+          <button
+            onClick={onOpenAuth}
+            className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium
+                        transition-colors border
+                        ${isOwner
+                          ? 'border-emerald-700/40 text-emerald-400 bg-emerald-900/20 hover:bg-emerald-900/40'
+                          : 'border-slate-700 text-slate-400 hover:text-slate-200 hover:bg-slate-800'}`}
+            title={isOwner ? 'Owner mode — click to manage' : 'Guest mode — click to log in'}
+          >
+            {isOwner ? <UnlockIconSm /> : <LockIconSm />}
+            {isOwner ? 'Owner' : 'Guest'}
+          </button>
         </header>
 
         <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
@@ -182,7 +195,7 @@ const NAV_GROUPS = [
   { id: 'strategy',  label: 'Strategy & AI' },
 ]
 
-function SidebarContent({ active, onNav }) {
+function SidebarContent({ active, onNav, isOwner, onOpenAuth }) {
   return (
     <div className="flex flex-col h-full">
       {/* Logo */}
@@ -230,10 +243,44 @@ function SidebarContent({ active, onNav }) {
         })}
       </nav>
 
-      {/* Footer */}
-      <div className="px-5 py-4 border-t border-slate-800">
-        <p className="text-xs text-slate-500">Backed by Supabase</p>
+      {/* Footer — auth status + lock button */}
+      <div className="px-3 py-3 border-t border-slate-800 space-y-2">
+        <button
+          onClick={onOpenAuth}
+          className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm
+                      font-medium transition-colors border
+                      ${isOwner
+                        ? 'border-emerald-700/40 text-emerald-300 bg-emerald-900/10 hover:bg-emerald-900/20'
+                        : 'border-slate-700/60 text-slate-400 hover:text-slate-200 hover:bg-slate-800'}`}
+        >
+          {isOwner ? <UnlockIconSm /> : <LockIconSm />}
+          <span>{isOwner ? 'Owner mode' : 'Guest mode'}</span>
+          <span className="ml-auto text-[10px] text-slate-500">
+            {isOwner ? 'click to manage' : 'click to log in'}
+          </span>
+        </button>
+        <p className="text-xs text-slate-600 px-1">
+          {isOwner ? 'Writes go to Supabase' : 'Writes stay in local storage'}
+        </p>
       </div>
     </div>
+  )
+}
+
+function LockIconSm() {
+  return (
+    <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+        d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+    </svg>
+  )
+}
+
+function UnlockIconSm() {
+  return (
+    <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+        d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
+    </svg>
   )
 }

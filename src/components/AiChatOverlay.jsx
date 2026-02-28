@@ -715,7 +715,7 @@ function SessionPanel({ sessions, activeId, onSelect, onNew, onDelete, onClose }
 
 // ─── Main overlay component ───────────────────────────────────────────────────
 
-export default function AiChatOverlay({ properties, profile, activeTab, simState }) {
+export default function AiChatOverlay({ properties, profile, activeTab, simState, isOwner }) {
   const [open, setOpen]                   = useState(false)
   const [showSessions, setShowSessions]   = useState(false)
   const [sessions, setSessions]           = useState(() => loadSessions())
@@ -733,7 +733,9 @@ export default function AiChatOverlay({ properties, profile, activeTab, simState
   const bottomRef                         = useRef(null)
   const inputRef                          = useRef(null)
 
-  const hasKey = Boolean(GEMINI_API_KEY)
+  // AI chat is only available to the authenticated owner — the Gemini API key
+  // should not be usable by anonymous guests.
+  const hasKey = Boolean(GEMINI_API_KEY) && Boolean(isOwner)
 
   // Derive the active session object
   const activeSession = sessions.find((s) => s.id === activeId) || null
@@ -996,8 +998,20 @@ export default function AiChatOverlay({ properties, profile, activeTab, simState
                 </button>
               </div>
 
-              {/* No API key warning */}
-              {!hasKey && (
+              {/* Guest mode — AI disabled */}
+              {!isOwner && (
+                <div className="m-3 rounded-xl border border-slate-700/60 bg-slate-800/60 p-3 space-y-1.5 shrink-0">
+                  <p className="text-slate-300 text-xs font-semibold">AI chat — owner only</p>
+                  <p className="text-slate-400 text-xs leading-relaxed">
+                    You are browsing as a guest. Log in as owner using the{' '}
+                    <span className="text-brand-300 font-medium">lock icon</span> in the sidebar
+                    to enable the AI advisor.
+                  </p>
+                </div>
+              )}
+
+              {/* No API key warning (owner is authed but key missing in env) */}
+              {isOwner && !hasKey && (
                 <div className="m-3 rounded-xl border border-amber-700/40 bg-amber-900/10 p-3 space-y-2 shrink-0">
                   <p className="text-amber-300 text-xs font-semibold">API key not configured</p>
                   <p className="text-amber-200/80 text-xs">

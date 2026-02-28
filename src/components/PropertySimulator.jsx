@@ -20,7 +20,6 @@ import {
   ResponsiveContainer, ReferenceLine,
 } from 'recharts'
 import { simulateNewProperty, formatEUR } from '../utils/projectionUtils'
-import { getSimulatorProfile, saveSimulatorProfile } from '../services/portfolioService'
 import InfoPopover from './InfoPopover'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -416,7 +415,7 @@ function SimTooltip({ active, payload, label }) {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export default function PropertySimulator({ properties, onSimChange }) {
+export default function PropertySimulator({ properties, onSimChange, getSimulatorProfile, saveSimulatorProfile }) {
   const [sim, setSim]         = useState(DEFAULT_SIM)
   const [simLoaded, setSimLoaded] = useState(false)
   const saveTimerRef          = useRef(null)
