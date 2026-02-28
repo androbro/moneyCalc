@@ -16,6 +16,23 @@
 
 const SESSION_KEY = 'mc_owner_authed'
 
+/**
+ * True when running on localhost / 127.0.0.1 / local network.
+ * On localhost there is no need for guest/owner separation — you are always
+ * the owner and the lock UI is hidden entirely.
+ */
+export function isLocalhost() {
+  const { hostname } = window.location
+  return (
+    hostname === 'localhost' ||
+    hostname === '127.0.0.1' ||
+    hostname === '::1' ||
+    hostname.startsWith('192.168.') ||
+    hostname.startsWith('10.') ||
+    hostname.endsWith('.local')
+  )
+}
+
 // ─── SHA-256 helper (Web Crypto — available in all modern browsers) ───────────
 
 async function sha256(text) {
@@ -32,6 +49,7 @@ async function sha256(text) {
 
 /** Returns true if the current session is authenticated as owner. */
 export function isOwner() {
+  if (isLocalhost()) return true   // always owner on localhost
   try {
     return sessionStorage.getItem(SESSION_KEY) === 'true'
   } catch {

@@ -11,7 +11,7 @@ import PropertySimulator from './components/PropertySimulator'
 import MoneyFlow from './components/MoneyFlow'
 import AiChatOverlay from './components/AiChatOverlay'
 import AuthOverlay from './components/AuthOverlay'
-import { isOwner, login, logout } from './lib/auth'
+import { isOwner, isLocalhost, login, logout } from './lib/auth'
 import {
   seedGuestStorage, isGuestSeeded,
   getPortfolio      as guestGetPortfolio,
@@ -325,6 +325,7 @@ export default function App() {
         onTabChange={setActiveTab}
         isOwner={ownerAuthed}
         onOpenAuth={() => setShowAuthOverlay(true)}
+        showAuthControls={!isLocalhost()}
       >
 
         {/* ── Dashboard ── */}
@@ -519,15 +520,17 @@ export default function App() {
         isOwner={ownerAuthed}
       />
 
-      {/* Auth overlay */}
-      <AuthOverlay
-        open={showAuthOverlay}
-        onClose={() => setShowAuthOverlay(false)}
-        onLogin={handleLogin}
-        onLogout={handleLogout}
-        isOwner={ownerAuthed}
-        onReset={handleReset}
-      />
+      {/* Auth overlay — only on non-localhost deployments */}
+      {!isLocalhost() && (
+        <AuthOverlay
+          open={showAuthOverlay}
+          onClose={() => setShowAuthOverlay(false)}
+          onLogin={handleLogin}
+          onLogout={handleLogout}
+          isOwner={ownerAuthed}
+          onReset={handleReset}
+        />
+      )}
     </>
   )
 }

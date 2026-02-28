@@ -5,19 +5,19 @@
  * portfolioService.js. Used for unauthenticated (guest) visitors so they
  * can fully interact with the app without touching Supabase.
  *
- * Keys used:
- *   mc_guest_portfolio   — { properties: [...] }
- *   mc_guest_household   — household profile object
- *   mc_guest_simulator   — simulator state object
+ * Seeding behaviour:
+ *   - On every fresh page load (new tab / refresh), guests always get a
+ *     fresh snapshot from Supabase. This means they always see your latest
+ *     data without you having to do anything.
+ *   - Within the same tab session, their edits are kept in localStorage so
+ *     navigating between pages doesn't lose their changes.
+ *   - The "Reset" button re-seeds from Supabase mid-session.
  *
- * Seeding:
- *   App.jsx calls seedGuestStorage(portfolio, household, simulator) once on
- *   first load (when no guest data exists yet) to populate localStorage with
- *   a read-only snapshot of the real Supabase data. This gives every guest
- *   a fresh copy of your actual data to tinker with.
- *
- *   Calling seedGuestStorage again (from the "Reset to my data" button) always
- *   overwrites, restoring the owner's data.
+ * How it works:
+ *   A flag in sessionStorage ('mc_guest_session_seeded') tracks whether the
+ *   current tab session has already seeded. sessionStorage clears on every
+ *   page load/refresh, so the seed always runs once per load from Supabase.
+ *   Guest edits land in localStorage so they survive in-session navigation.
  */
 
 import { v4 as uuidv4 } from 'uuid'
@@ -25,10 +25,11 @@ import { defaultHousehold } from '../services/portfolioService'
 
 // ─── Storage keys ─────────────────────────────────────────────────────────────
 
-const PORTFOLIO_KEY  = 'mc_guest_portfolio'
-const HOUSEHOLD_KEY  = 'mc_guest_household'
-const SIMULATOR_KEY  = 'mc_guest_simulator'
-const SEEDED_KEY     = 'mc_guest_seeded'   // flag: has the initial seed run?
+const PORTFOLIO_KEY   = 'mc_guest_portfolio'
+const HOUSEHOLD_KEY   = 'mc_guest_household'
+const SIMULATOR_KEY   = 'mc_guest_simulator'
+// Session flag — lives in sessionStorage, so it resets on every page load
+const SESSION_SEEDED  = 'mc_guest_session_seeded'
 
 // ─── Raw helpers ──────────────────────────────────────────────────────────────
 
@@ -49,27 +50,35 @@ function write(key, value) {
 
 // ─── Seeding ──────────────────────────────────────────────────────────────────
 
-/** Returns true if guest storage has already been seeded this browser. */
+/**
+ * Returns true only if this specific tab session has already seeded.
+ * Always false on a fresh page load / refresh because sessionStorage clears.
+ */
 export function isGuestSeeded() {
-  return localStorage.getItem(SEEDED_KEY) === 'true'
+  try {
+    return sessionStorage.getItem(SESSION_SEEDED) === 'true'
+  } catch {
+    return false
+  }
 }
 
 /**
- * Populate guest localStorage with a snapshot of the owner's Supabase data.
- * Always overwrites — used both for first-time seeding and the "Reset" button.
+ * Populate guest localStorage with a snapshot of the owner's Supabase data
+ * and mark this session as seeded.
  */
 export function seedGuestStorage(portfolio, household, simulator) {
   write(PORTFOLIO_KEY, portfolio)
   write(HOUSEHOLD_KEY, household)
   write(SIMULATOR_KEY, simulator || {})
-  try { localStorage.setItem(SEEDED_KEY, 'true') } catch { /* ignore */ }
+  try { sessionStorage.setItem(SESSION_SEEDED, 'true') } catch { /* ignore */ }
 }
 
-/** Wipe all guest data (useful for hard reset). */
+/** Wipe all guest data. */
 export function clearGuestStorage() {
-  ;[PORTFOLIO_KEY, HOUSEHOLD_KEY, SIMULATOR_KEY, SEEDED_KEY].forEach((k) => {
+  ;[PORTFOLIO_KEY, HOUSEHOLD_KEY, SIMULATOR_KEY].forEach((k) => {
     try { localStorage.removeItem(k) } catch { /* ignore */ }
   })
+  try { sessionStorage.removeItem(SESSION_SEEDED) } catch { /* ignore */ }
 }
 
 // ─── Portfolio API (mirrors portfolioService.js) ──────────────────────────────
