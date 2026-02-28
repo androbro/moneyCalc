@@ -1,6 +1,7 @@
 import { computeSummary, formatEUR, isRentalActiveOn, getLoanPaymentSplit } from '../utils/projectionUtils'
 import { getStatusMeta, isPrimaryResidenceOn } from './PropertyForm'
 import InfoPopover from './InfoPopover'
+import PropertyTimeline from './PropertyTimeline'
 
 // ─── Tooltip content ───────────────────────────────────────────────────────────
 
@@ -316,6 +317,13 @@ function PropertyCard({ property, onEdit, onDelete }) {
               )
             })}
           </div>
+        </div>
+      )}
+
+      {/* Compact timeline */}
+      {(property.loans?.length > 0 || property.rentalStartDate || property.purchaseDate) && (
+        <div className="border-t border-slate-700 pt-3">
+          <PropertyTimeline property={property} compact />
         </div>
       )}
     </div>

@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { v4 as uuidv4 } from 'uuid'
 import CSVImporter from './CSVImporter'
+import PropertyTimeline from './PropertyTimeline'
 
 // ─── Property status options ───────────────────────────────────────────────────
 
@@ -438,47 +439,52 @@ export default function PropertyForm({ property: editProperty, onSave, onCancel 
         </div>
       </div>
 
-      {/* ── Section 3: Rental Income & Indexation ── */}
+      {/* ── Section 3: Rental Income & Period ── */}
       <div className="card space-y-4">
-        <div className="flex items-center justify-between mb-0">
-          <div>
-            <h3 className="section-title mb-0">Rental Income &amp; Period</h3>
-            <p className="text-xs text-slate-500 mt-0.5">
-              Configure the rent amount and when the rental period starts/ends.
-              {!isRented && <span className="ml-1 text-amber-400">Set status to "Rented out" above to enable rental income.</span>}
-            </p>
-          </div>
+        <div>
+          <h3 className="section-title mb-0">Rental Income &amp; Period</h3>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Set the expected rent and when the rental period starts — even if you're not renting yet.
+            Cash flow only counts rent once the start date is reached and status is "Rented out".
+          </p>
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <Field label="Monthly Rental Income (EUR)"
             hint="Gross rent — starting point for annual indexation">
             <input className="input" type="number" min="0" placeholder="1200"
-              value={form.startRentalIncome} onChange={si('startRentalIncome')}
-              disabled={!isRented} />
+              value={form.startRentalIncome} onChange={si('startRentalIncome')} />
           </Field>
 
           <Field label="Annual Rent Indexation Rate"
             hint="How much rent rises each year (Belgian health index ≈ 2%)">
-            <PctInput value={form.indexationRate} onChange={sf('indexationRate')}
-              disabled={!isRented} />
+            <PctInput value={form.indexationRate} onChange={sf('indexationRate')} />
           </Field>
 
           <Field label="Rental start date"
             hint="When the tenant moves in / rental income begins. Leave blank if already renting.">
             <input className="input" type="date"
-              value={form.rentalStartDate} onChange={si('rentalStartDate')}
-              disabled={!isRented} />
+              value={form.rentalStartDate} onChange={si('rentalStartDate')} />
           </Field>
 
           <Field label="Rental end date"
             hint="When the current lease ends. Leave blank if open-ended.">
             <input className="input" type="date"
-              value={form.rentalEndDate} onChange={si('rentalEndDate')}
-              disabled={!isRented} />
+              value={form.rentalEndDate} onChange={si('rentalEndDate')} />
           </Field>
         </div>
 
+        {/* Contextual notices */}
+        {!isRented && form.rentalStartDate && (
+          <div className="flex items-start gap-2 bg-slate-800/60 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-slate-400">
+            <svg className="w-4 h-4 shrink-0 mt-0.5 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span>
+              Rental date set. Switch status to <strong className="text-emerald-400">Rented out</strong> when the tenant moves in — that's when rent will appear in cash flow.
+            </span>
+          </div>
+        )}
         {isRented && form.rentalStartDate && new Date(form.rentalStartDate) > new Date() && (
           <div className="flex items-start gap-2 bg-amber-900/20 border border-amber-700/40 rounded-xl px-3 py-2.5 text-xs text-amber-300">
             <svg className="w-4 h-4 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -544,6 +550,39 @@ export default function PropertyForm({ property: editProperty, onSave, onCancel 
             onChange={updateLoan} onRemove={removeLoan} onScheduleImport={importSchedule} />
         ))}
       </div>
+
+      {/* ── Timeline preview ── */}
+      {(loans.length > 0 || form.rentalStartDate || form.purchaseDate) && (
+        <div className="card space-y-2">
+          <h3 className="section-title mb-0">Timeline Preview</h3>
+          <p className="text-xs text-slate-500">
+            Live view — updates as you edit. Hover any year for financials.
+          </p>
+          <PropertyTimeline
+            property={{
+              ...form,
+              purchasePrice:         Number(form.purchasePrice) || 0,
+              currentValue:          Number(form.currentValue) || 0,
+              appreciationRate:      Number(form.appreciationRate) || 0.02,
+              startRentalIncome:     Number(form.startRentalIncome) || 0,
+              monthlyRentalIncome:   Number(form.startRentalIncome) || 0,
+              indexationRate:        Number(form.indexationRate) || 0.02,
+              monthlyExpenses:       Number(form.monthlyExpenses) || 0,
+              annualMaintenanceCost: Number(form.annualMaintenanceCost) || 0,
+              annualInsuranceCost:   Number(form.annualInsuranceCost) || 0,
+              annualPropertyTax:     Number(form.annualPropertyTax) || 0,
+              inflationRate:         Number(form.inflationRate) || 0.02,
+              loans: loans.map((l) => ({
+                ...l,
+                originalAmount: Number(l.originalAmount) || 0,
+                termMonths:     Number(l.termMonths) || 0,
+                monthlyPayment: Number(l.monthlyPayment) || 0,
+                interestRate:   Number(l.interestRate) || 0,
+              })),
+            }}
+          />
+        </div>
+      )}
 
       {/* Actions */}
       <div className="flex items-center gap-3 justify-end">
