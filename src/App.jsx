@@ -8,7 +8,8 @@ import ScenarioPlanner from './components/ScenarioPlanner'
 import HouseholdForm from './components/HouseholdForm'
 import CashFlowAggregator from './components/CashFlowAggregator'
 import PropertySimulator from './components/PropertySimulator'
-import AiInsights from './components/AiInsights'
+import MoneyFlow from './components/MoneyFlow'
+import AiChatOverlay from './components/AiChatOverlay'
 import {
   getPortfolio,
   addProperty,
@@ -386,17 +387,17 @@ export default function App() {
           </div>
         )}
 
-        {/* ── Property Simulator ── */}
-        {activeTab === 'simulator' && (
-          <PropertySimulator properties={properties} />
-        )}
-
-        {/* ── AI Insights ── */}
-        {activeTab === 'ai' && (
-          <AiInsights
+        {/* ── Money Flow ── */}
+        {activeTab === 'moneyflow' && (
+          <MoneyFlow
             properties={properties}
             profile={householdProfile}
           />
+        )}
+
+        {/* ── Property Simulator ── */}
+        {activeTab === 'simulator' && (
+          <PropertySimulator properties={properties} />
         )}
 
       </Layout>
@@ -409,6 +410,12 @@ export default function App() {
           onDismiss={() => setToast(null)}
         />
       )}
+
+      {/* AI Chat overlay — always mounted so it floats above all pages */}
+      <AiChatOverlay
+        properties={properties}
+        profile={householdProfile}
+      />
     </>
   )
 }

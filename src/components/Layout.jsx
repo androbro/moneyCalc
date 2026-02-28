@@ -8,8 +8,8 @@ const NAV_ITEMS = [
   { id: 'scenario',    label: 'Scenarios',        icon: ScenarioIcon,   group: 'portfolio' },
   { id: 'household',   label: 'Household Profile',icon: HouseholdIcon,  group: 'strategy' },
   { id: 'cashflow',    label: 'Cash Flow',        icon: CashFlowIcon,   group: 'strategy' },
+  { id: 'moneyflow',   label: 'Money Flow',       icon: MoneyFlowIcon,  group: 'strategy' },
   { id: 'simulator',   label: 'Simulator',        icon: SimulatorIcon,  group: 'strategy' },
-  { id: 'ai',          label: 'AI Insights',      icon: AiIcon,         group: 'strategy' },
 ]
 
 function ChartIcon() {
@@ -71,6 +71,15 @@ function CashFlowIcon() {
     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
         d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+    </svg>
+  )
+}
+
+function MoneyFlowIcon() {
+  return (
+    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+        d="M7 16V4m0 0L3 8m4-4l4 4M17 8v12m0 0l4-4m-4 4l-4-4" />
     </svg>
   )
 }
