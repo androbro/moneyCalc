@@ -99,6 +99,9 @@ export default function App() {
   const [householdProfile, setHouseholdProfile]     = useState(defaultHousehold())
   const [showHouseholdForm, setShowHouseholdForm]   = useState(false)
 
+  // ── Phase 9: simulator state (lifted so AiChatOverlay can see it) ──
+  const [simState, setSimState] = useState(null)
+
   // ── Load portfolio + household profile from Supabase ──
   const load = useCallback(async () => {
     setLoading(true)
@@ -397,7 +400,10 @@ export default function App() {
 
         {/* ── Property Simulator ── */}
         {activeTab === 'simulator' && (
-          <PropertySimulator properties={properties} />
+          <PropertySimulator
+            properties={properties}
+            onSimChange={setSimState}
+          />
         )}
 
       </Layout>
@@ -415,6 +421,8 @@ export default function App() {
       <AiChatOverlay
         properties={properties}
         profile={householdProfile}
+        activeTab={activeTab}
+        simState={simState}
       />
     </>
   )

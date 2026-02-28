@@ -258,6 +258,139 @@ Always state any assumptions you make.`
   return { systemPrompt, contextPrompt }
 }
 
+// ─── Per-screen focused context ───────────────────────────────────────────────
+
+const TAB_LABELS = {
+  dashboard:   'Dashboard (portfolio overview)',
+  properties:  'Properties (property list / edit form)',
+  investments: 'Planned Investments',
+  projection:  '20-Year Projection chart',
+  scenario:    'Scenario Planner (hold vs. sell)',
+  household:   'Household Profile editor',
+  cashflow:    'Cash Flow Aggregator',
+  moneyflow:   'Money Flow breakdown',
+  simulator:   'Property Simulator (what-if new acquisition)',
+}
+
+/**
+ * Returns a short, focused context string that describes what the user is
+ * currently looking at. Injected as the LAST turn before each user question
+ * so it has the highest recency weight for the model.
+ */
+function buildScreenContext(activeTab, simState, properties, profile) {
+  const fmt = formatEUR
+  const screenLabel = TAB_LABELS[activeTab] || activeTab || 'unknown'
+  let block = `## Current Screen: ${screenLabel}\n`
+
+  switch (activeTab) {
+    case 'dashboard': {
+      const totalValue = properties.reduce((s, p) => s + (p.currentValue || 0), 0)
+      const totalDebt  = properties.reduce((s, p) =>
+        s + (p.loans || []).reduce((ls, l) => ls + (l.originalAmount || 0), 0), 0)
+      block += `The user is looking at the portfolio overview dashboard.\n`
+      block += `- ${properties.length} propert${properties.length === 1 ? 'y' : 'ies'} in portfolio\n`
+      block += `- Total current value: ${fmt(totalValue)}\n`
+      block += `- Approximate total debt: ${fmt(totalDebt)}\n`
+      block += `- Net equity (approx): ${fmt(totalValue - totalDebt)}\n`
+      break
+    }
+
+    case 'properties':
+      block += `The user is managing their property list or editing a property form.\n`
+      block += `They have ${properties.length} propert${properties.length === 1 ? 'y' : 'ies'} recorded.\n`
+      if (properties.length > 0) {
+        block += `Properties: ${properties.map((p) => `"${p.name}" (${fmt(p.currentValue)})`).join(', ')}\n`
+      }
+      break
+
+    case 'investments': {
+      const allInv = properties.flatMap((p) => (p.plannedInvestments || []).map((i) => ({ ...i, propertyName: p.name })))
+      block += `The user is viewing planned capital investments across their portfolio.\n`
+      block += `- ${allInv.length} planned investment${allInv.length === 1 ? '' : 's'} total\n`
+      if (allInv.length > 0) {
+        const totalCost = allInv.reduce((s, i) => s + (i.cost || 0), 0)
+        block += `- Total planned spend: ${fmt(totalCost)}\n`
+        for (const inv of allInv.slice(0, 5)) {
+          block += `  - "${inv.description}" on ${inv.propertyName}: cost ${fmt(inv.cost)}, value increase ${fmt(inv.valueIncrease)}, date ${inv.plannedDate}\n`
+        }
+        if (allInv.length > 5) block += `  - … and ${allInv.length - 5} more\n`
+      }
+      break
+    }
+
+    case 'projection':
+      block += `The user is viewing the 20-year portfolio projection chart.\n`
+      block += `This shows net worth, cumulative cash flow, and total return trajectories for all ${properties.length} current properties combined.\n`
+      break
+
+    case 'scenario':
+      block += `The user is on the Scenario Planner screen, comparing "hold all properties" vs. "sell one or more" scenarios over time.\n`
+      break
+
+    case 'household': {
+      const members = profile?.members || []
+      const totalIncome = members.reduce((s, m) => s + (m.netIncome || 0) + (m.investmentIncome || 0), 0)
+      block += `The user is editing their household profile.\n`
+      block += `- ${members.length} household member${members.length === 1 ? '' : 's'}\n`
+      block += `- Combined monthly income: ${fmt(totalIncome)}\n`
+      block += `- Monthly household expenses: ${fmt(profile?.householdExpenses || 0)}\n`
+      break
+    }
+
+    case 'cashflow': {
+      const members = profile?.members || []
+      const totalIncome = members.reduce((s, m) => s + (m.netIncome || 0) + (m.investmentIncome || 0), 0)
+      const totalRent = properties.filter((p) => p.isRented !== false)
+        .reduce((s, p) => s + (p.startRentalIncome || p.monthlyRentalIncome || 0), 0)
+      block += `The user is reviewing the household + portfolio combined cash flow aggregator.\n`
+      block += `- Total monthly salary + investment income: ${fmt(totalIncome)}\n`
+      block += `- Total monthly gross rental income: ${fmt(totalRent)}\n`
+      block += `- Monthly household expenses: ${fmt(profile?.householdExpenses || 0)}\n`
+      break
+    }
+
+    case 'moneyflow':
+      block += `The user is on the Money Flow breakdown screen, showing per-property and household-level income/expense flows.\n`
+      break
+
+    case 'simulator': {
+      if (simState) {
+        const price = simState.purchasePrice || 0
+        const loan  = simState.loanAmount || 0
+        const rent  = simState.monthlyRentalIncome || 0
+        const regTax = simState.registrationTax || 0
+        block += `The user is actively using the Property Simulator with the following hypothetical scenario:\n`
+        block += `- Purchase price: ${fmt(price)}\n`
+        block += `- Loan amount: ${fmt(loan)} at ${((simState.loanInterestRate || 0) * 100).toFixed(2)}% — monthly payment ${fmt(simState.loanMonthlyPayment || 0)} over ${simState.loanTermMonths || 0} months\n`
+        block += `- Monthly gross rent: ${fmt(rent)} (gross yield: ${price > 0 ? ((rent * 12 / price) * 100).toFixed(2) : 0}%)\n`
+        block += `- Renovation / fit-out cost: ${fmt(simState.renovationCost || 0)}\n`
+        block += `- Annual appreciation: ${((simState.appreciationRate || 0) * 100).toFixed(1)}%\n`
+        block += `- Annual operating costs: ${fmt((simState.annualMaintenanceCost || 0) + (simState.annualInsuranceCost || 0) + (simState.annualPropertyTax || 0) + (simState.monthlyExpenses || 0) * 12)}\n`
+        block += `- Acquisition in: ${simState.acquisitionYear || 0} year(s) from today\n`
+        if (simState.coBuying) {
+          block += `- Buying together with co-buyer: YES\n`
+          block += `  - My ownership share: ${((simState.mySharePct || 0.5) * 100).toFixed(0)}%\n`
+          block += `  - My registration tax rate: ${((simState.myTaxRate || 0.12) * 100).toFixed(1)}% (already owns another property)\n`
+          block += `  - Co-buyer registration tax rate: ${((simState.partnerTaxRate || 0.02) * 100).toFixed(1)}% (first property / klein beschrijf)\n`
+          block += `  - My registration tax share: ${fmt(price * (simState.mySharePct || 0.5) * (simState.myTaxRate || 0.12))}\n`
+          block += `  - Co-buyer registration tax share: ${fmt(price * (1 - (simState.mySharePct || 0.5)) * (simState.partnerTaxRate || 0.02))}\n`
+        } else {
+          block += `- Buying alone — registration tax rate: ${((simState.soloTaxRate || 0.12) * 100).toFixed(1)}%\n`
+        }
+        block += `- Total registration tax (upfront): ${fmt(regTax)}\n`
+      } else {
+        block += `The user is on the Property Simulator screen (simulator state not yet loaded).\n`
+      }
+      break
+    }
+
+    default:
+      block += `Screen: ${activeTab}\n`
+  }
+
+  return block
+}
+
 // ─── Model selector ───────────────────────────────────────────────────────────
 
 function ModelSelector({ apiKey, selectedModel, onSelect }) {
@@ -582,7 +715,7 @@ function SessionPanel({ sessions, activeId, onSelect, onNew, onDelete, onClose }
 
 // ─── Main overlay component ───────────────────────────────────────────────────
 
-export default function AiChatOverlay({ properties, profile }) {
+export default function AiChatOverlay({ properties, profile, activeTab, simState }) {
   const [open, setOpen]                   = useState(false)
   const [showSessions, setShowSessions]   = useState(false)
   const [sessions, setSessions]           = useState(() => loadSessions())
@@ -688,11 +821,13 @@ export default function AiChatOverlay({ properties, profile }) {
 
     try {
       const { systemPrompt, contextPrompt } = buildFinancialContext(properties, profile)
+      const screenContext = buildScreenContext(activeTab, simState, properties, profile)
 
       // Build contents from the current session's messages
       const currentMessages = sessions.find((s) => s.id === sessionId)?.messages || []
 
       const contents = [
+        // Full portfolio + household context — always the first grounding turn
         {
           role: 'user',
           parts: [{ text: `${contextPrompt}\n\n---\nI will now ask you questions about my financial situation. Please answer based only on the data I have provided above.` }],
@@ -701,10 +836,20 @@ export default function AiChatOverlay({ properties, profile }) {
           role: 'model',
           parts: [{ text: "Understood. I have reviewed your complete financial picture and I'm ready to answer your questions with specific, data-driven advice." }],
         },
+        // Prior conversation turns
         ...currentMessages.map((m) => ({
           role: m.role === 'user' ? 'user' : 'model',
           parts: [{ text: m.content }],
         })),
+        // Focused screen context injected just before the question for high recency
+        {
+          role: 'user',
+          parts: [{ text: `Before I ask my question, here is what I am currently looking at in the app:\n\n${screenContext}\nPlease keep this screen context in mind when answering.` }],
+        },
+        {
+          role: 'model',
+          parts: [{ text: `Noted — you are currently on the ${TAB_LABELS[activeTab] || activeTab || 'app'} screen. I'll focus my answer on that context while keeping your full financial picture in mind.` }],
+        },
         { role: 'user', parts: [{ text: text.trim() }] },
       ]
 

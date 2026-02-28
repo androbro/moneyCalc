@@ -490,6 +490,36 @@ export async function saveHouseholdProfile(profile) {
   return getHouseholdProfile()
 }
 
+// ─── Simulator profile ────────────────────────────────────────────────────────
+
+const SIMULATOR_ID = 'default'
+
+/**
+ * Load the simulator state blob.
+ * Returns {} if no row exists yet (the migration seeds a row with state={},
+ * but this guards against older deployments).
+ */
+export async function getSimulatorProfile() {
+  const { data, error } = await supabase
+    .from('simulator_profile')
+    .select('state')
+    .eq('id', SIMULATOR_ID)
+    .maybeSingle()
+  check(error, 'getSimulatorProfile')
+  return data?.state ?? {}
+}
+
+/**
+ * Persist the full simulator state as a JSONB blob.
+ * Uses upsert so it works whether the seed row exists or not.
+ */
+export async function saveSimulatorProfile(state) {
+  const { error } = await supabase
+    .from('simulator_profile')
+    .upsert({ id: SIMULATOR_ID, state }, { onConflict: 'id' })
+  check(error, 'saveSimulatorProfile')
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function defaultMeta() {

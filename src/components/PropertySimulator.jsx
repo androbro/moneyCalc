@@ -13,13 +13,15 @@
  *   properties – current portfolio array
  */
 
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect, useRef } from 'react'
 import {
   ComposedChart, AreaChart, Area, Bar, Line,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend,
   ResponsiveContainer, ReferenceLine,
 } from 'recharts'
 import { simulateNewProperty, formatEUR } from '../utils/projectionUtils'
+import { getSimulatorProfile, saveSimulatorProfile } from '../services/portfolioService'
+import InfoPopover from './InfoPopover'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -47,10 +49,13 @@ function kFmt(v) {
 
 // ─── Input field ──────────────────────────────────────────────────────────────
 
-function Field({ label, hint, children }) {
+function Field({ label, hint, info, children }) {
   return (
     <div className="space-y-1">
-      <label className="block text-xs font-medium text-slate-400">{label}</label>
+      <label className="block text-xs font-medium text-slate-400 flex items-center">
+        {label}
+        {info && <InfoPopover>{info}</InfoPopover>}
+      </label>
       {children}
       {hint && <p className="text-xs text-slate-500">{hint}</p>}
     </div>
@@ -93,6 +98,275 @@ function PctInput({ value, onChange, step = '0.1' }) {
       <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 text-sm">%</span>
     </div>
   )
+}
+
+// ─── Tooltip explanation texts ────────────────────────────────────────────────
+
+const SIM_INFO = {
+  purchasePrice: (
+    <>
+      <strong>Purchase Price</strong> is the total amount you pay to the seller
+      (notarised deed price). Registration tax and notary fees are <em>on top</em>{' '}
+      of this — enter them in the Registration Tax section below.
+    </>
+  ),
+  renovationCost: (
+    <>
+      <strong>Renovation / Fit-out Cost</strong> is a one-off cash outflow that
+      happens in the same year you buy. It reduces your cash flow in year 1 but
+      can increase the initial market value of the property.
+      <br /><br />
+      Typical examples: kitchen renovation, bathroom, painting, new windows.
+    </>
+  ),
+  currentValue: (
+    <>
+      <strong>Initial Market Value</strong> is what the property is worth{' '}
+      <em>after</em> renovation, at the moment of purchase. This is the starting
+      point for annual appreciation.
+      <br /><br />
+      If you are buying and not renovating, set this equal to the purchase price.
+      If you renovate and add value, set it higher.
+    </>
+  ),
+  acquisitionYear: (
+    <>
+      <strong>Years from Today to Buy</strong> — how far in the future this
+      purchase happens. Setting this to <code>0</code> means you buy immediately.
+      Setting it to <code>2</code> means you buy in 2 years.
+      <br /><br />
+      During the waiting years the simulator keeps your baseline portfolio
+      unchanged and only adds the new property from that year onward.
+    </>
+  ),
+  appreciationRate: (
+    <>
+      <strong>Annual Appreciation</strong> is the expected yearly increase in
+      the property's market value, expressed as a percentage.
+      <br /><br />
+      Belgian residential real estate has historically appreciated roughly{' '}
+      <strong>3–4 %/year</strong> in cities; 2 % is a conservative assumption.
+      This compounds: a €300 k property at 2 %/yr is worth ~€446 k after 20 years.
+    </>
+  ),
+  // Registration tax
+  coBuying: (
+    <>
+      <strong>Co-buying</strong> means you buy the property together with
+      someone else, each owning a share. This matters for Belgian registration
+      tax because the reduced rate (<em>klein beschrijf</em> / abattement) only
+      applies if you do <em>not</em> already own another property.
+      <br /><br />
+      If you already own a property, your share is taxed at the full rate (12 %)
+      while your co-buyer — who owns nothing else — gets the reduced rate (~2 %).
+    </>
+  ),
+  mySharePct: (
+    <>
+      <strong>My ownership share</strong> is your percentage of the property.
+      50 % means you and your co-buyer each own half. This determines how much
+      of the total price your registration tax is calculated on.
+      <br /><br />
+      Example: 50 % of a €400 k property = your taxable base is €200 k.
+    </>
+  ),
+  myTaxRate: (
+    <>
+      <strong>My registration tax rate</strong> — the rate applied to <em>your</em>{' '}
+      share of the purchase price.
+      <br /><br />
+      In Flanders: <strong>12 %</strong> is the standard rate. If you already
+      own another property (like your apartment), you pay 12 % — no reduction
+      available. If this would be your only property you could get a reduced
+      rate (around 2–3 % depending on the value).
+    </>
+  ),
+  partnerTaxRate: (
+    <>
+      <strong>Co-buyer's tax rate</strong> — the rate applied to your co-buyer's
+      share of the purchase price.
+      <br /><br />
+      In Flanders: if this is your co-buyer's <em>only</em> property (first purchase
+      or sole owner), they can benefit from the <strong>klein beschrijf</strong>{' '}
+      reduced rate of approximately <strong>2 %</strong> (on the first €220 k of
+      their share) vs the standard 12 %. Enter 2 % here in that case.
+    </>
+  ),
+  soloTaxRate: (
+    <>
+      <strong>Your registration tax rate</strong> — the percentage of the purchase
+      price you owe as registration tax to the Belgian state.
+      <br /><br />
+      In Flanders: <strong>12 %</strong> standard rate. You pay 12 % because
+      you already own another property (no klein beschrijf reduction).
+      <br />
+      If this were your only property you could pay ~2–3 % instead.
+    </>
+  ),
+  // Rental income
+  monthlyRentalIncome: (
+    <>
+      <strong>Monthly Gross Rent</strong> is the rent you charge the tenant,
+      before any costs. This is your top-line rental revenue.
+      <br /><br />
+      The simulator automatically indexes this rent each year by the{' '}
+      <em>Rent Indexation Rate</em> below, mimicking how Belgian leases are
+      typically indexed annually to the health index.
+    </>
+  ),
+  indexationRate: (
+    <>
+      <strong>Rent Indexation Rate</strong> — how much rent grows each year
+      as a percentage. In Belgium, residential rents are indexed annually to
+      the <strong>health index</strong> (a subset of CPI), which has averaged
+      roughly 2–3 %/year historically.
+      <br /><br />
+      This is applied automatically year-over-year on top of the base rent,
+      compounding over the 20-year horizon.
+    </>
+  ),
+  // Operating costs
+  annualMaintenanceCost: (
+    <>
+      <strong>Annual Maintenance</strong> covers repairs and upkeep you pay
+      each year as landlord: boiler servicing, fixing leaks, repainting, etc.
+      <br /><br />
+      A common rule of thumb is <strong>1 % of property value per year</strong>{' '}
+      (so ~€3 000/yr on a €300 k property). This cost is inflation-indexed
+      each year using the Cost Inflation rate.
+    </>
+  ),
+  annualInsuranceCost: (
+    <>
+      <strong>Annual Insurance</strong> is the landlord's building/fire insurance
+      premium. This is your responsibility as the owner — the tenant typically
+      covers their own contents insurance.
+      <br /><br />
+      Budget roughly <strong>€200–600/year</strong> depending on the property
+      size and insurer. This cost is inflation-indexed annually.
+    </>
+  ),
+  annualPropertyTax: (
+    <>
+      <strong>Property Tax</strong> (<em>onroerende voorheffing</em>) is the
+      annual Belgian property tax based on the cadastral income of the property.
+      <br /><br />
+      Unlike other costs, it is <strong>never indexed</strong> in this model —
+      it stays constant over 20 years, which is the conservative assumption
+      (in reality it can be reassessed, but rarely dramatically).
+      <br /><br />
+      As a landlord, you can often pass this cost on to the tenant in the lease.
+    </>
+  ),
+  monthlyExpenses: (
+    <>
+      <strong>Other Monthly Expenses</strong> — a catch-all for recurring costs
+      not covered above. Examples:
+      <br />• Syndic fees (for apartments in a co-ownership building)
+      <br />• Property management fees if you use an agency
+      <br />• Small recurring maintenance contracts
+      <br /><br />
+      This is inflation-indexed annually.
+    </>
+  ),
+  inflationRate: (
+    <>
+      <strong>Cost Inflation Rate</strong> — the annual percentage by which your
+      operating costs (maintenance, insurance, other expenses) grow each year.
+      <br /><br />
+      This does <em>not</em> apply to the property tax (<em>onroerende
+      voorheffing</em>), which stays fixed. A value of <strong>2 %</strong>{' '}
+      is in line with the ECB's long-term inflation target.
+    </>
+  ),
+  // Financing
+  loanAmount: (
+    <>
+      <strong>Loan Amount</strong> is the mortgage principal you borrow from
+      the bank to finance this property.
+      <br /><br />
+      The down payment is implicitly: <em>Purchase Price − Loan Amount</em>.
+      For example, borrowing €240 k on a €300 k property means a €60 k down
+      payment (20 %).
+      <br /><br />
+      Remember to also budget for registration tax and notary fees on top —
+      those are typically <em>not</em> financed by the bank.
+    </>
+  ),
+  loanInterestRate: (
+    <>
+      <strong>Interest Rate</strong> is the annual mortgage interest rate
+      expressed as a percentage.
+      <br /><br />
+      Belgian fixed mortgage rates in 2024–2025 are roughly{' '}
+      <strong>3–4 %</strong> depending on term and your equity ratio. A
+      variable rate will fluctuate over time — use a conservative estimate
+      if unsure.
+    </>
+  ),
+  loanMonthlyPayment: (
+    <>
+      <strong>Monthly Payment</strong> is the fixed amount you pay to the bank
+      each month, covering both interest and capital repayment
+      (<em>annuity loan</em>).
+      <br /><br />
+      You can calculate this: for a €240 k loan at 3.5 % over 20 years, the
+      monthly payment is approximately <strong>€1 392</strong>. Your bank
+      statement or loan offer will show the exact figure.
+    </>
+  ),
+  loanTermMonths: (
+    <>
+      <strong>Loan Term</strong> is the total duration of the mortgage in months.
+      <br /><br />
+      Common terms: 240 months (20 years), 300 months (25 years), 360 months
+      (30 years). A longer term means lower monthly payments but more total
+      interest paid. The simulator uses this to track the declining loan balance
+      over 20 years.
+    </>
+  ),
+  // Quick metrics
+  grossYield: (
+    <>
+      <strong>Gross Yield</strong> = Annual gross rent ÷ Purchase price × 100.
+      <br /><br />
+      This is the <em>before-costs</em> return on the purchase price. A gross
+      yield of <strong>4 %</strong> or above is generally considered decent for
+      Belgian residential property. Net yield (after costs and mortgage) is
+      what really matters — see Year-1 Net CF for that.
+    </>
+  ),
+  netCF: (
+    <>
+      <strong>Year-1 Net Cash Flow</strong> = Annual rent − Annual operating
+      costs − Annual mortgage payments.
+      <br /><br />
+      This is the cash you have left over (or need to top up) each year after
+      paying all running costs and your mortgage. A positive number means the
+      property is self-funding from day one. A negative number means you need
+      to top it up from other income.
+    </>
+  ),
+  netWorthBoost: (
+    <>
+      <strong>+20y Net Worth Boost</strong> — how much more net worth you have
+      after 20 years <em>because</em> of this property, compared to not buying it.
+      <br /><br />
+      Net worth = property value − remaining loan balance. After 20 years the
+      loan is largely or fully repaid and the property has appreciated, giving
+      you a large equity gain.
+    </>
+  ),
+  cumulativeCFBoost: (
+    <>
+      <strong>+20y Cumulative Cash Flow Boost</strong> — the total extra cash
+      generated (or consumed) by this property over 20 years vs. not buying it.
+      <br /><br />
+      This sums up every year's net cash flow contribution from the new property.
+        It can be negative in early years (mortgage {'>'} rent) and turn positive as
+      rent rises and the loan balance falls.
+    </>
+  ),
 }
 
 // ─── Default simulator state ──────────────────────────────────────────────────
@@ -142,8 +416,36 @@ function SimTooltip({ active, payload, label }) {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export default function PropertySimulator({ properties }) {
-  const [sim, setSim] = useState(DEFAULT_SIM)
+export default function PropertySimulator({ properties, onSimChange }) {
+  const [sim, setSim]         = useState(DEFAULT_SIM)
+  const [simLoaded, setSimLoaded] = useState(false)
+  const saveTimerRef          = useRef(null)
+
+  // ── Load persisted state on mount ─────────────────────────────────────────
+  useEffect(() => {
+    getSimulatorProfile().then((saved) => {
+      if (saved && Object.keys(saved).length > 0) {
+        // Merge saved values over DEFAULT_SIM so any new fields added later
+        // still get their defaults rather than being undefined.
+        setSim((prev) => ({ ...prev, ...saved }))
+      }
+      setSimLoaded(true)
+    }).catch(() => {
+      // DB unavailable — just use defaults
+      setSimLoaded(true)
+    })
+  }, [])
+
+  // ── Debounced save + notify parent on every change ─────────────────────────
+  useEffect(() => {
+    if (!simLoaded) return   // don't save the initial DEFAULT_SIM before load completes
+    if (onSimChange) onSimChange(sim)
+    clearTimeout(saveTimerRef.current)
+    saveTimerRef.current = setTimeout(() => {
+      saveSimulatorProfile(sim).catch(() => { /* silently ignore save errors */ })
+    }, 800)
+    return () => clearTimeout(saveTimerRef.current)
+  }, [sim, simLoaded]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const set = (key) => (value) => setSim((s) => ({ ...s, [key]: value }))
   const setNum = (key) => (e) => setSim((s) => ({ ...s, [key]: num(e.target.value) }))
@@ -224,16 +526,16 @@ export default function PropertySimulator({ properties }) {
               Acquisition
             </h3>
             <div className="space-y-3">
-              <Field label="Purchase Price">
+              <Field label="Purchase Price" info={SIM_INFO.purchasePrice}>
                 <MoneyInput value={sim.purchasePrice} onChange={set('purchasePrice')} />
               </Field>
-              <Field label="Renovation / Fit-out Cost" hint="One-off cash outflow in the year of purchase">
+              <Field label="Renovation / Fit-out Cost" info={SIM_INFO.renovationCost}>
                 <MoneyInput value={sim.renovationCost} onChange={set('renovationCost')} />
               </Field>
-              <Field label="Initial Market Value" hint="Value after renovation (usually purchasePrice + uplift)">
+              <Field label="Initial Market Value" info={SIM_INFO.currentValue}>
                 <MoneyInput value={sim.currentValue} onChange={set('currentValue')} />
               </Field>
-              <Field label="Years from Today to Buy">
+              <Field label="Years from Today to Buy" info={SIM_INFO.acquisitionYear}>
                 <input
                   type="number"
                   min="0"
@@ -243,7 +545,7 @@ export default function PropertySimulator({ properties }) {
                   className="input w-full"
                 />
               </Field>
-              <Field label="Annual Appreciation">
+              <Field label="Annual Appreciation" info={SIM_INFO.appreciationRate}>
                 <PctInput value={sim.appreciationRate} onChange={set('appreciationRate')} step="0.1" />
               </Field>
             </div>
@@ -257,7 +559,10 @@ export default function PropertySimulator({ properties }) {
             <div className="space-y-3">
               {/* Co-buying toggle */}
               <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-slate-400">Buying together with co-buyer?</span>
+                <span className="text-xs font-medium text-slate-400 flex items-center">
+                  Buying together with co-buyer?
+                  <InfoPopover>{SIM_INFO.coBuying}</InfoPopover>
+                </span>
                 <button
                   type="button"
                   role="switch"
@@ -279,19 +584,19 @@ export default function PropertySimulator({ properties }) {
                 <>
                   <Field
                     label="My ownership share"
-                    hint="Your % of the property (e.g. 50 = half-half)"
+                    info={SIM_INFO.mySharePct}
                   >
                     <PctInput value={sim.mySharePct} onChange={set('mySharePct')} step="1" />
                   </Field>
                   <Field
                     label="My tax rate"
-                    hint="12% if you already own another property in Belgium"
+                    info={SIM_INFO.myTaxRate}
                   >
                     <PctInput value={sim.myTaxRate} onChange={set('myTaxRate')} step="0.1" />
                   </Field>
                   <Field
                     label="Co-buyer's tax rate"
-                    hint="2% klein beschrijf / reduced rate if first property"
+                    info={SIM_INFO.partnerTaxRate}
                   >
                     <PctInput value={sim.partnerTaxRate} onChange={set('partnerTaxRate')} step="0.1" />
                   </Field>
@@ -318,7 +623,7 @@ export default function PropertySimulator({ properties }) {
                 <>
                   <Field
                     label="Your tax rate"
-                    hint="12% standard rate · 2% or 3% if this is your only property (klein beschrijf)"
+                    info={SIM_INFO.soloTaxRate}
                   >
                     <PctInput value={sim.soloTaxRate} onChange={set('soloTaxRate')} step="0.1" />
                   </Field>
@@ -337,10 +642,10 @@ export default function PropertySimulator({ properties }) {
               Rental Income
             </h3>
             <div className="space-y-3">
-              <Field label="Monthly Gross Rent">
+              <Field label="Monthly Gross Rent" info={SIM_INFO.monthlyRentalIncome}>
                 <MoneyInput value={sim.monthlyRentalIncome} onChange={set('monthlyRentalIncome')} />
               </Field>
-              <Field label="Rent Indexation Rate">
+              <Field label="Rent Indexation Rate" info={SIM_INFO.indexationRate}>
                 <PctInput value={sim.indexationRate} onChange={set('indexationRate')} step="0.1" />
               </Field>
             </div>
@@ -352,19 +657,19 @@ export default function PropertySimulator({ properties }) {
               Operating Costs (Annual)
             </h3>
             <div className="space-y-3">
-              <Field label="Maintenance">
+              <Field label="Maintenance" info={SIM_INFO.annualMaintenanceCost}>
                 <MoneyInput value={sim.annualMaintenanceCost} onChange={set('annualMaintenanceCost')} />
               </Field>
-              <Field label="Insurance">
+              <Field label="Insurance" info={SIM_INFO.annualInsuranceCost}>
                 <MoneyInput value={sim.annualInsuranceCost} onChange={set('annualInsuranceCost')} />
               </Field>
-              <Field label="Property Tax">
+              <Field label="Property Tax (onroerende voorheffing)" info={SIM_INFO.annualPropertyTax}>
                 <MoneyInput value={sim.annualPropertyTax} onChange={set('annualPropertyTax')} />
               </Field>
-              <Field label="Other Monthly Expenses">
+              <Field label="Other Monthly Expenses" info={SIM_INFO.monthlyExpenses}>
                 <MoneyInput value={sim.monthlyExpenses} onChange={set('monthlyExpenses')} />
               </Field>
-              <Field label="Cost Inflation">
+              <Field label="Cost Inflation" info={SIM_INFO.inflationRate}>
                 <PctInput value={sim.inflationRate} onChange={set('inflationRate')} step="0.1" />
               </Field>
             </div>
@@ -376,16 +681,16 @@ export default function PropertySimulator({ properties }) {
               Financing
             </h3>
             <div className="space-y-3">
-              <Field label="Loan Amount">
+              <Field label="Loan Amount" info={SIM_INFO.loanAmount}>
                 <MoneyInput value={sim.loanAmount} onChange={set('loanAmount')} />
               </Field>
-              <Field label="Interest Rate">
+              <Field label="Interest Rate" info={SIM_INFO.loanInterestRate}>
                 <PctInput value={sim.loanInterestRate} onChange={set('loanInterestRate')} step="0.05" />
               </Field>
-              <Field label="Monthly Payment">
+              <Field label="Monthly Payment" info={SIM_INFO.loanMonthlyPayment}>
                 <MoneyInput value={sim.loanMonthlyPayment} onChange={set('loanMonthlyPayment')} />
               </Field>
-              <Field label="Loan Term (months)">
+              <Field label="Loan Term (months)" info={SIM_INFO.loanTermMonths}>
                 <input
                   type="number"
                   min="12"
@@ -405,25 +710,37 @@ export default function PropertySimulator({ properties }) {
           {/* Quick metrics */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div className="card text-center space-y-1">
-              <p className="text-xs text-slate-400">Gross Yield</p>
+              <p className="text-xs text-slate-400 flex items-center justify-center">
+                Gross Yield
+                <InfoPopover>{SIM_INFO.grossYield}</InfoPopover>
+              </p>
               <p className={`text-xl font-bold ${grossYield >= 4 ? 'text-emerald-400' : 'text-amber-400'}`}>
                 {grossYield.toFixed(2)}%
               </p>
             </div>
             <div className="card text-center space-y-1">
-              <p className="text-xs text-slate-400">Year-1 Net CF</p>
+              <p className="text-xs text-slate-400 flex items-center justify-center">
+                Year-1 Net CF
+                <InfoPopover>{SIM_INFO.netCF}</InfoPopover>
+              </p>
               <p className={`text-xl font-bold ${netCFYear1 >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                 {fmt(netCFYear1)}
               </p>
             </div>
             <div className="card text-center space-y-1">
-              <p className="text-xs text-slate-400">+20y Net Worth Boost</p>
+              <p className="text-xs text-slate-400 flex items-center justify-center">
+                +20y Net Worth Boost
+                <InfoPopover>{SIM_INFO.netWorthBoost}</InfoPopover>
+              </p>
               <p className={`text-xl font-bold ${final20.netWorth >= 0 ? 'text-brand-400' : 'text-red-400'}`}>
                 {fmt(final20.netWorth)}
               </p>
             </div>
             <div className="card text-center space-y-1">
-              <p className="text-xs text-slate-400">+20y Cumulative CF Boost</p>
+              <p className="text-xs text-slate-400 flex items-center justify-center">
+                +20y Cumulative CF Boost
+                <InfoPopover>{SIM_INFO.cumulativeCFBoost}</InfoPopover>
+              </p>
               <p className={`text-xl font-bold ${final20.cumulativeCF >= 0 ? 'text-brand-400' : 'text-red-400'}`}>
                 {fmt(final20.cumulativeCF)}
               </p>
