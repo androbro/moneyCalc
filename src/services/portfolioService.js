@@ -24,8 +24,16 @@ function dbToProperty(row) {
     address:               row.address ?? '',
     purchasePrice:         Number(row.purchase_price ?? 0),
     currentValue:          Number(row.current_value ?? 0),
+    valuationDate:         row.valuation_date ?? '',
     appreciationRate:      Number(row.appreciation_rate ?? 0.02),
     purchaseDate:          row.purchase_date ?? '',
+    // Actual acquisition costs (null = not entered → use estimate)
+    registrationTax:       row.registration_tax   != null ? Number(row.registration_tax)   : null,
+    notaryFees:            row.notary_fees         != null ? Number(row.notary_fees)         : null,
+    agencyFees:            row.agency_fees         != null ? Number(row.agency_fees)         : null,
+    otherAcquisitionCosts: row.other_acquisition_costs != null ? Number(row.other_acquisition_costs) : null,
+    // Ownership
+    owners:                Array.isArray(row.owners) ? row.owners : [{ name: 'Me', share: 1 }],
     // Status & rental period
     status:                row.status ?? 'rented',
     isRented:              row.is_rented ?? true,
@@ -54,8 +62,15 @@ function propertyToDb(p) {
     address:                 p.address ?? '',
     purchase_price:          p.purchasePrice ?? 0,
     current_value:           p.currentValue ?? 0,
+    valuation_date:          p.valuationDate || null,
     appreciation_rate:       p.appreciationRate ?? 0.02,
     purchase_date:           p.purchaseDate || null,
+    registration_tax:        p.registrationTax   ?? null,
+    notary_fees:             p.notaryFees         ?? null,
+    agency_fees:             p.agencyFees         ?? null,
+    other_acquisition_costs: p.otherAcquisitionCosts ?? null,
+    // Ownership
+    owners:                  p.owners?.length ? p.owners : [{ name: 'Me', share: 1 }],
     // Status & rental period
     status:                  p.status ?? 'rented',
     is_rented:               p.isRented ?? true,

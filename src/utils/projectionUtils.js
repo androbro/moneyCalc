@@ -264,42 +264,59 @@ export function getLoanPaymentSplit(loan, date = new Date()) {
  *   - interest component → true cost (counted in annualCosts)
  *   - capital component  → equity building (NOT counted in cash-flow cost)
  *
+ * Personal net worth uses each property's `owners` array to find the share
+ * owned by "me" (owner.name === 'Me' or first owner if none is flagged).
+ * Pass `profile` (householdProfile) to also include personal cash & investments.
+ *
  * Fields returned:
- *   totalPortfolioValue, totalDebt, totalNetWorth
+ *   totalPortfolioValue, totalDebt, totalNetWorth  – full portfolio (all owners)
+ *   personalRealEstateNetWorth                     – my share of equity only
+ *   personalCash                                   – my cash (isMe member)
+ *   personalInvestmentValue                        – my investment positions (today value, contributions only)
+ *   personalNetWorth                               – sum of all three above
  *   totalMonthlyCashFlow, annualNetCashFlow
  *   monthlyInterest, monthlyCapital  – aggregate loan split
  *   roe, propertyCount, loanCount
- *   activeRentalCount  – how many properties are currently generating rent
+ *   activeRentalCount
  */
-export function computeSummary(properties) {
+export function computeSummary(properties, profile = null) {
   let totalAssets      = 0
   let totalLiabilities = 0
+  let personalAssets   = 0   // my share of property values
+  let personalDebt     = 0   // my share of loan balances
   let annualRentalIncome = 0
-  let annualOpex       = 0   // operating costs only
-  let annualInterest   = 0   // interest component of loans
-  let annualCapital    = 0   // capital repayment (equity building, NOT a cost)
+  let annualOpex       = 0
+  let annualInterest   = 0
+  let annualCapital    = 0
   let activeRentalCount = 0
 
   const today    = new Date()
   const todayISO = today.toISOString()
 
   for (const property of properties) {
-    totalAssets += property.currentValue || 0
+    const value = property.currentValue || 0
+    totalAssets += value
 
-    // Rental income — only if currently active
+    // My ownership share on this property (default 100% if no owners array)
+    const owners   = property.owners || [{ name: 'Me', share: 1 }]
+    const myOwner  = owners.find((o) => /^me$/i.test(o.name?.trim())) ?? owners[0]
+    const myShare  = Number(myOwner?.share ?? 1)
+    personalAssets += value * myShare
+
     if (isRentalActiveOn(property, today)) {
       annualRentalIncome += (property.startRentalIncome || property.monthlyRentalIncome || 0) * 12
       activeRentalCount++
     }
 
-    // Operating costs (always apply regardless of rental status)
     annualOpex += (property.annualMaintenanceCost || 0)
     annualOpex += (property.annualInsuranceCost || 0)
     annualOpex += (property.monthlyExpenses || 0) * 12
     annualOpex += (property.annualPropertyTax || 0)
 
     for (const loan of property.loans || []) {
-      totalLiabilities += getRemainingBalance(loan, todayISO)
+      const balance = getRemainingBalance(loan, todayISO)
+      totalLiabilities += balance
+      personalDebt     += balance * myShare
       const split = getLoanPaymentSplit(loan, today)
       annualInterest += split.monthlyInterest * 12
       annualCapital  += split.monthlyCapital  * 12
@@ -307,27 +324,52 @@ export function computeSummary(properties) {
   }
 
   const equity = totalAssets - totalLiabilities
-  // Cash flow = rent - opex - interest (capital is equity-building, not a cost)
+  const personalRealEstateNetWorth = personalAssets - personalDebt
+
+  // Personal cash & investments from the "isMe" household member
+  let personalCash            = 0
+  let personalInvestmentValue = 0  // simple sum of cash contributed to positions (not compounded — for snapshot)
+  if (profile?.members) {
+    const me = profile.members.find((m) => m.isMe) ?? profile.members[0]
+    if (me) {
+      personalCash = me.cash || 0
+      // Investment value = sum of monthly amounts × 12 months contributed so far
+      // We don't have a "since date" so we use monthly × 12 as a simple 1-year proxy for display
+      // The real compounded value lives in the projection chart
+      personalInvestmentValue = (me.investmentPositions || [])
+        .reduce((s, p) => s + (p.monthlyAmount || 0) * 12, 0)
+    }
+  }
+
+  const personalNetWorth = personalRealEstateNetWorth + personalCash
+
   const annualNetCF = annualRentalIncome - annualOpex - annualInterest
   const roe = equity > 0 ? (annualNetCF / equity) * 100 : 0
 
   return {
+    // Full portfolio totals
     totalAssets,
-    totalPortfolioValue:  totalAssets,
+    totalPortfolioValue:          totalAssets,
     totalLiabilities,
-    totalDebt:            totalLiabilities,
-    totalNetWorth:        equity,
-    totalMonthlyCashFlow: annualNetCF / 12,
-    annualNetCashFlow:    annualNetCF,
-    monthlyInterest:      annualInterest / 12,
-    monthlyCapital:       annualCapital  / 12,
+    totalDebt:                    totalLiabilities,
+    totalNetWorth:                equity,
+    // Personal breakdown
+    personalRealEstateNetWorth,
+    personalCash,
+    personalInvestmentValue,
+    personalNetWorth,
+    // Cash flow
+    totalMonthlyCashFlow:         annualNetCF / 12,
+    annualNetCashFlow:            annualNetCF,
+    monthlyInterest:              annualInterest / 12,
+    monthlyCapital:               annualCapital  / 12,
     annualRentalIncome,
     annualOpex,
     annualInterest,
     annualCapital,
     roe,
-    propertyCount:        properties.length,
-    loanCount:            properties.reduce((sum, p) => sum + (p.loans?.length || 0), 0),
+    propertyCount:                properties.length,
+    loanCount:                    properties.reduce((sum, p) => sum + (p.loans?.length || 0), 0),
     activeRentalCount,
   }
 }

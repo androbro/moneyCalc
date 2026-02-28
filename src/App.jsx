@@ -9,6 +9,7 @@ import HouseholdForm from './components/HouseholdForm'
 import CashFlowAggregator from './components/CashFlowAggregator'
 import PropertySimulator from './components/PropertySimulator'
 import MoneyFlow from './components/MoneyFlow'
+import PropertyDetail from './components/PropertyDetail'
 import AiChatOverlay from './components/AiChatOverlay'
 import AuthOverlay from './components/AuthOverlay'
 import { isOwner, isLocalhost, login, logout } from './lib/auth'
@@ -110,6 +111,7 @@ export default function App() {
   const [activeTab, setActiveTab]               = useState('dashboard')
   const [editingProperty, setEditingProperty]   = useState(null)
   const [showForm, setShowForm]                 = useState(false)
+  const [detailProperty, setDetailProperty]     = useState(null)
   const [editingInvestment, setEditingInvestment] = useState(null)
   const [showInvestmentForm, setShowInvestmentForm] = useState(false)
 
@@ -232,6 +234,7 @@ export default function App() {
   const handleEditProperty = (property) => {
     setEditingProperty(property)
     setShowForm(true)
+    setDetailProperty(null)
     setActiveTab('properties')
   }
 
@@ -253,7 +256,8 @@ export default function App() {
     )
     setShowForm(false)
     setEditingProperty(null)
-    setActiveTab('dashboard')
+    // Stay on properties tab after saving; if we were editing from detail view, go back there
+    setActiveTab('properties')
   }
 
   const handleCancelForm = () => {
@@ -322,7 +326,7 @@ export default function App() {
     <>
       <Layout
         activeTab={activeTab}
-        onTabChange={setActiveTab}
+        onTabChange={(tab) => { setActiveTab(tab); setDetailProperty(null); setShowForm(false) }}
         isOwner={ownerAuthed}
         onOpenAuth={() => setShowAuthOverlay(true)}
         showAuthControls={!isLocalhost()}
@@ -332,14 +336,24 @@ export default function App() {
         {activeTab === 'dashboard' && (
           <Dashboard
             properties={properties}
+            profile={householdProfile}
             onAddProperty={handleAddProperty}
             onEditProperty={handleEditProperty}
             onDeleteProperty={handleDeleteProperty}
           />
         )}
 
+        {/* ── Property detail view ── */}
+        {activeTab === 'properties' && detailProperty && !showForm && (
+          <PropertyDetail
+            property={properties.find((p) => p.id === detailProperty.id) ?? detailProperty}
+            onEdit={() => handleEditProperty(detailProperty)}
+            onBack={() => setDetailProperty(null)}
+          />
+        )}
+
         {/* ── Properties list ── */}
-        {activeTab === 'properties' && !showForm && (
+        {activeTab === 'properties' && !showForm && !detailProperty && (
           <div className="space-y-4">
             <div className="flex items-center justify-between">
               <div>
@@ -369,6 +383,7 @@ export default function App() {
                   <PropertyListCard
                     key={p.id}
                     property={p}
+                    onView={() => setDetailProperty(p)}
                     onEdit={() => handleEditProperty(p)}
                     onDelete={() => handleDeleteProperty(p.id)}
                   />
@@ -422,7 +437,7 @@ export default function App() {
 
         {/* ── Projection ── */}
         {activeTab === 'projection' && (
-          <ProjectionChart properties={properties} />
+          <ProjectionChart properties={properties} profile={householdProfile} />
         )}
 
         {/* ── Scenarios ── */}
@@ -656,19 +671,62 @@ function InvestmentsPage({ properties, onAdd, onEdit, onDelete }) {
 
 // ─── Property list card ───────────────────────────────────────────────────────
 
-function PropertyListCard({ property, onEdit, onDelete }) {
+function PropertyListCard({ property, onView, onEdit, onDelete }) {
+  const fmt = (n) =>
+    new Intl.NumberFormat('nl-BE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 }).format(n)
+
+  const STATUS_COLORS = {
+    owner_occupied: 'bg-brand-800/50 text-brand-300 border-brand-700/50',
+    rented:         'bg-emerald-900/40 text-emerald-300 border-emerald-700/40',
+    vacant:         'bg-slate-700/60 text-slate-300 border-slate-600/60',
+    for_sale:       'bg-amber-900/40 text-amber-300 border-amber-700/40',
+    renovation:     'bg-orange-900/40 text-orange-300 border-orange-700/40',
+  }
+  const STATUS_LABELS = {
+    owner_occupied: 'Owner-occupied',
+    rented:         'Rented out',
+    vacant:         'Vacant',
+    for_sale:       'For sale',
+    renovation:     'Renovation',
+  }
+  const sc = STATUS_COLORS[property.status] ?? STATUS_COLORS.owner_occupied
+  const sl = STATUS_LABELS[property.status] ?? property.status
+
   return (
-    <div className="card space-y-3">
+    <div
+      className="card space-y-3 cursor-pointer hover:border-brand-500/50 hover:bg-slate-800/80 transition-all group"
+      onClick={onView}
+      role="button"
+      tabIndex={0}
+      onKeyDown={(e) => e.key === 'Enter' && onView()}
+    >
       <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <h3 className="font-semibold text-white truncate">{property.name}</h3>
-          <p className="text-xs text-slate-400 truncate">{property.address}</p>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h3 className="font-semibold text-white truncate group-hover:text-brand-300 transition-colors">
+              {property.name}
+            </h3>
+            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border shrink-0 ${sc}`}>
+              {sl}
+            </span>
+          </div>
+          {property.address && (
+            <p className="text-xs text-slate-400 truncate mt-0.5">{property.address}</p>
+          )}
         </div>
         <div className="flex gap-2 shrink-0">
-          <button onClick={onEdit} className="text-slate-400 hover:text-brand-400 transition-colors">
+          <button
+            onClick={(e) => { e.stopPropagation(); onEdit() }}
+            className="text-slate-400 hover:text-brand-400 transition-colors"
+            title="Edit"
+          >
             <EditIcon />
           </button>
-          <button onClick={onDelete} className="text-slate-400 hover:text-red-400 transition-colors">
+          <button
+            onClick={(e) => { e.stopPropagation(); onDelete() }}
+            className="text-slate-400 hover:text-red-400 transition-colors"
+            title="Delete"
+          >
             <TrashIcon />
           </button>
         </div>
@@ -676,10 +734,7 @@ function PropertyListCard({ property, onEdit, onDelete }) {
       <div className="grid grid-cols-2 gap-2 text-sm">
         <div>
           <span className="text-slate-400">Value </span>
-          <span className="text-white font-medium">
-            {new Intl.NumberFormat('nl-BE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 })
-              .format(property.currentValue)}
-          </span>
+          <span className="text-white font-medium">{fmt(property.currentValue)}</span>
         </div>
         <div>
           <span className="text-slate-400">Loans </span>
@@ -692,12 +747,13 @@ function PropertyListCard({ property, onEdit, onDelete }) {
           </span>
         </div>
         <div>
-          <span className="text-slate-400">Schedules </span>
-          <span className="text-white font-medium">
-            {property.loans?.filter((l) => l.amortizationSchedule?.length > 0).length || 0}
-          </span>
+          <span className="text-slate-400">Renovations </span>
+          <span className="text-white font-medium">{property.plannedInvestments?.length || 0}</span>
         </div>
       </div>
+      <p className="text-xs text-brand-400 opacity-0 group-hover:opacity-100 transition-opacity">
+        Click to view full property details →
+      </p>
     </div>
   )
 }

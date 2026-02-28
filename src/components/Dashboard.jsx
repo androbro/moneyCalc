@@ -414,8 +414,8 @@ function EmptyState({ onAdd }) {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export default function Dashboard({ properties, onAddProperty, onEditProperty, onDeleteProperty }) {
-  const s = computeSummary(properties)
+export default function Dashboard({ properties, profile, onAddProperty, onEditProperty, onDeleteProperty }) {
+  const s = computeSummary(properties, profile)
 
   const ltv        = s.totalPortfolioValue > 0 ? (s.totalDebt / s.totalPortfolioValue) * 100 : null
   const grossYield = s.totalPortfolioValue > 0 ? (s.annualNetCashFlow / s.totalPortfolioValue) * 100 : null
@@ -438,26 +438,68 @@ export default function Dashboard({ properties, onAddProperty, onEditProperty, o
       {/* ── Where I live banner ── */}
       {properties.length > 0 && <ResidenceBanner properties={properties} />}
 
+      {/* ── Personal net worth banner ── */}
+      {properties.length > 0 && (
+        <div className="card bg-gradient-to-r from-brand-900/40 to-slate-800/60 border-brand-700/40">
+          <div className="flex flex-wrap items-center justify-between gap-4">
+            <div>
+              <p className="text-xs text-brand-300 font-semibold uppercase tracking-wider mb-1 flex items-center gap-1">
+                Your Personal Net Worth
+                <InfoPopover>{INFO.netWorth}</InfoPopover>
+              </p>
+              <p className={`text-4xl font-bold tabular-nums ${s.personalNetWorth >= 0 ? 'text-white' : 'text-red-400'}`}>
+                {formatEUR(s.personalNetWorth)}
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-4 text-sm">
+              <div className="text-center">
+                <p className="text-xs text-slate-400 mb-0.5">Real estate equity (my share)</p>
+                <p className={`font-bold tabular-nums ${s.personalRealEstateNetWorth >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                  {formatEUR(s.personalRealEstateNetWorth)}
+                </p>
+              </div>
+              {s.personalCash > 0 && (
+                <div className="text-center">
+                  <p className="text-xs text-slate-400 mb-0.5">Cash on hand</p>
+                  <p className="font-bold tabular-nums text-brand-300">{formatEUR(s.personalCash)}</p>
+                </div>
+              )}
+            </div>
+          </div>
+          {/* Sub-note if not all properties are 100% owned */}
+          {properties.some((p) => {
+            const owners  = p.owners || []
+            const myOwner = owners.find((o) => /^me$/i.test(o.name?.trim())) ?? owners[0]
+            return myOwner && Number(myOwner.share) < 0.999
+          }) && (
+            <p className="text-xs text-slate-500 mt-2">
+              Includes only your ownership share per property. Portfolio total (all owners) is {formatEUR(s.totalNetWorth)}.
+            </p>
+          )}
+        </div>
+      )}
+
       {/* ── Primary KPI cards ── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         <KpiCard
           label="Total Portfolio Value"
           value={formatEUR(s.totalPortfolioValue)}
-          sub={`${s.propertyCount} propert${s.propertyCount === 1 ? 'y' : 'ies'}`}
+          sub={`${s.propertyCount} propert${s.propertyCount === 1 ? 'y' : 'ies'} · all owners`}
           icon={<BuildingIcon />}
           info={INFO.totalPortfolioValue}
         />
         <KpiCard
           label="Total Debt"
           value={formatEUR(s.totalDebt)}
-          sub={`${s.loanCount} loan${s.loanCount === 1 ? '' : 's'}`}
+          sub={`${s.loanCount} loan${s.loanCount === 1 ? '' : 's'} · all owners`}
           valueColor="text-red-400"
           icon={<DebtIcon />}
           info={INFO.totalDebt}
         />
         <KpiCard
-          label="Net Worth"
+          label="Portfolio Net Worth"
           value={formatEUR(s.totalNetWorth)}
+          sub="all owners combined"
           valueColor={s.totalNetWorth >= 0 ? 'text-emerald-400' : 'text-red-400'}
           icon={<NetWorthIcon />}
           info={INFO.netWorth}

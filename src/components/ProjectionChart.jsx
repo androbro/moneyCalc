@@ -1,4 +1,4 @@
-import { useState, useRef } from 'react'
+import { useState } from 'react'
 import {
   AreaChart, Area,
   ComposedChart, Bar, Line,
@@ -8,6 +8,30 @@ import {
 } from 'recharts'
 import { buildProjection, formatEUR } from '../utils/projectionUtils'
 import InfoPopover from './InfoPopover'
+
+// ─── Investment projection math (mirrors MoneyFlow.jsx) ──────────────────────
+
+function buildInvProjection(profile, years = 20) {
+  const members = profile?.members || []
+  // Only "me" member's positions
+  const me = members.find((m) => m.isMe) ?? members[0]
+  const positions = (me?.investmentPositions || []).filter((p) => (p.monthlyAmount || 0) > 0)
+
+  const result = []
+  for (let y = 0; y <= years; y++) {
+    let total = 0
+    for (const pos of positions) {
+      const r = (pos.annualReturn || 0) / 12
+      const n = y * 12
+      const fv = r === 0
+        ? (pos.monthlyAmount || 0) * n
+        : (pos.monthlyAmount || 0) * ((Math.pow(1 + r, n) - 1) / r)
+      total += Math.round(fv)
+    }
+    result.push({ year: y, investmentPortfolio: total })
+  }
+  return result
+}
 
 // ─── Explanation texts (single source of truth) ───────────────────────────────
 
@@ -125,6 +149,24 @@ const INFO = {
       When this line rises above Net Worth, your rental income is adding meaningful real-world value on top of paper equity.
     </>
   ),
+  investmentPortfolio: (
+    <>
+      <strong className="text-white block mb-1">Investment Portfolio</strong>
+      The projected value of your stock/ETF/savings positions from the Household Profile (your positions only).
+      <br /><br />
+      <code className="text-brand-300">FV = monthly × ((1+r)^n − 1) / r</code>
+      <br /><br />
+      Assumes constant monthly contributions and fixed annual return. Dividends reinvested. Tax on gains not modelled.
+    </>
+  ),
+  personalNetWorth: (
+    <>
+      <strong className="text-white block mb-1">Personal Net Worth</strong>
+      Your real estate equity (your ownership share) plus your investment portfolio value at that point in time.
+      <br /><br />
+      <code className="text-brand-300">= Real Estate Equity (my share) + Investment Portfolio</code>
+    </>
+  ),
   cfTable: {
     propertyValue:  'Appreciated portfolio value at the start of that year.',
     loanBalance:    'Total outstanding debt across all loans at the start of that year.',
@@ -171,7 +213,7 @@ function CustomTooltip({ active, payload, label }) {
 
 // ─── Summary strip ────────────────────────────────────────────────────────────
 
-function SummaryStrip({ data }) {
+function SummaryStrip({ data, hasInvestments }) {
   const first = data[0]
   const last  = data[data.length - 1]
   const netWorthGain  = last.netWorth - first.netWorth
@@ -218,8 +260,32 @@ function SummaryStrip({ data }) {
     },
   ]
 
+  // Extra investment stats appended when user has investment positions
+  if (hasInvestments) {
+    const invGain = (last.investmentPortfolio ?? 0) - (first.investmentPortfolio ?? 0)
+    const pnwGain = (last.personalNetWorth ?? 0) - (first.personalNetWorth ?? 0)
+    items.push(
+      {
+        label: 'Investment growth (20y)',
+        value: formatEUR(invGain),
+        color: invGain >= 0 ? 'text-violet-400' : 'text-red-400',
+        prefix: invGain >= 0 ? '+' : '',
+        info: INFO.investmentPortfolio,
+      },
+      {
+        label: 'Personal NW gain (20y)',
+        value: formatEUR(pnwGain),
+        color: pnwGain >= 0 ? 'text-fuchsia-400' : 'text-red-400',
+        prefix: pnwGain >= 0 ? '+' : '',
+        info: INFO.personalNetWorth,
+      },
+    )
+  }
+
+  const cols = items.length <= 5 ? 'lg:grid-cols-5' : 'lg:grid-cols-7'
+
   return (
-    <div className="grid grid-cols-2 lg:grid-cols-5 gap-3 mt-4">
+    <div className={`grid grid-cols-2 ${cols} gap-3 mt-4`}>
       {items.map((item) => (
         <div key={item.label} className="bg-slate-700/50 rounded-xl p-3 text-center">
           <p className="text-xs text-slate-400 mb-1 leading-tight flex items-center justify-center gap-0.5">
@@ -289,7 +355,7 @@ function PropertyBreakdown({ properties }) {
 
 // ─── Annual cash flow table ───────────────────────────────────────────────────
 
-function CashFlowTable({ data }) {
+function CashFlowTable({ data, hasInvestments }) {
   const [expanded, setExpanded] = useState(false)
   const rows = expanded ? data : data.slice(0, 6)
 
@@ -314,6 +380,12 @@ function CashFlowTable({ data }) {
             <ThWithInfo info={INFO.cfTable.annualCF}>Annual CF</ThWithInfo>
             <ThWithInfo info={INFO.cfTable.cumulativeCF}>Cumulative CF</ThWithInfo>
             <ThWithInfo info={INFO.cfTable.totalReturn}>Total Return</ThWithInfo>
+            {hasInvestments && (
+              <ThWithInfo info={INFO.investmentPortfolio}>Investments</ThWithInfo>
+            )}
+            {hasInvestments && (
+              <ThWithInfo info={INFO.personalNetWorth}>Personal NW</ThWithInfo>
+            )}
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-800">
@@ -332,6 +404,16 @@ function CashFlowTable({ data }) {
               <td className={`py-2 pl-2 text-right font-bold ${row.totalReturn >= 0 ? 'text-amber-400' : 'text-red-400'}`}>
                 {row.totalReturn >= 0 ? '+' : ''}{formatEUR(row.totalReturn)}
               </td>
+              {hasInvestments && (
+                <td className="py-2 px-2 text-right text-violet-400 font-medium">
+                  {formatEUR(row.investmentPortfolio ?? 0)}
+                </td>
+              )}
+              {hasInvestments && (
+                <td className="py-2 pl-2 text-right text-fuchsia-400 font-bold">
+                  {formatEUR(row.personalNetWorth ?? 0)}
+                </td>
+              )}
             </tr>
           ))}
         </tbody>
@@ -466,11 +548,40 @@ function getInvestmentMarkers(properties) {
   return byYear  // { "+3y": [inv, ...], ... }
 }
 
-export default function ProjectionChart({ properties }) {
+export default function ProjectionChart({ properties, profile }) {
   if (!properties || properties.length === 0) return <EmptyState />
 
   const data = buildProjection(properties)
   const investmentMarkers = getInvestmentMarkers(properties)
+
+  // Build investment projection and merge into chart data
+  const invData = buildInvProjection(profile)
+  const hasInvestments = invData.some((d) => d.investmentPortfolio > 0)
+
+  // Merge: add investmentPortfolio and personalNetWorth to each year point
+  // personalNetWorth = my share of real estate equity + investment portfolio
+  const mergedData = data.map((pt, i) => {
+    const inv = invData[i]?.investmentPortfolio ?? 0
+    // My share of real estate equity
+    let myEquity = pt.netWorth  // fallback: assume 100% ownership
+    if (properties.length > 0) {
+      // Weighted by ownership share
+      // Re-derive: sum(currentValue × share × appreciationFactor) − sum(loanBalance × share)
+      // For simplicity, use the same share as computeSummary does (first "Me" owner or owner[0])
+      // We approximate by scaling total netWorth by the average personal share
+      const totalValue = properties.reduce((s, p) => s + (p.currentValue || 0), 0)
+      if (totalValue > 0) {
+        const myValueToday = properties.reduce((s, p) => {
+          const owners  = p.owners || [{ name: 'Me', share: 1 }]
+          const myOwner = owners.find((o) => /^me$/i.test(o.name?.trim())) ?? owners[0]
+          return s + (p.currentValue || 0) * Number(myOwner?.share ?? 1)
+        }, 0)
+        const myShareFraction = myValueToday / totalValue
+        myEquity = Math.round(pt.netWorth * myShareFraction)
+      }
+    }
+    return { ...pt, investmentPortfolio: inv, personalNetWorth: myEquity + inv }
+  })
 
   return (
     <div className="space-y-6">
@@ -491,11 +602,15 @@ export default function ProjectionChart({ properties }) {
             { label: 'Loan Balance',   color: '#ef4444', info: INFO.loanBalance },
             { label: 'Net Worth',      color: '#38bdf8', info: INFO.netWorth },
             { label: 'Total Return',   color: '#f59e0b', info: INFO.totalReturn },
+            ...(hasInvestments ? [
+              { label: 'Investment Portfolio', color: '#a78bfa', info: INFO.investmentPortfolio },
+              { label: 'Personal Net Worth',   color: '#e879f9', info: INFO.personalNetWorth },
+            ] : []),
           ]} />
         </div>
 
         <ResponsiveContainer width="100%" height={320}>
-          <AreaChart data={data} margin={{ top: 10, right: 8, left: 0, bottom: 0 }}>
+          <AreaChart data={mergedData} margin={{ top: 10, right: 8, left: 0, bottom: 0 }}>
             <defs>
               <linearGradient id="gProp" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%"  stopColor="#10b981" stopOpacity={0.35} />
@@ -513,6 +628,14 @@ export default function ProjectionChart({ properties }) {
                 <stop offset="5%"  stopColor="#f59e0b" stopOpacity={0.30} />
                 <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.02} />
               </linearGradient>
+              <linearGradient id="gInv" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%"  stopColor="#a78bfa" stopOpacity={0.45} />
+                <stop offset="95%" stopColor="#a78bfa" stopOpacity={0.05} />
+              </linearGradient>
+              <linearGradient id="gPersonal" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%"  stopColor="#e879f9" stopOpacity={0.35} />
+                <stop offset="95%" stopColor="#e879f9" stopOpacity={0.02} />
+              </linearGradient>
             </defs>
             <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
             <XAxis dataKey="label" tick={{ fill: '#94a3b8', fontSize: 11 }} axisLine={{ stroke: '#1e293b' }} tickLine={false} />
@@ -522,6 +645,12 @@ export default function ProjectionChart({ properties }) {
             <Area type="monotone" dataKey="loanBalance"   name="Loan Balance"   stroke="#ef4444" strokeWidth={2} fill="url(#gLoan)" dot={false} activeDot={{ r: 4 }} />
             <Area type="monotone" dataKey="netWorth"      name="Net Worth"       stroke="#38bdf8" strokeWidth={2.5} fill="url(#gNW)"          dot={false} activeDot={{ r: 5 }} />
             <Area type="monotone" dataKey="totalReturn"   name="Total Return"    stroke="#f59e0b" strokeWidth={2}   fill="url(#gTotalReturn)"  dot={false} activeDot={{ r: 4 }} strokeDasharray="5 3" />
+            {hasInvestments && (
+              <Area type="monotone" dataKey="investmentPortfolio" name="Investment Portfolio" stroke="#a78bfa" strokeWidth={2} fill="url(#gInv)" dot={false} activeDot={{ r: 4 }} />
+            )}
+            {hasInvestments && (
+              <Area type="monotone" dataKey="personalNetWorth" name="Personal Net Worth" stroke="#e879f9" strokeWidth={2.5} fill="url(#gPersonal)" dot={false} activeDot={{ r: 5 }} strokeDasharray="6 2" />
+            )}
             {Object.entries(investmentMarkers).map(([label, invs]) => (
               <ReferenceLine
                 key={label}
@@ -540,20 +669,20 @@ export default function ProjectionChart({ properties }) {
           </AreaChart>
         </ResponsiveContainer>
 
-        <SummaryStrip data={data} />
+        <SummaryStrip data={mergedData} hasInvestments={hasInvestments} />
       </div>
 
       {/* ── Chart 2: Cash Flow (only when portfolio has rented properties) ── */}
       {properties.some((p) => p.isRented !== false) && (
-        <CashFlowChart data={data} />
+        <CashFlowChart data={mergedData} />
       )}
 
       {/* ── Chart 3: Equity Growth (always shown) ── */}
-      <EquityGrowthChart data={data} />
+      <EquityGrowthChart data={mergedData} />
 
       {/* ── Tables ── */}
       <PropertyBreakdown properties={properties} />
-      <CashFlowTable data={data} />
+      <CashFlowTable data={mergedData} hasInvestments={hasInvestments} />
     </div>
   )
 }

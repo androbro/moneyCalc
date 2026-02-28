@@ -64,8 +64,16 @@ const EMPTY_PROPERTY = () => ({
   address: '',
   purchasePrice: '',
   currentValue: '',
+  valuationDate: '',
   appreciationRate: '0.02',
   purchaseDate: '',
+  // Acquisition costs — empty string = "not entered, use estimate"
+  registrationTax: '',
+  notaryFees: '',
+  agencyFees: '',
+  otherAcquisitionCosts: '',
+  // Ownership
+  owners: [{ name: 'Me', share: 1 }],
   // Status & lifecycle
   status: 'owner_occupied',
   rentalStartDate: '',
@@ -286,6 +294,7 @@ export default function PropertyForm({ property: editProperty, onSave, onCancel 
       setForm({
         ...EMPTY_PROPERTY(),
         ...editProperty,
+        owners:                editProperty.owners?.length ? editProperty.owners : [{ name: 'Me', share: 1 }],
         status:                editProperty.status ?? (editProperty.isRented ? 'rented' : 'owner_occupied'),
         rentalStartDate:       editProperty.rentalStartDate ?? '',
         rentalEndDate:         editProperty.rentalEndDate ?? '',
@@ -295,6 +304,11 @@ export default function PropertyForm({ property: editProperty, onSave, onCancel 
         purchasePrice:         String(editProperty.purchasePrice ?? ''),
         currentValue:          String(editProperty.currentValue ?? ''),
         appreciationRate:      String(editProperty.appreciationRate ?? 0.02),
+        // null → '' so inputs stay uncontrolled-safe
+        registrationTax:       editProperty.registrationTax   != null ? String(editProperty.registrationTax)   : '',
+        notaryFees:            editProperty.notaryFees         != null ? String(editProperty.notaryFees)         : '',
+        agencyFees:            editProperty.agencyFees         != null ? String(editProperty.agencyFees)         : '',
+        otherAcquisitionCosts: editProperty.otherAcquisitionCosts != null ? String(editProperty.otherAcquisitionCosts) : '',
         startRentalIncome:     String(editProperty.startRentalIncome ?? editProperty.monthlyRentalIncome ?? ''),
         indexationRate:        String(editProperty.indexationRate ?? 0.02),
         monthlyExpenses:       String(editProperty.monthlyExpenses ?? ''),
@@ -331,6 +345,7 @@ export default function PropertyForm({ property: editProperty, onSave, onCancel 
     e.preventDefault()
     const property = {
       ...form,
+      owners:                form.owners?.length ? form.owners : [{ name: 'Me', share: 1 }],
       // Derive legacy isRented flag from status for backward compat
       isRented:              isRented,
       status:                form.status,
@@ -341,7 +356,13 @@ export default function PropertyForm({ property: editProperty, onSave, onCancel 
       residenceEndDate:      form.residenceEndDate || '',
       purchasePrice:         Number(form.purchasePrice) || 0,
       currentValue:          Number(form.currentValue) || 0,
+      valuationDate:         form.valuationDate || '',
       appreciationRate:      Number(form.appreciationRate) || 0.02,
+      // null = not entered (use estimate); registrationTax is a rate fraction (e.g. 0.06)
+      registrationTax:       form.registrationTax !== '' ? Number(form.registrationTax) : null,
+      notaryFees:            form.notaryFees       !== '' ? Number(form.notaryFees)       : null,
+      agencyFees:            form.agencyFees       !== '' ? Number(form.agencyFees)       : null,
+      otherAcquisitionCosts: form.otherAcquisitionCosts !== '' ? Number(form.otherAcquisitionCosts) : null,
       startRentalIncome:     Number(form.startRentalIncome) || 0,
       monthlyRentalIncome:   Number(form.startRentalIncome) || 0, // legacy sync
       indexationRate:        Number(form.indexationRate) || 0.02,
@@ -399,6 +420,10 @@ export default function PropertyForm({ property: editProperty, onSave, onCancel 
             value={form.currentValue} onChange={si('currentValue')} required />
         </Field>
 
+        <Field label="Valuation Date" hint="When was this estimate made? Used as the projection baseline.">
+          <input className="input" type="date" value={form.valuationDate} onChange={si('valuationDate')} />
+        </Field>
+
         <Field label="Annual Appreciation Rate"
           hint="Expected property value increase per year">
           <PctInput value={form.appreciationRate} onChange={sf('appreciationRate')} />
@@ -409,7 +434,123 @@ export default function PropertyForm({ property: editProperty, onSave, onCancel 
         </Field>
       </Section>
 
-      {/* ── Section 2: Current Status ── */}
+      {/* ── Section 1b: Acquisition Costs ── */}
+      <Section title="Acquisition Costs">
+        <Field label="Registration tax (registratierechten)"
+          hint="Leave blank to auto-estimate (6% klein beschrijf / 12.5%). Enter the actual % you paid.">
+          <PctInput
+            value={form.registrationTax}
+            onChange={sf('registrationTax')}
+            placeholder="Auto-estimated"
+            step="0.01"
+          />
+        </Field>
+        <Field label="Notary fees (EUR)"
+          hint="Actual notary invoice total incl. VAT. Leave blank to auto-estimate (1% + €1,500).">
+          <input className="input" type="number" min="0" placeholder="Auto-estimated"
+            value={form.notaryFees} onChange={si('notaryFees')} />
+        </Field>
+        <Field label="Agency / broker fees (EUR)"
+          hint="Estate agent commission paid by you at purchase.">
+          <input className="input" type="number" min="0" placeholder="0"
+            value={form.agencyFees} onChange={si('agencyFees')} />
+        </Field>
+        <Field label="Other acquisition costs (EUR)"
+          hint="Architect, survey, moving costs, etc.">
+          <input className="input" type="number" min="0" placeholder="0"
+            value={form.otherAcquisitionCosts} onChange={si('otherAcquisitionCosts')} />
+        </Field>
+      </Section>
+
+      {/* ── Section 2: Ownership ── */}
+      <div className="card space-y-3">
+        <div>
+          <h3 className="section-title mb-0">Ownership</h3>
+          <p className="text-xs text-slate-500 mt-0.5">
+            Who owns this property and what share. Shares must add up to 100%.
+            Your personal net worth only counts your share.
+          </p>
+        </div>
+
+        {/* Owner rows */}
+        <div className="space-y-2">
+          {(form.owners || [{ name: 'Me', share: 1 }]).map((owner, i) => {
+            const owners = form.owners || [{ name: 'Me', share: 1 }]
+            const updateOwner = (updated) => {
+              const next = owners.map((o, idx) => idx === i ? updated : o)
+              sf('owners')(next)
+            }
+            const removeOwner = () => sf('owners')(owners.filter((_, idx) => idx !== i))
+            const totalShare  = owners.reduce((s, o) => s + (Number(o.share) || 0), 0)
+            const isOver      = totalShare > 1.001
+            const isUnder     = totalShare < 0.999
+
+            return (
+              <div key={i} className="flex items-center gap-2">
+                <input
+                  className="input flex-1 text-sm"
+                  placeholder={i === 0 ? 'Me' : 'Partner name…'}
+                  value={owner.name}
+                  onChange={(e) => updateOwner({ ...owner, name: e.target.value })}
+                />
+                <div className="relative w-24">
+                  <input
+                    className={`input pr-6 text-sm text-right w-full ${isOver ? 'border-red-500' : ''}`}
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="1"
+                    placeholder="50"
+                    value={owner.share !== '' ? Math.round(Number(owner.share) * 100) : ''}
+                    onChange={(e) => updateOwner({ ...owner, share: Number(e.target.value) / 100 })}
+                  />
+                  <span className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 text-xs">%</span>
+                </div>
+                {owners.length > 1 && (
+                  <button
+                    type="button"
+                    onClick={removeOwner}
+                    className="text-slate-500 hover:text-red-400 transition-colors shrink-0"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                  </button>
+                )}
+              </div>
+            )
+          })}
+        </div>
+
+        {/* Share validation + total */}
+        {(() => {
+          const owners     = form.owners || []
+          const totalShare = owners.reduce((s, o) => s + (Number(o.share) || 0), 0)
+          const isOver     = totalShare > 1.001
+          const isUnder    = totalShare < 0.999 && owners.length > 1
+          return (
+            <div className="flex items-center justify-between text-xs">
+              <button
+                type="button"
+                onClick={() => sf('owners')([...(form.owners || []), { name: '', share: 0 }])}
+                className="text-slate-400 hover:text-brand-400 transition-colors flex items-center gap-1"
+              >
+                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                </svg>
+                Add co-owner
+              </button>
+              <span className={`font-semibold ${isOver ? 'text-red-400' : isUnder ? 'text-amber-400' : 'text-emerald-400'}`}>
+                Total: {Math.round(totalShare * 100)}%
+                {isOver  && ' — exceeds 100%'}
+                {isUnder && ' — under 100%'}
+              </span>
+            </div>
+          )
+        })()}
+      </div>
+
+      {/* ── Section 3: Current Status ── */}
       <div className="card space-y-4">
         <h3 className="section-title mb-0">Current Status</h3>
         <p className="text-xs text-slate-500 -mt-2">
@@ -499,7 +640,7 @@ export default function PropertyForm({ property: editProperty, onSave, onCancel 
         )}
       </div>
 
-      {/* ── Section 4: Operating Expenses ── */}
+      {/* ── Section 5: Operating Expenses ── */}
       <Section title="Operating Expenses">
         <Field label="Annual Maintenance Cost (EUR)"
           hint="Repairs, upkeep — inflated each year">
@@ -531,7 +672,7 @@ export default function PropertyForm({ property: editProperty, onSave, onCancel 
         </Field>
       </Section>
 
-      {/* ── Section 5: Loans ── */}
+      {/* ── Section 6: Loans ── */}
       <div className="card space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="section-title mb-0">Loans</h3>

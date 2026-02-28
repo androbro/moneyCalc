@@ -151,7 +151,7 @@ function PositionRow({ pos, onChange, onRemove }) {
 
 // ─── Member card ──────────────────────────────────────────────────────────────
 
-function MemberCard({ member, onChange, onRemove, canRemove }) {
+function MemberCard({ member, onChange, onRemove, onSetMe, canRemove }) {
   const set = (key) => (value) => onChange({ ...member, [key]: value })
   const positions = member.investmentPositions || []
 
@@ -182,17 +182,31 @@ function MemberCard({ member, onChange, onRemove, canRemove }) {
     <div className="bg-slate-900/60 border border-slate-700 rounded-xl p-4 space-y-4">
       {/* Name row */}
       <div className="flex items-center gap-3">
-        <div className="w-8 h-8 rounded-full bg-brand-600/30 border border-brand-500/40
-                        flex items-center justify-center shrink-0 text-brand-300 font-bold text-sm">
-          {(member.name || '?').charAt(0).toUpperCase()}
+        <button
+          type="button"
+          title={member.isMe ? 'This is you' : 'Mark as me'}
+          onClick={onSetMe}
+          className={`w-8 h-8 rounded-full border flex items-center justify-center shrink-0 font-bold text-sm transition-all
+            ${member.isMe
+              ? 'bg-brand-600/40 border-brand-500 text-brand-200'
+              : 'bg-slate-800 border-slate-600 text-slate-400 hover:border-brand-500 hover:text-brand-400'}`}
+        >
+          {member.isMe ? '★' : (member.name || '?').charAt(0).toUpperCase()}
+        </button>
+        <div className="flex-1 min-w-0">
+          <input
+            type="text"
+            value={member.name}
+            onChange={(e) => onChange({ ...member, name: e.target.value })}
+            placeholder="Name (e.g. Me, Sarah…)"
+            className="input w-full text-sm font-medium"
+          />
+          {member.isMe && (
+            <p className="text-[10px] text-brand-400 mt-0.5 ml-0.5">
+              ★ Your personal net worth includes this member's cash &amp; investments
+            </p>
+          )}
         </div>
-        <input
-          type="text"
-          value={member.name}
-          onChange={(e) => onChange({ ...member, name: e.target.value })}
-          placeholder="Name (e.g. Me, Sarah…)"
-          className="input flex-1 text-sm font-medium"
-        />
         {canRemove && (
           <button
             type="button"
@@ -304,7 +318,7 @@ export default function HouseholdForm({ profile, onSave, saving }) {
       ...f,
       members: [
         ...f.members,
-        { id: uuidv4(), name: '', netIncome: 0, investmentIncome: 0, cash: 0 },
+        { id: uuidv4(), name: '', netIncome: 0, investmentIncome: 0, cash: 0, isMe: false },
       ],
     }))
   }
@@ -374,6 +388,10 @@ export default function HouseholdForm({ profile, onSave, saving }) {
               member={m}
               onChange={(updated) => updateMember(m.id, updated)}
               onRemove={() => removeMember(m.id)}
+              onSetMe={() => setForm((f) => ({
+                ...f,
+                members: f.members.map((mm) => ({ ...mm, isMe: mm.id === m.id })),
+              }))}
               canRemove={form.members.length > 1}
             />
           ))}
