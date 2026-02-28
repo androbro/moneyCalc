@@ -2,6 +2,50 @@ import { useState, useEffect } from 'react'
 import { v4 as uuidv4 } from 'uuid'
 import CSVImporter from './CSVImporter'
 
+// ─── Property status options ───────────────────────────────────────────────────
+
+export const PROPERTY_STATUSES = [
+  { value: 'owner_occupied', label: 'Owner-occupied',    color: 'text-brand-400',   bg: 'bg-brand-900/40 border-brand-700/50' },
+  { value: 'rented',         label: 'Rented out',        color: 'text-emerald-400', bg: 'bg-emerald-900/40 border-emerald-700/50' },
+  { value: 'vacant',         label: 'Vacant',            color: 'text-amber-400',   bg: 'bg-amber-900/30 border-amber-700/40' },
+  { value: 'for_sale',       label: 'For sale',          color: 'text-orange-400',  bg: 'bg-orange-900/30 border-orange-700/40' },
+  { value: 'renovation',     label: 'Under renovation',  color: 'text-purple-400',  bg: 'bg-purple-900/30 border-purple-700/40' },
+]
+
+export function getStatusMeta(status) {
+  return PROPERTY_STATUSES.find((s) => s.value === status) ?? PROPERTY_STATUSES[1]
+}
+
+// ─── Helpers ───────────────────────────────────────────────────────────────────
+
+/**
+ * Returns true if rental income is active on `date` (default: today).
+ * Rules:
+ *  - status must be 'rented'
+ *  - if rentalStartDate set, date must be >= it
+ *  - if rentalEndDate set, date must be <= it
+ */
+export function isRentalActive(property, date = new Date()) {
+  if (property.status !== 'rented') return false
+  if (property.rentalStartDate) {
+    if (new Date(property.rentalStartDate) > date) return false
+  }
+  if (property.rentalEndDate) {
+    if (new Date(property.rentalEndDate) < date) return false
+  }
+  return true
+}
+
+/**
+ * Returns true if this property is the primary residence on `date`.
+ */
+export function isPrimaryResidenceOn(property, date = new Date()) {
+  if (!property.isPrimaryResidence) return false
+  if (property.residenceStartDate && new Date(property.residenceStartDate) > date) return false
+  if (property.residenceEndDate   && new Date(property.residenceEndDate)   < date) return false
+  return true
+}
+
 const EMPTY_LOAN = () => ({
   id: uuidv4(),
   lender: '',
@@ -21,12 +65,20 @@ const EMPTY_PROPERTY = () => ({
   currentValue: '',
   appreciationRate: '0.02',
   purchaseDate: '',
-  isRented: true,
-  // Cash flow
+  // Status & lifecycle
+  status: 'owner_occupied',
+  rentalStartDate: '',
+  rentalEndDate: '',
+  isPrimaryResidence: false,
+  residenceStartDate: '',
+  residenceEndDate: '',
+  // Legacy (kept for back-compat)
+  isRented: false,
+  // Income
   startRentalIncome: '',
   indexationRate: '0.02',
+  // Costs
   monthlyExpenses: '',
-  // Operating costs (new Phase 5)
   annualMaintenanceCost: '',
   annualInsuranceCost: '',
   annualPropertyTax: '',
@@ -34,7 +86,7 @@ const EMPTY_PROPERTY = () => ({
   loans: [],
 })
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// ─── Shared sub-components ────────────────────────────────────────────────────
 
 function Field({ label, hint, children, required, span2 = false }) {
   return (
@@ -69,7 +121,30 @@ function PctInput({ value, onChange, placeholder = '2.0', step = '0.1', min = '0
   )
 }
 
-// ─── Loan sub-form ────────────────────────────────────────────────────────────
+function Toggle({ checked, onChange, label }) {
+  return (
+    <label className="flex items-center gap-2.5 cursor-pointer select-none">
+      <button
+        type="button"
+        role="switch"
+        aria-checked={checked}
+        onClick={() => onChange(!checked)}
+        className={`relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent
+                    transition-colors duration-200 focus:outline-none
+                    ${checked ? 'bg-brand-600' : 'bg-slate-600'}`}
+      >
+        <span
+          className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow
+                      transform transition-transform duration-200
+                      ${checked ? 'translate-x-5' : 'translate-x-0'}`}
+        />
+      </button>
+      <span className="text-sm text-slate-300">{label}</span>
+    </label>
+  )
+}
+
+// ─── Loan sub-form ─────────────────────────────────────────────────────────────
 
 function LoanForm({ loan, index, onChange, onRemove, onScheduleImport }) {
   const [showImporter, setShowImporter] = useState(false)
@@ -165,6 +240,40 @@ function Section({ title, children }) {
   )
 }
 
+// ─── Status selector ──────────────────────────────────────────────────────────
+
+function StatusSelector({ value, onChange }) {
+  return (
+    <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+      {PROPERTY_STATUSES.map((s) => (
+        <button
+          key={s.value}
+          type="button"
+          onClick={() => onChange(s.value)}
+          className={`rounded-xl border px-3 py-2.5 text-xs font-semibold text-left transition-all
+            ${value === s.value
+              ? `${s.bg} ${s.color} border-current shadow-sm`
+              : 'bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-500 hover:text-slate-200'
+            }`}
+        >
+          <span className={`block text-base mb-0.5 ${value === s.value ? s.color : 'text-slate-500'}`}>
+            {STATUS_ICONS[s.value]}
+          </span>
+          {s.label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+const STATUS_ICONS = {
+  owner_occupied: '🏠',
+  rented:         '🔑',
+  vacant:         '⬜',
+  for_sale:       '🏷️',
+  renovation:     '🔨',
+}
+
 // ─── Main form ────────────────────────────────────────────────────────────────
 
 export default function PropertyForm({ property: editProperty, onSave, onCancel }) {
@@ -176,7 +285,12 @@ export default function PropertyForm({ property: editProperty, onSave, onCancel 
       setForm({
         ...EMPTY_PROPERTY(),
         ...editProperty,
-        isRented:              editProperty.isRented ?? true,
+        status:                editProperty.status ?? (editProperty.isRented ? 'rented' : 'owner_occupied'),
+        rentalStartDate:       editProperty.rentalStartDate ?? '',
+        rentalEndDate:         editProperty.rentalEndDate ?? '',
+        isPrimaryResidence:    editProperty.isPrimaryResidence ?? false,
+        residenceStartDate:    editProperty.residenceStartDate ?? '',
+        residenceEndDate:      editProperty.residenceEndDate ?? '',
         purchasePrice:         String(editProperty.purchasePrice ?? ''),
         currentValue:          String(editProperty.currentValue ?? ''),
         appreciationRate:      String(editProperty.appreciationRate ?? 0.02),
@@ -199,8 +313,9 @@ export default function PropertyForm({ property: editProperty, onSave, onCancel 
     }
   }, [editProperty])
 
-  const sf = (field) => (value) => setForm((prev) => ({ ...prev, [field]: value }))
-  const si = (field) => (e)     => setForm((prev) => ({ ...prev, [field]: e.target.value }))
+  const sf  = (field) => (value) => setForm((prev) => ({ ...prev, [field]: value }))
+  const si  = (field) => (e)     => setForm((prev) => ({ ...prev, [field]: e.target.value }))
+  const sib = (field) => (v)     => setForm((prev) => ({ ...prev, [field]: v }))
 
   const addLoan        = () => setLoans((prev) => [...prev, EMPTY_LOAN()])
   const updateLoan     = (i, u) => setLoans((prev) => prev.map((l, idx) => idx === i ? u : l))
@@ -209,11 +324,20 @@ export default function PropertyForm({ property: editProperty, onSave, onCancel 
     prev.map((l, idx) => idx === i ? { ...l, amortizationSchedule: s } : l)
   )
 
+  const isRented = form.status === 'rented'
+
   const handleSubmit = (e) => {
     e.preventDefault()
     const property = {
       ...form,
-      isRented:              form.isRented ?? true,
+      // Derive legacy isRented flag from status for backward compat
+      isRented:              isRented,
+      status:                form.status,
+      rentalStartDate:       form.rentalStartDate || '',
+      rentalEndDate:         form.rentalEndDate || '',
+      isPrimaryResidence:    form.isPrimaryResidence ?? false,
+      residenceStartDate:    form.residenceStartDate || '',
+      residenceEndDate:      form.residenceEndDate || '',
       purchasePrice:         Number(form.purchasePrice) || 0,
       currentValue:          Number(form.currentValue) || 0,
       appreciationRate:      Number(form.appreciationRate) || 0.02,
@@ -284,52 +408,92 @@ export default function PropertyForm({ property: editProperty, onSave, onCancel 
         </Field>
       </Section>
 
-      {/* ── Section 2: Rental Income & Indexation ── */}
+      {/* ── Section 2: Current Status ── */}
       <div className="card space-y-4">
-        <div className="flex items-center justify-between mb-2">
-          <h3 className="section-title mb-0">Rental Income &amp; Indexation</h3>
-          {/* Toggle */}
-          <label className="flex items-center gap-2.5 cursor-pointer select-none">
-            <span className="text-sm text-slate-400">Rented out</span>
-            <button
-              type="button"
-              role="switch"
-              aria-checked={form.isRented}
-              onClick={() => setForm((prev) => ({ ...prev, isRented: !prev.isRented }))}
-              className={`relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent
-                          transition-colors duration-200 focus:outline-none
-                          ${form.isRented ? 'bg-brand-600' : 'bg-slate-600'}`}
-            >
-              <span
-                className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow
-                            transform transition-transform duration-200
-                            ${form.isRented ? 'translate-x-5' : 'translate-x-0'}`}
-              />
-            </button>
-          </label>
+        <h3 className="section-title mb-0">Current Status</h3>
+        <p className="text-xs text-slate-500 -mt-2">
+          What is the current situation with this property? This controls what shows in cash flow today.
+        </p>
+        <StatusSelector value={form.status} onChange={sf('status')} />
+
+        {/* Primary residence toggle */}
+        <div className="pt-2 border-t border-slate-700/60 space-y-3">
+          <Toggle
+            checked={form.isPrimaryResidence}
+            onChange={sib('isPrimaryResidence')}
+            label="This is (or will be) my primary residence"
+          />
+          {form.isPrimaryResidence && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pl-0">
+              <Field label="Living there from" hint="Leave blank if already living there">
+                <input className="input" type="date"
+                  value={form.residenceStartDate} onChange={si('residenceStartDate')} />
+              </Field>
+              <Field label="Moving out" hint="Leave blank if indefinite / ongoing">
+                <input className="input" type="date"
+                  value={form.residenceEndDate} onChange={si('residenceEndDate')} />
+              </Field>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* ── Section 3: Rental Income & Indexation ── */}
+      <div className="card space-y-4">
+        <div className="flex items-center justify-between mb-0">
+          <div>
+            <h3 className="section-title mb-0">Rental Income &amp; Period</h3>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Configure the rent amount and when the rental period starts/ends.
+              {!isRented && <span className="ml-1 text-amber-400">Set status to "Rented out" above to enable rental income.</span>}
+            </p>
+          </div>
         </div>
 
-        {form.isRented ? (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <Field label="Monthly Rental Income (EUR)"
-              hint="Current gross rent — starting point for annual indexation">
-              <input className="input" type="number" min="0" placeholder="1200"
-                value={form.startRentalIncome} onChange={si('startRentalIncome')} />
-            </Field>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Field label="Monthly Rental Income (EUR)"
+            hint="Gross rent — starting point for annual indexation">
+            <input className="input" type="number" min="0" placeholder="1200"
+              value={form.startRentalIncome} onChange={si('startRentalIncome')}
+              disabled={!isRented} />
+          </Field>
 
-            <Field label="Annual Rent Indexation Rate"
-              hint="How much rent rises each year (e.g. 2% ≈ CPI)">
-              <PctInput value={form.indexationRate} onChange={sf('indexationRate')} />
-            </Field>
+          <Field label="Annual Rent Indexation Rate"
+            hint="How much rent rises each year (Belgian health index ≈ 2%)">
+            <PctInput value={form.indexationRate} onChange={sf('indexationRate')}
+              disabled={!isRented} />
+          </Field>
+
+          <Field label="Rental start date"
+            hint="When the tenant moves in / rental income begins. Leave blank if already renting.">
+            <input className="input" type="date"
+              value={form.rentalStartDate} onChange={si('rentalStartDate')}
+              disabled={!isRented} />
+          </Field>
+
+          <Field label="Rental end date"
+            hint="When the current lease ends. Leave blank if open-ended.">
+            <input className="input" type="date"
+              value={form.rentalEndDate} onChange={si('rentalEndDate')}
+              disabled={!isRented} />
+          </Field>
+        </div>
+
+        {isRented && form.rentalStartDate && new Date(form.rentalStartDate) > new Date() && (
+          <div className="flex items-start gap-2 bg-amber-900/20 border border-amber-700/40 rounded-xl px-3 py-2.5 text-xs text-amber-300">
+            <svg className="w-4 h-4 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+            </svg>
+            <span>
+              Rental income starts <strong>{new Date(form.rentalStartDate).toLocaleDateString('nl-BE', { day: 'numeric', month: 'long', year: 'numeric' })}</strong>.
+              Until then, cash flow shows €0 rental income — only costs.
+            </span>
           </div>
-        ) : (
-          <p className="text-sm text-slate-500 italic">
-            This property is not rented out — rental income will not be included in projections.
-          </p>
         )}
       </div>
 
-      {/* ── Section 3: Operating Expenses ── */}
+      {/* ── Section 4: Operating Expenses ── */}
       <Section title="Operating Expenses">
         <Field label="Annual Maintenance Cost (EUR)"
           hint="Repairs, upkeep — inflated each year">
@@ -361,7 +525,7 @@ export default function PropertyForm({ property: editProperty, onSave, onCancel 
         </Field>
       </Section>
 
-      {/* ── Section 4: Loans ── */}
+      {/* ── Section 5: Loans ── */}
       <div className="card space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="section-title mb-0">Loans</h3>

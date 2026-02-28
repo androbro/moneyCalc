@@ -15,7 +15,7 @@
  */
 
 import { useMemo, useState } from 'react'
-import { buildProjection, computeSummary, getRemainingBalance } from '../utils/projectionUtils'
+import { buildProjection, computeSummary, getRemainingBalance, isRentalActiveOn, getLoanPaymentSplit } from '../utils/projectionUtils'
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid,
   Tooltip, Legend, ResponsiveContainer,
@@ -48,13 +48,15 @@ function FlowRow({ operator, label, sublabel, amount, dimmed = false, total = fa
   const opColor =
     operator === '+' ? 'text-emerald-400' :
     operator === '−' ? 'text-red-400' :
-    operator === '=' ? 'text-brand-400' : 'text-slate-500'
+    operator === '=' ? 'text-brand-400' :
+    operator === '↑' ? 'text-teal-400' : 'text-slate-500'
 
   const amtColor =
     total ? (amount >= 0 ? 'text-brand-400' : 'text-red-400') :
     operator === '+' ? 'text-emerald-400' :
     operator === '−' ? 'text-red-400' :
-    operator === '~' ? 'text-amber-400' : 'text-white'
+    operator === '~' ? 'text-amber-400' :
+    operator === '↑' ? 'text-teal-400' : 'text-white'
 
   return (
     <div
@@ -479,30 +481,52 @@ function InvestmentSection({ members }) {
 
 export default function MoneyFlow({ properties, profile }) {
   const data = useMemo(() => {
-    // ── Portfolio-only flows (rental minus property costs) ──
+    const today = new Date()
+    const todayISO = today.toISOString()
+
+    // ── Portfolio-only flows ──
     let monthlyRentalGross   = 0
     let monthlyPropertyOpex  = 0
-    let monthlyPropertyLoans = 0
+    let monthlyInterestTotal = 0
+    let monthlyCapitalTotal  = 0
 
     const propertyLines = properties.map((p) => {
-      const rent = p.isRented !== false ? (p.startRentalIncome || p.monthlyRentalIncome || 0) : 0
+      // Rental income only if currently active (respects rentalStartDate)
+      const rentalActive = isRentalActiveOn(p, today)
+      const rent = rentalActive ? (p.startRentalIncome || p.monthlyRentalIncome || 0) : 0
+
       const opex =
         (p.annualMaintenanceCost || 0) / 12 +
         (p.annualInsuranceCost   || 0) / 12 +
         (p.annualPropertyTax     || 0) / 12 +
         (p.monthlyExpenses       || 0)
-      const loans = (p.loans || []).reduce((s, l) => s + (l.monthlyPayment || 0), 0)
-      const today = new Date().toISOString()
-      const balance = (p.loans || []).reduce((s, l) => s + getRemainingBalance(l, today), 0)
+
+      // Split each loan into interest (cost) vs capital (equity-building)
+      let monthlyInterest = 0
+      let monthlyCapital  = 0
+      for (const l of p.loans || []) {
+        const split = getLoanPaymentSplit(l, today)
+        monthlyInterest += split.monthlyInterest
+        monthlyCapital  += split.monthlyCapital
+      }
+
+      const balance = (p.loans || []).reduce((s, l) => s + getRemainingBalance(l, todayISO), 0)
 
       monthlyRentalGross   += rent
       monthlyPropertyOpex  += opex
-      monthlyPropertyLoans += loans
+      monthlyInterestTotal += monthlyInterest
+      monthlyCapitalTotal  += monthlyCapital
 
-      return { id: p.id, name: p.name, rent, opex, loans, balance, isRented: p.isRented }
+      return {
+        id: p.id, name: p.name, rent, opex,
+        monthlyInterest, monthlyCapital,
+        balance, rentalActive,
+        status: p.status ?? (p.isRented ? 'rented' : 'owner_occupied'),
+      }
     })
 
-    const portfolioMonthlyCF = monthlyRentalGross - monthlyPropertyOpex - monthlyPropertyLoans
+    // CF = rent - opex - interest (capital excluded — builds equity)
+    const portfolioMonthlyCF = monthlyRentalGross - monthlyPropertyOpex - monthlyInterestTotal
 
     // ── Household flows ──
     const members = profile.members || []
@@ -517,8 +541,9 @@ export default function MoneyFlow({ properties, profile }) {
     const totalInflow = monthlyRentalGross + totalMemberSalary + totalMemberInvestment
     const savingsSetAside = totalInflow * savingsRate
 
+    // Outflow uses interest-only (capital is equity-building, not a true cost)
     const totalOutflow =
-      monthlyPropertyOpex + monthlyPropertyLoans +
+      monthlyPropertyOpex + monthlyInterestTotal +
       newResidenceLoan + householdExpenses + savingsSetAside
 
     const availableCash = totalInflow - totalOutflow
@@ -530,7 +555,8 @@ export default function MoneyFlow({ properties, profile }) {
       propertyLines,
       monthlyRentalGross,
       monthlyPropertyOpex,
-      monthlyPropertyLoans,
+      monthlyInterestTotal,
+      monthlyCapitalTotal,
       portfolioMonthlyCF,
       members,
       totalMemberSalary,
@@ -551,7 +577,8 @@ export default function MoneyFlow({ properties, profile }) {
     propertyLines,
     monthlyRentalGross,
     monthlyPropertyOpex,
-    monthlyPropertyLoans,
+    monthlyInterestTotal,
+    monthlyCapitalTotal,
     portfolioMonthlyCF,
     members,
     totalMemberSalary,
@@ -613,7 +640,7 @@ export default function MoneyFlow({ properties, profile }) {
               {/* Per-property breakdown */}
               {propertyLines.map((p) => (
                 <div key={p.id}>
-                  {p.isRented !== false ? (
+                  {p.rentalActive ? (
                     <FlowRow
                       operator="+"
                       label={p.name}
@@ -624,7 +651,14 @@ export default function MoneyFlow({ properties, profile }) {
                     <FlowRow
                       operator=" "
                       label={p.name}
-                      sublabel="not rented — no rental income"
+                      sublabel={
+                        p.status === 'rented'
+                          ? 'rental not yet started'
+                          : p.status === 'owner_occupied' ? 'owner-occupied — no rental income'
+                          : p.status === 'vacant' ? 'vacant — no rental income'
+                          : p.status === 'renovation' ? 'under renovation — no rental income'
+                          : 'no rental income'
+                      }
                       amount={0}
                       dimmed
                     />
@@ -633,17 +667,26 @@ export default function MoneyFlow({ properties, profile }) {
                     <FlowRow
                       operator="−"
                       label="Operating costs"
-                      sublabel={`${p.name} — maintenance, insurance, tax`}
+                      sublabel={`${p.name} — maintenance, insurance, tax, syndic`}
                       amount={p.opex}
                       indent
                     />
                   )}
-                  {p.loans > 0 && (
+                  {p.monthlyInterest > 0 && (
                     <FlowRow
                       operator="−"
-                      label="Loan payments"
-                      sublabel={`${p.name}`}
-                      amount={p.loans}
+                      label="Loan interest"
+                      sublabel={`${p.name} — cost of borrowing`}
+                      amount={p.monthlyInterest}
+                      indent
+                    />
+                  )}
+                  {p.monthlyCapital > 0 && (
+                    <FlowRow
+                      operator="↑"
+                      label="Capital repayment"
+                      sublabel={`${p.name} — builds equity`}
+                      amount={p.monthlyCapital}
                       indent
                     />
                   )}
@@ -700,10 +743,15 @@ export default function MoneyFlow({ properties, profile }) {
           {/* Outflows */}
           {monthlyPropertyOpex > 0 && (
             <FlowRow operator="−" label="Property Operating Costs" amount={monthlyPropertyOpex}
-              sublabel="maintenance, insurance, tax, other" />
+              sublabel="maintenance, insurance, tax, syndic" />
           )}
-          {monthlyPropertyLoans > 0 && (
-            <FlowRow operator="−" label="Property Loan Payments" amount={monthlyPropertyLoans} />
+          {monthlyInterestTotal > 0 && (
+            <FlowRow operator="−" label="Loan Interest" amount={monthlyInterestTotal}
+              sublabel="true cost of borrowing across all properties" />
+          )}
+          {monthlyCapitalTotal > 0 && (
+            <FlowRow operator="↑" label="Capital Repayment" amount={monthlyCapitalTotal}
+              sublabel="equity building — not a true expense" />
           )}
           {newResidenceLoan > 0 && (
             <FlowRow operator="−" label="New Residence Loan" amount={newResidenceLoan}

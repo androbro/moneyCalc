@@ -13,7 +13,7 @@ import AiChatOverlay from './components/AiChatOverlay'
 import AuthOverlay from './components/AuthOverlay'
 import { isOwner, isLocalhost, login, logout } from './lib/auth'
 import {
-  seedGuestStorage, isGuestSeeded,
+  seedGuestStorage,
   getPortfolio      as guestGetPortfolio,
   addProperty       as guestAddProperty,
   updateProperty    as guestUpdateProperty,
@@ -156,10 +156,10 @@ export default function App() {
   }, [ownerAuthed]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
-    // For guests: seed localStorage with a real Supabase snapshot on first visit
-    // (or after a reset). For owners: just load from Supabase directly.
-    if (!ownerAuthed && !isGuestSeeded()) {
-      // Fetch from Supabase once, seed guest storage, then load from it
+    // For guests: always fetch a fresh Supabase snapshot on every page load
+    // so they see the owner's latest data (including investment positions etc.)
+    // For owners: just load from Supabase directly.
+    if (!ownerAuthed) {
       Promise.all([getPortfolio(), getHouseholdProfile(), getSimulatorProfile()])
         .then(([portfolio, household, simulator]) => {
           seedGuestStorage(portfolio, household, simulator)

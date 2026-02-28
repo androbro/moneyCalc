@@ -1,8 +1,125 @@
-import { computeSummary, formatEUR } from '../utils/projectionUtils'
+import { computeSummary, formatEUR, isRentalActiveOn, getLoanPaymentSplit } from '../utils/projectionUtils'
+import { getStatusMeta, isPrimaryResidenceOn } from './PropertyForm'
+import InfoPopover from './InfoPopover'
+
+// ─── Tooltip content ───────────────────────────────────────────────────────────
+
+const INFO = {
+  totalPortfolioValue: (
+    <>
+      <strong className="text-white">Total Portfolio Value</strong>
+      <p className="mt-1">The sum of the current market values of all your properties as entered in each property's settings.</p>
+      <p className="mt-1 text-slate-400">This is what you estimate the properties are worth today — not what you paid for them.</p>
+    </>
+  ),
+  totalDebt: (
+    <>
+      <strong className="text-white">Total Debt</strong>
+      <p className="mt-1">The total outstanding loan balances across all properties today.</p>
+      <p className="mt-1 text-slate-400">If you uploaded an amortization schedule (CSV), the exact balance at today's date is used. Otherwise the original loan amount is shown.</p>
+    </>
+  ),
+  netWorth: (
+    <>
+      <strong className="text-white">Net Worth (Real Estate)</strong>
+      <p className="mt-1 font-mono text-slate-300">= Portfolio Value − Total Debt</p>
+      <p className="mt-1">The equity you own across your entire portfolio. This is what you'd pocket (before taxes and fees) if you sold everything and paid off all loans today.</p>
+    </>
+  ),
+  netCashFlow: (
+    <>
+      <strong className="text-white">Net Cash Flow</strong>
+      <p className="mt-1 font-mono text-slate-300">= Rent − Operating Costs − Loan Interest</p>
+      <p className="mt-1">Monthly cash your portfolio generates after costs. Loan <em>capital repayment</em> is not counted as a cost — it builds equity.</p>
+      <ul className="mt-1.5 space-y-0.5 text-slate-400 list-disc list-inside">
+        <li>Only includes rent from <strong>active</strong> rentals (respects rental start date)</li>
+        <li>Includes maintenance, insurance, property tax, syndic</li>
+        <li>Interest = true cost; capital = equity investment</li>
+      </ul>
+    </>
+  ),
+  ltv: (
+    <>
+      <strong className="text-white">Loan-to-Value (LTV)</strong>
+      <p className="mt-1 font-mono text-slate-300">= Total Debt / Portfolio Value × 100</p>
+      <p className="mt-1">The percentage of your portfolio that is financed by debt.</p>
+      <ul className="mt-1.5 space-y-0.5 list-disc list-inside">
+        <li className="text-emerald-400">&lt; 60% — low risk</li>
+        <li className="text-orange-400">60–80% — moderate</li>
+        <li className="text-red-400">&gt; 80% — high leverage</li>
+      </ul>
+    </>
+  ),
+  roeSecondary: (
+    <>
+      <strong className="text-white">Return on Equity (ROE)</strong>
+      <p className="mt-1 font-mono text-slate-300">= Annual Net CF / Equity × 100</p>
+      <p className="mt-1">Annual net cash flow divided by the total equity in your portfolio.</p>
+      <p className="mt-1 text-slate-400">Measures how productively your equity is working. Rule of thumb: above 4–5% is solid for Belgian residential real estate.</p>
+    </>
+  ),
+  netYield: (
+    <>
+      <strong className="text-white">Net Yield</strong>
+      <p className="mt-1 font-mono text-slate-300">= Annual Net CF / Portfolio Value × 100</p>
+      <p className="mt-1">Annual net cash flow as a percentage of total portfolio value — independent of leverage. Useful for comparing properties with other asset classes.</p>
+    </>
+  ),
+  marketValue: (
+    <>
+      <strong className="text-white">Market Value</strong>
+      <p className="mt-1">Your estimate of what this property is worth today. Update it as prices change.</p>
+    </>
+  ),
+  equity: (
+    <>
+      <strong className="text-white">Equity</strong>
+      <p className="mt-1 font-mono text-slate-300">= Market Value − Loan Balance(s)</p>
+      <p className="mt-1">How much of the property you actually own outright. Grows as the value appreciates and as you repay loans.</p>
+    </>
+  ),
+  monthlyCF: (
+    <>
+      <strong className="text-white">Monthly Cash Flow</strong>
+      <p className="mt-1 font-mono text-slate-300">= Rent − Operating Costs − Loan Interest</p>
+      <p className="mt-1 text-slate-400">Capital repayment is excluded — it builds equity rather than leaving your hands.</p>
+      <ul className="mt-1.5 space-y-0.5 text-slate-400 list-disc list-inside">
+        <li>€0 rent if rental hasn't started yet</li>
+        <li>Includes maintenance, insurance, syndic ÷ 12</li>
+        <li>Interest only from loans (not full payment)</li>
+      </ul>
+    </>
+  ),
+  appreciation: (
+    <>
+      <strong className="text-white">Appreciation Rate</strong>
+      <p className="mt-1">Annual rate at which you expect this property's value to grow. Used in projection charts. Belgian residential real estate: ~3–4% in urban areas historically.</p>
+    </>
+  ),
+  rent: (
+    <>
+      <strong className="text-white">Rent / Month</strong>
+      <p className="mt-1">The gross monthly rental income (starting rent). In projections, this is indexed upward each year at the rent indexation rate.</p>
+    </>
+  ),
+  rentIndex: (
+    <>
+      <strong className="text-white">Rent Indexation Rate</strong>
+      <p className="mt-1">Annual rate at which rent is increased. In Belgium, residential rent is legally indexed to the health index (≈ 2% on average).</p>
+    </>
+  ),
+  loanInterest: (
+    <>
+      <strong className="text-white">Loan Interest (monthly)</strong>
+      <p className="mt-1">The interest portion of your monthly loan payments — this is the true cost of borrowing that flows out each month.</p>
+      <p className="mt-1 text-slate-400">The capital repayment portion is not shown here — it reduces your debt and builds equity.</p>
+    </>
+  ),
+}
 
 // ─── KPI card ─────────────────────────────────────────────────────────────────
 
-function KpiCard({ label, value, sub, valueColor = 'text-white', icon, trend }) {
+function KpiCard({ label, value, sub, valueColor = 'text-white', icon, trend, info }) {
   return (
     <div className="card flex items-start gap-4">
       {icon && (
@@ -11,7 +128,10 @@ function KpiCard({ label, value, sub, valueColor = 'text-white', icon, trend }) 
         </div>
       )}
       <div className="min-w-0 flex-1">
-        <p className="stat-label">{label}</p>
+        <p className="stat-label flex items-center">
+          {label}
+          {info && <InfoPopover>{info}</InfoPopover>}
+        </p>
         <p className={`stat-value leading-tight ${valueColor}`}>{value}</p>
         {sub && <p className="text-xs text-slate-500 mt-1">{sub}</p>}
         {trend !== undefined && (
@@ -28,10 +148,27 @@ function KpiCard({ label, value, sub, valueColor = 'text-white', icon, trend }) 
   )
 }
 
+// ─── Secondary metric card ────────────────────────────────────────────────────
+
+function SecondaryMetric({ label, value, valueColor, sub, info }) {
+  return (
+    <div className="card text-center py-4">
+      <p className="text-xs text-slate-400 mb-1 flex items-center justify-center">
+        {label}
+        {info && <InfoPopover>{info}</InfoPopover>}
+      </p>
+      <p className={`text-xl font-bold ${valueColor}`}>{value}</p>
+      <p className="text-xs text-slate-500 mt-1">{sub}</p>
+    </div>
+  )
+}
+
 // ─── Property card ────────────────────────────────────────────────────────────
 
 function PropertyCard({ property, onEdit, onDelete }) {
   const today = new Date()
+
+  // Loan balance (amortization-aware)
   const currentLoanBalance = (property.loans || []).reduce((sum, l) => {
     if (l.amortizationSchedule?.length > 0) {
       const past = l.amortizationSchedule
@@ -43,23 +180,58 @@ function PropertyCard({ property, onEdit, onDelete }) {
   }, 0)
 
   const equity = property.currentValue - currentLoanBalance
-  const monthlyIncome = property.startRentalIncome || property.monthlyRentalIncome || 0
-  const monthlyCosts =
+
+  // Rental income — only if active today
+  const rentalActive  = isRentalActiveOn(property, today)
+  const monthlyIncome = rentalActive
+    ? (property.startRentalIncome || property.monthlyRentalIncome || 0)
+    : 0
+
+  // Operating costs
+  const monthlyOpex =
     (property.monthlyExpenses || 0) +
-    ((property.annualMaintenanceCost || 0) + (property.annualInsuranceCost || 0)) / 12 +
-    (property.loans || []).reduce((s, l) => s + (l.monthlyPayment || 0), 0)
-  const monthlyCF = monthlyIncome - monthlyCosts
+    ((property.annualMaintenanceCost || 0) + (property.annualInsuranceCost || 0)) / 12
+
+  // Loan interest split
+  const monthlyInterest = (property.loans || []).reduce((s, l) => {
+    return s + getLoanPaymentSplit(l, today).monthlyInterest
+  }, 0)
+
+  // CF = rent - opex - interest (capital repayment excluded — builds equity)
+  const monthlyCF = monthlyIncome - monthlyOpex - monthlyInterest
+
+  const statusMeta    = getStatusMeta(property.status ?? (property.isRented ? 'rented' : 'owner_occupied'))
+  const isHome        = isPrimaryResidenceOn(property, today)
+  const monthlyIncomeFull = property.startRentalIncome || property.monthlyRentalIncome || 0
+
+  // Days until rental starts (if future)
+  const rentalStartsIn = (property.status === 'rented' && property.rentalStartDate && !rentalActive)
+    ? Math.ceil((new Date(property.rentalStartDate) - today) / (1000 * 60 * 60 * 24))
+    : null
 
   return (
-    <div className="card space-y-4">
+    <div className="card space-y-3">
+      {/* Header row */}
       <div className="flex items-start justify-between gap-2">
-        <div className="min-w-0">
-          <h3 className="font-semibold text-white truncate">{property.name}</h3>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h3 className="font-semibold text-white truncate">{property.name}</h3>
+            {isHome && (
+              <span className="shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded-full
+                               bg-brand-900/50 border border-brand-700/50 text-brand-300">
+                🏠 Home
+              </span>
+            )}
+          </div>
           {property.address && (
             <p className="text-xs text-slate-400 truncate mt-0.5">{property.address}</p>
           )}
         </div>
-        <div className="flex gap-2 shrink-0">
+        <div className="flex items-center gap-2 shrink-0">
+          {/* Status badge */}
+          <span className={`text-[10px] font-semibold px-2 py-0.5 rounded-full border ${statusMeta.bg} ${statusMeta.color}`}>
+            {statusMeta.label}
+          </span>
           <button onClick={() => onEdit(property)}
             className="text-slate-400 hover:text-brand-400 transition-colors" title="Edit">
             <EditIcon />
@@ -71,37 +243,78 @@ function PropertyCard({ property, onEdit, onDelete }) {
         </div>
       </div>
 
+      {/* Future rental notice */}
+      {rentalStartsIn !== null && (
+        <div className="flex items-center gap-2 bg-amber-900/20 border border-amber-700/30 rounded-lg px-2.5 py-1.5 text-xs text-amber-300">
+          <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+          </svg>
+          Rental starts in <strong className="ml-0.5">{rentalStartsIn}d</strong>
+          <span className="text-amber-500 ml-0.5">
+            ({new Date(property.rentalStartDate).toLocaleDateString('nl-BE', { day: 'numeric', month: 'short' })})
+          </span>
+        </div>
+      )}
+
+      {/* Metrics grid */}
       <div className="grid grid-cols-2 gap-3">
-        <Metric label="Market Value"   value={formatEUR(property.currentValue)} />
-        <Metric label="Equity"         value={formatEUR(equity)}
-          color={equity >= 0 ? 'text-emerald-400' : 'text-red-400'} />
-        <Metric label="Monthly CF"     value={formatEUR(monthlyCF)}
-          color={monthlyCF >= 0 ? 'text-emerald-400' : 'text-red-400'} />
-        <Metric label="Appreciation"   value={`${((property.appreciationRate || 0.02) * 100).toFixed(1)}% / yr`} />
-        <Metric label="Rent / mo"      value={formatEUR(monthlyIncome)} />
-        <Metric label="Rent index"     value={`${((property.indexationRate ?? 0.02) * 100).toFixed(1)}% / yr`}
-          color="text-slate-300" />
+        <Metric label="Market Value"  value={formatEUR(property.currentValue)}   info={INFO.marketValue} />
+        <Metric label="Equity"        value={formatEUR(equity)}
+          color={equity >= 0 ? 'text-emerald-400' : 'text-red-400'}              info={INFO.equity} />
+        <Metric label="Monthly CF"    value={formatEUR(monthlyCF)}
+          color={monthlyCF >= 0 ? 'text-emerald-400' : 'text-red-400'}           info={INFO.monthlyCF} />
+        <Metric label="Appreciation"  value={`${((property.appreciationRate || 0.02) * 100).toFixed(1)}% / yr`}
+                                                                                  info={INFO.appreciation} />
+        {monthlyIncomeFull > 0 && (
+          <Metric
+            label={rentalActive ? 'Rent / mo' : 'Future rent / mo'}
+            value={formatEUR(monthlyIncomeFull)}
+            color={rentalActive ? 'text-white' : 'text-slate-500'}
+            info={INFO.rent}
+          />
+        )}
+        {monthlyIncomeFull > 0 && (
+          <Metric label="Rent index"  value={`${((property.indexationRate ?? 0.02) * 100).toFixed(1)}% / yr`}
+            color="text-slate-300"                                                info={INFO.rentIndex} />
+        )}
+        {monthlyInterest > 0 && (
+          <Metric label="Loan interest / mo" value={formatEUR(monthlyInterest)}
+            color="text-red-400"                                                  info={INFO.loanInterest} />
+        )}
       </div>
 
+      {/* Loans */}
       {(property.loans || []).length > 0 && (
         <div className="border-t border-slate-700 pt-3">
           <p className="text-xs font-medium text-slate-400 mb-2">
             Loans ({property.loans.length})
           </p>
           <div className="space-y-1.5">
-            {property.loans.map((loan) => (
-              <div key={loan.id} className="flex justify-between text-sm gap-2">
-                <span className="text-slate-300 truncate">{loan.lender}</span>
-                <span className="text-slate-400 whitespace-nowrap shrink-0">
-                  {formatEUR(loan.originalAmount)} @ {(loan.interestRate * 100).toFixed(2)}%
-                  {loan.amortizationSchedule?.length > 0 && (
-                    <span className="ml-1.5 text-[10px] bg-emerald-900/40 text-emerald-400 px-1.5 py-0.5 rounded-full">
-                      CSV
+            {property.loans.map((loan) => {
+              const split = getLoanPaymentSplit(loan, today)
+              return (
+                <div key={loan.id} className="text-sm space-y-0.5">
+                  <div className="flex justify-between gap-2">
+                    <span className="text-slate-300 truncate">{loan.lender}</span>
+                    <span className="text-slate-400 whitespace-nowrap shrink-0">
+                      {formatEUR(loan.originalAmount)} @ {(loan.interestRate * 100).toFixed(2)}%
+                      {loan.amortizationSchedule?.length > 0 && (
+                        <span className="ml-1.5 text-[10px] bg-emerald-900/40 text-emerald-400 px-1.5 py-0.5 rounded-full">
+                          CSV
+                        </span>
+                      )}
                     </span>
+                  </div>
+                  {split.monthlyTotal > 0 && (
+                    <div className="flex gap-3 text-[11px] text-slate-500 pl-0.5">
+                      <span>Payment: <span className="text-slate-300">{formatEUR(split.monthlyTotal)}/mo</span></span>
+                      <span>Interest: <span className="text-red-400">{formatEUR(split.monthlyInterest)}</span></span>
+                      <span>Capital: <span className="text-emerald-400">{formatEUR(split.monthlyCapital)}</span></span>
+                    </div>
                   )}
-                </span>
-              </div>
-            ))}
+                </div>
+              )
+            })}
           </div>
         </div>
       )}
@@ -109,11 +322,63 @@ function PropertyCard({ property, onEdit, onDelete }) {
   )
 }
 
-function Metric({ label, value, color = 'text-white' }) {
+function Metric({ label, value, color = 'text-white', info }) {
   return (
     <div>
-      <p className="text-xs text-slate-400">{label}</p>
+      <p className="text-xs text-slate-400 flex items-center">
+        {label}
+        {info && <InfoPopover>{info}</InfoPopover>}
+      </p>
       <p className={`font-semibold text-sm ${color}`}>{value}</p>
+    </div>
+  )
+}
+
+// ─── Where I live banner ──────────────────────────────────────────────────────
+
+function ResidenceBanner({ properties }) {
+  const today = new Date()
+  const home = properties.find((p) => isPrimaryResidenceOn(p, today))
+
+  // Find upcoming move (residence starts in the future)
+  const upcoming = properties
+    .filter((p) => p.isPrimaryResidence && p.residenceStartDate && new Date(p.residenceStartDate) > today)
+    .sort((a, b) => new Date(a.residenceStartDate) - new Date(b.residenceStartDate))[0]
+
+  if (!home && !upcoming) return null
+
+  return (
+    <div className="flex flex-wrap gap-3">
+      {home && (
+        <div className="flex items-center gap-3 bg-brand-900/30 border border-brand-700/40
+                        rounded-xl px-4 py-3 text-sm flex-1 min-w-0">
+          <span className="text-xl shrink-0">🏠</span>
+          <div className="min-w-0">
+            <p className="text-xs text-slate-400 mb-0.5">You currently live at</p>
+            <p className="font-semibold text-brand-300 truncate">{home.name}</p>
+            {home.address && <p className="text-xs text-slate-500 truncate">{home.address}</p>}
+            {home.residenceEndDate && (
+              <p className="text-xs text-amber-400 mt-0.5">
+                Moving out: {new Date(home.residenceEndDate).toLocaleDateString('nl-BE', { day: 'numeric', month: 'long', year: 'numeric' })}
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+      {upcoming && (
+        <div className="flex items-center gap-3 bg-slate-800/60 border border-slate-700
+                        rounded-xl px-4 py-3 text-sm flex-1 min-w-0">
+          <span className="text-xl shrink-0">📦</span>
+          <div className="min-w-0">
+            <p className="text-xs text-slate-400 mb-0.5">Moving to</p>
+            <p className="font-semibold text-white truncate">{upcoming.name}</p>
+            <p className="text-xs text-slate-400 mt-0.5">
+              {new Date(upcoming.residenceStartDate).toLocaleDateString('nl-BE', { day: 'numeric', month: 'long', year: 'numeric' })}
+              {' '}({Math.ceil((new Date(upcoming.residenceStartDate) - today) / (1000 * 60 * 60 * 24))} days)
+            </p>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
@@ -144,7 +409,7 @@ function EmptyState({ onAdd }) {
 export default function Dashboard({ properties, onAddProperty, onEditProperty, onDeleteProperty }) {
   const s = computeSummary(properties)
 
-  const ltv = s.totalPortfolioValue > 0 ? (s.totalDebt / s.totalPortfolioValue) * 100 : null
+  const ltv        = s.totalPortfolioValue > 0 ? (s.totalDebt / s.totalPortfolioValue) * 100 : null
   const grossYield = s.totalPortfolioValue > 0 ? (s.annualNetCashFlow / s.totalPortfolioValue) * 100 : null
 
   return (
@@ -162,6 +427,9 @@ export default function Dashboard({ properties, onAddProperty, onEditProperty, o
         </button>
       </div>
 
+      {/* ── Where I live banner ── */}
+      {properties.length > 0 && <ResidenceBanner properties={properties} />}
+
       {/* ── Primary KPI cards ── */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4">
         <KpiCard
@@ -169,6 +437,7 @@ export default function Dashboard({ properties, onAddProperty, onEditProperty, o
           value={formatEUR(s.totalPortfolioValue)}
           sub={`${s.propertyCount} propert${s.propertyCount === 1 ? 'y' : 'ies'}`}
           icon={<BuildingIcon />}
+          info={INFO.totalPortfolioValue}
         />
         <KpiCard
           label="Total Debt"
@@ -176,58 +445,89 @@ export default function Dashboard({ properties, onAddProperty, onEditProperty, o
           sub={`${s.loanCount} loan${s.loanCount === 1 ? '' : 's'}`}
           valueColor="text-red-400"
           icon={<DebtIcon />}
+          info={INFO.totalDebt}
         />
         <KpiCard
           label="Net Worth"
           value={formatEUR(s.totalNetWorth)}
           valueColor={s.totalNetWorth >= 0 ? 'text-emerald-400' : 'text-red-400'}
           icon={<NetWorthIcon />}
+          info={INFO.netWorth}
         />
         <KpiCard
           label="Net Cash Flow (Monthly)"
           value={formatEUR(s.totalMonthlyCashFlow)}
           valueColor={s.totalMonthlyCashFlow >= 0 ? 'text-emerald-400' : 'text-red-400'}
-          sub={`${formatEUR(s.annualNetCashFlow)} / year`}
+          sub={s.activeRentalCount === 0
+            ? 'No active rentals — costs only'
+            : `${s.activeRentalCount} active rental${s.activeRentalCount === 1 ? '' : 's'} · ${formatEUR(s.annualNetCashFlow)}/yr`}
           trend={s.roe}
           icon={<CashFlowIcon />}
+          info={INFO.netCashFlow}
         />
       </div>
+
+      {/* ── Loan interest/capital strip — only when there are loans ── */}
+      {s.loanCount > 0 && (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+          <div className="card py-3 text-center">
+            <p className="text-xs text-slate-400 mb-0.5 flex items-center justify-center">
+              Loan Interest / mo
+              <InfoPopover>{INFO.loanInterest}</InfoPopover>
+            </p>
+            <p className="text-lg font-bold text-red-400">{formatEUR(s.monthlyInterest)}</p>
+            <p className="text-[11px] text-slate-500 mt-0.5">true cost — leaves your pocket</p>
+          </div>
+          <div className="card py-3 text-center">
+            <p className="text-xs text-slate-400 mb-0.5">Capital Repayment / mo</p>
+            <p className="text-lg font-bold text-emerald-400">{formatEUR(s.monthlyCapital)}</p>
+            <p className="text-[11px] text-slate-500 mt-0.5">equity building — yours to keep</p>
+          </div>
+          <div className="card py-3 text-center">
+            <p className="text-xs text-slate-400 mb-0.5">Total Loan Payment / mo</p>
+            <p className="text-lg font-bold text-white">{formatEUR(s.monthlyInterest + s.monthlyCapital)}</p>
+            <p className="text-[11px] text-slate-500 mt-0.5">
+              {s.monthlyInterest + s.monthlyCapital > 0
+                ? `${Math.round(s.monthlyInterest / (s.monthlyInterest + s.monthlyCapital) * 100)}% interest · ${Math.round(s.monthlyCapital / (s.monthlyInterest + s.monthlyCapital) * 100)}% capital`
+                : '—'}
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* ── Secondary metrics strip ── */}
       {properties.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-          <div className="card text-center py-4">
-            <p className="text-xs text-slate-400 mb-1">Loan-to-Value (LTV)</p>
-            <p className={`text-xl font-bold ${
+          <SecondaryMetric
+            label="Loan-to-Value (LTV)"
+            value={ltv !== null ? `${ltv.toFixed(1)}%` : '—'}
+            valueColor={
               ltv === null ? 'text-slate-400'
-              : ltv > 80 ? 'text-red-400'
-              : ltv > 60 ? 'text-orange-400'
+              : ltv > 80   ? 'text-red-400'
+              : ltv > 60   ? 'text-orange-400'
               : 'text-emerald-400'
-            }`}>
-              {ltv !== null ? `${ltv.toFixed(1)}%` : '—'}
-            </p>
-            <p className="text-xs text-slate-500 mt-1">debt / portfolio value</p>
-          </div>
-
-          <div className="card text-center py-4">
-            <p className="text-xs text-slate-400 mb-1">Return on Equity (ROE)</p>
-            <p className={`text-xl font-bold ${s.roe >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-              {s.totalNetWorth > 0 ? `${s.roe.toFixed(1)}%` : '—'}
-            </p>
-            <p className="text-xs text-slate-500 mt-1">annual net CF / equity</p>
-          </div>
-
-          <div className="card text-center py-4">
-            <p className="text-xs text-slate-400 mb-1">Net Yield</p>
-            <p className={`text-xl font-bold ${
+            }
+            sub="debt / portfolio value"
+            info={INFO.ltv}
+          />
+          <SecondaryMetric
+            label="Return on Equity (ROE)"
+            value={s.totalNetWorth > 0 ? `${s.roe.toFixed(1)}%` : '—'}
+            valueColor={s.roe >= 0 ? 'text-emerald-400' : 'text-red-400'}
+            sub="annual net CF / equity"
+            info={INFO.roeSecondary}
+          />
+          <SecondaryMetric
+            label="Net Yield"
+            value={grossYield !== null ? `${grossYield.toFixed(1)}%` : '—'}
+            valueColor={
               grossYield === null ? 'text-slate-400'
-              : grossYield >= 0 ? 'text-brand-400'
+              : grossYield >= 0   ? 'text-brand-400'
               : 'text-red-400'
-            }`}>
-              {grossYield !== null ? `${grossYield.toFixed(1)}%` : '—'}
-            </p>
-            <p className="text-xs text-slate-500 mt-1">annual net CF / portfolio value</p>
-          </div>
+            }
+            sub="annual net CF / portfolio value"
+            info={INFO.netYield}
+          />
         </div>
       )}
 

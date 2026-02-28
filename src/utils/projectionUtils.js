@@ -193,54 +193,142 @@ export function buildProjection(properties) {
   return points
 }
 
+// ─── Rental date awareness ────────────────────────────────────────────────────
+
+/**
+ * Returns true if rental income is active for this property on `date`.
+ * Mirrors the logic in PropertyForm.jsx (isRentalActive) but kept here
+ * so projectionUtils has no component import dependency.
+ */
+export function isRentalActiveOn(property, date = new Date()) {
+  if (property.status && property.status !== 'rented') return false
+  // Legacy: if no status field, fall back to isRented boolean
+  if (!property.status && property.isRented === false) return false
+  if (property.rentalStartDate && new Date(property.rentalStartDate) > date) return false
+  if (property.rentalEndDate   && new Date(property.rentalEndDate)   < date) return false
+  return true
+}
+
+// ─── Loan interest / capital split ───────────────────────────────────────────
+
+/**
+ * For a given loan, return the approximate monthly interest and capital
+ * repayment components as of today.
+ *
+ * If an amortization schedule is present, find the row closest to today.
+ * Otherwise derive from the annuity formula.
+ *
+ * Returns { monthlyInterest, monthlyCapital, monthlyTotal }
+ */
+export function getLoanPaymentSplit(loan, date = new Date()) {
+  const { amortizationSchedule = [], originalAmount, interestRate,
+          termMonths, startDate, monthlyPayment } = loan
+  const totalPayment = monthlyPayment || 0
+
+  if (amortizationSchedule.length > 0) {
+    // Find the schedule row whose dueDate is closest to (but not after) today
+    const today = date
+    const past = amortizationSchedule
+      .filter((e) => new Date(e.dueDate) <= today)
+      .sort((a, b) => new Date(b.dueDate) - new Date(a.dueDate))
+    if (past.length > 0) {
+      return {
+        monthlyInterest: past[0].interest || 0,
+        monthlyCapital:  past[0].capitalRepayment || 0,
+        monthlyTotal:    past[0].totalPayment || totalPayment,
+      }
+    }
+    // Before first payment — estimate from original balance
+  }
+
+  // Annuity formula estimate
+  if (!originalAmount || !interestRate || !startDate) {
+    return { monthlyInterest: 0, monthlyCapital: totalPayment, monthlyTotal: totalPayment }
+  }
+  const balance = getRemainingBalance(loan, date.toISOString())
+  const monthlyRate = interestRate / 12
+  const interest = balance * monthlyRate
+  const capital  = Math.max(0, totalPayment - interest)
+  return { monthlyInterest: interest, monthlyCapital: capital, monthlyTotal: totalPayment }
+}
+
 // ─── Dashboard summary ────────────────────────────────────────────────────────
 
 /**
  * Compute current snapshot for KPI cards.
- * New fields returned:
- *   totalPortfolioValue   – same as totalAssets (explicit alias)
- *   totalDebt             – same as totalLiabilities (explicit alias)
- *   roe                   – Return on Equity = annualCashFlow / equity
+ *
+ * Rental income is only counted if rental is currently active (respects
+ * rentalStartDate / rentalEndDate / status fields).
+ *
+ * Loan payments are split:
+ *   - interest component → true cost (counted in annualCosts)
+ *   - capital component  → equity building (NOT counted in cash-flow cost)
+ *
+ * Fields returned:
+ *   totalPortfolioValue, totalDebt, totalNetWorth
+ *   totalMonthlyCashFlow, annualNetCashFlow
+ *   monthlyInterest, monthlyCapital  – aggregate loan split
+ *   roe, propertyCount, loanCount
+ *   activeRentalCount  – how many properties are currently generating rent
  */
 export function computeSummary(properties) {
-  let totalAssets    = 0
+  let totalAssets      = 0
   let totalLiabilities = 0
   let annualRentalIncome = 0
-  let annualCosts    = 0
+  let annualOpex       = 0   // operating costs only
+  let annualInterest   = 0   // interest component of loans
+  let annualCapital    = 0   // capital repayment (equity building, NOT a cost)
+  let activeRentalCount = 0
 
-  const today = new Date().toISOString()
+  const today    = new Date()
+  const todayISO = today.toISOString()
 
   for (const property of properties) {
     totalAssets += property.currentValue || 0
-    if (property.isRented !== false) {
+
+    // Rental income — only if currently active
+    if (isRentalActiveOn(property, today)) {
       annualRentalIncome += (property.startRentalIncome || property.monthlyRentalIncome || 0) * 12
+      activeRentalCount++
     }
-    annualCosts += (property.annualMaintenanceCost || 0)
-    annualCosts += (property.annualInsuranceCost || 0)
-    annualCosts += (property.monthlyExpenses || 0) * 12
-    annualCosts += (property.annualPropertyTax || 0)
+
+    // Operating costs (always apply regardless of rental status)
+    annualOpex += (property.annualMaintenanceCost || 0)
+    annualOpex += (property.annualInsuranceCost || 0)
+    annualOpex += (property.monthlyExpenses || 0) * 12
+    annualOpex += (property.annualPropertyTax || 0)
 
     for (const loan of property.loans || []) {
-      totalLiabilities += getRemainingBalance(loan, today)
-      annualCosts += (loan.monthlyPayment || 0) * 12
+      totalLiabilities += getRemainingBalance(loan, todayISO)
+      const split = getLoanPaymentSplit(loan, today)
+      annualInterest += split.monthlyInterest * 12
+      annualCapital  += split.monthlyCapital  * 12
     }
   }
 
   const equity = totalAssets - totalLiabilities
-  const annualNetCF = annualRentalIncome - annualCosts
+  // Cash flow = rent - opex - interest (capital is equity-building, not a cost)
+  const annualNetCF = annualRentalIncome - annualOpex - annualInterest
   const roe = equity > 0 ? (annualNetCF / equity) * 100 : 0
 
   return {
     totalAssets,
-    totalPortfolioValue: totalAssets,
+    totalPortfolioValue:  totalAssets,
     totalLiabilities,
-    totalDebt: totalLiabilities,
-    totalNetWorth: equity,
+    totalDebt:            totalLiabilities,
+    totalNetWorth:        equity,
     totalMonthlyCashFlow: annualNetCF / 12,
-    annualNetCashFlow: annualNetCF,
+    annualNetCashFlow:    annualNetCF,
+    monthlyInterest:      annualInterest / 12,
+    monthlyCapital:       annualCapital  / 12,
+    annualRentalIncome,
+    annualOpex,
+    annualInterest,
+    annualCapital,
     roe,
-    propertyCount: properties.length,
-    loanCount: properties.reduce((sum, p) => sum + (p.loans?.length || 0), 0),
+    propertyCount:        properties.length,
+    loanCount:            properties.reduce((sum, p) => sum + (p.loans?.length || 0), 0),
+    activeRentalCount,
   }
 }
 

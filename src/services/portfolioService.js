@@ -26,7 +26,16 @@ function dbToProperty(row) {
     currentValue:          Number(row.current_value ?? 0),
     appreciationRate:      Number(row.appreciation_rate ?? 0.02),
     purchaseDate:          row.purchase_date ?? '',
+    // Status & rental period
+    status:                row.status ?? 'rented',
     isRented:              row.is_rented ?? true,
+    rentalStartDate:       row.rental_start_date ?? '',
+    rentalEndDate:         row.rental_end_date ?? '',
+    // Primary residence
+    isPrimaryResidence:    row.is_primary_residence ?? false,
+    residenceStartDate:    row.residence_start_date ?? '',
+    residenceEndDate:      row.residence_end_date ?? '',
+    // Income & costs
     startRentalIncome:     Number(row.start_rental_income ?? 0),
     monthlyRentalIncome:   Number(row.start_rental_income ?? 0), // legacy alias
     indexationRate:        Number(row.indexation_rate ?? 0.02),
@@ -41,16 +50,25 @@ function dbToProperty(row) {
 
 function propertyToDb(p) {
   return {
-    name:                   p.name,
-    address:                p.address ?? '',
-    purchase_price:         p.purchasePrice ?? 0,
-    current_value:          p.currentValue ?? 0,
-    appreciation_rate:      p.appreciationRate ?? 0.02,
-    purchase_date:          p.purchaseDate || null,
-    is_rented:              p.isRented ?? true,
-    start_rental_income:    p.startRentalIncome ?? p.monthlyRentalIncome ?? 0,
-    indexation_rate:        p.indexationRate ?? 0.02,
-    monthly_expenses:       p.monthlyExpenses ?? 0,
+    name:                    p.name,
+    address:                 p.address ?? '',
+    purchase_price:          p.purchasePrice ?? 0,
+    current_value:           p.currentValue ?? 0,
+    appreciation_rate:       p.appreciationRate ?? 0.02,
+    purchase_date:           p.purchaseDate || null,
+    // Status & rental period
+    status:                  p.status ?? 'rented',
+    is_rented:               p.isRented ?? true,
+    rental_start_date:       p.rentalStartDate || null,
+    rental_end_date:         p.rentalEndDate || null,
+    // Primary residence
+    is_primary_residence:    p.isPrimaryResidence ?? false,
+    residence_start_date:    p.residenceStartDate || null,
+    residence_end_date:      p.residenceEndDate || null,
+    // Income & costs
+    start_rental_income:     p.startRentalIncome ?? p.monthlyRentalIncome ?? 0,
+    indexation_rate:         p.indexationRate ?? 0.02,
+    monthly_expenses:        p.monthlyExpenses ?? 0,
     annual_maintenance_cost: p.annualMaintenanceCost ?? 0,
     annual_insurance_cost:   p.annualInsuranceCost ?? 0,
     annual_property_tax:     p.annualPropertyTax ?? 0,
