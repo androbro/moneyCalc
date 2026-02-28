@@ -114,6 +114,13 @@ const DEFAULT_SIM = {
   loanMonthlyPayment:    1_200,
   loanTermMonths:        240,
   acquisitionYear:       2,
+  // Registration tax
+  coBuying:              false,   // buying together with someone?
+  mySharePct:            0.5,     // my ownership share (0–1)
+  myTaxRate:             0.12,    // my registration tax rate
+  partnerTaxRate:        0.02,    // partner's registration tax rate
+  soloTaxRate:           0.12,    // tax rate when buying alone
+  registrationTax:       0,       // computed total — updated by the UI
 }
 
 // ─── Custom tooltip ───────────────────────────────────────────────────────────
@@ -141,6 +148,26 @@ export default function PropertySimulator({ properties }) {
   const set = (key) => (value) => setSim((s) => ({ ...s, [key]: value }))
   const setNum = (key) => (e) => setSim((s) => ({ ...s, [key]: num(e.target.value) }))
 
+  // ── Registration tax calculation ──────────────────────────────────────────
+  // Computed from ownership splits + per-buyer tax rates so the simulation
+  // always uses the correct total even when the user changes rates mid-edit.
+  const regTaxBreakdown = useMemo(() => {
+    const price = sim.purchasePrice || 0
+    if (sim.coBuying) {
+      const myShare      = Math.max(0, Math.min(1, sim.mySharePct))
+      const partnerShare = 1 - myShare
+      const myTax        = price * myShare      * sim.myTaxRate
+      const partnerTax   = price * partnerShare * sim.partnerTaxRate
+      return { myTax, partnerTax, total: myTax + partnerTax }
+    } else {
+      const total = price * sim.soloTaxRate
+      return { myTax: total, partnerTax: 0, total }
+    }
+  }, [sim.purchasePrice, sim.coBuying, sim.mySharePct, sim.myTaxRate, sim.partnerTaxRate, sim.soloTaxRate])
+
+  // Keep sim.registrationTax in sync so projectionUtils picks it up
+  const simWithTax = { ...sim, registrationTax: regTaxBreakdown.total }
+
   // Derive net rent yield for a quick sanity check
   const grossYield = sim.purchasePrice > 0
     ? ((sim.monthlyRentalIncome * 12) / sim.purchasePrice) * 100
@@ -155,8 +182,11 @@ export default function PropertySimulator({ properties }) {
     sim.loanMonthlyPayment * 12
 
   const { baseline, withNew, delta } = useMemo(
-    () => simulateNewProperty(properties, sim),
-    [properties, sim]
+    () => simulateNewProperty(properties, simWithTax),
+    // simWithTax is a derived object — depend on sim (which changes on any field edit)
+    // and regTaxBreakdown.total so tax recalculates when ownership/rates change
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [properties, sim, regTaxBreakdown.total]
   )
 
   // Chart data: merge baseline + withNew for overlay
@@ -216,6 +246,88 @@ export default function PropertySimulator({ properties }) {
               <Field label="Annual Appreciation">
                 <PctInput value={sim.appreciationRate} onChange={set('appreciationRate')} step="0.1" />
               </Field>
+            </div>
+          </div>
+
+          {/* Registration Tax */}
+          <div className="card space-y-4">
+            <h3 className="text-xs font-semibold text-slate-300 uppercase tracking-wider border-b border-slate-700 pb-2">
+              Registration Tax (Registratierechten)
+            </h3>
+            <div className="space-y-3">
+              {/* Co-buying toggle */}
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-medium text-slate-400">Buying together with co-buyer?</span>
+                <button
+                  type="button"
+                  role="switch"
+                  aria-checked={sim.coBuying}
+                  onClick={() => setSim((s) => ({ ...s, coBuying: !s.coBuying }))}
+                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                    sim.coBuying ? 'bg-brand-500' : 'bg-slate-600'
+                  }`}
+                >
+                  <span
+                    className={`inline-block h-3.5 w-3.5 transform rounded-full bg-white shadow transition-transform ${
+                      sim.coBuying ? 'translate-x-4.5' : 'translate-x-0.5'
+                    }`}
+                  />
+                </button>
+              </div>
+
+              {sim.coBuying ? (
+                <>
+                  <Field
+                    label="My ownership share"
+                    hint="Your % of the property (e.g. 50 = half-half)"
+                  >
+                    <PctInput value={sim.mySharePct} onChange={set('mySharePct')} step="1" />
+                  </Field>
+                  <Field
+                    label="My tax rate"
+                    hint="12% if you already own another property in Belgium"
+                  >
+                    <PctInput value={sim.myTaxRate} onChange={set('myTaxRate')} step="0.1" />
+                  </Field>
+                  <Field
+                    label="Co-buyer's tax rate"
+                    hint="2% klein beschrijf / reduced rate if first property"
+                  >
+                    <PctInput value={sim.partnerTaxRate} onChange={set('partnerTaxRate')} step="0.1" />
+                  </Field>
+                  {/* Breakdown */}
+                  <div className="rounded-lg bg-slate-800/60 p-3 space-y-1.5 text-xs">
+                    <div className="flex justify-between text-slate-400">
+                      <span>My share ({(sim.mySharePct * 100).toFixed(0)}% × {(sim.myTaxRate * 100).toFixed(1)}%)</span>
+                      <span className="text-red-400 font-medium">{fmt(regTaxBreakdown.myTax)}</span>
+                    </div>
+                    <div className="flex justify-between text-slate-400">
+                      <span>Co-buyer ({((1 - sim.mySharePct) * 100).toFixed(0)}% × {(sim.partnerTaxRate * 100).toFixed(1)}%)</span>
+                      <span className="text-amber-400 font-medium">{fmt(regTaxBreakdown.partnerTax)}</span>
+                    </div>
+                    <div className="flex justify-between border-t border-slate-700 pt-1.5 text-slate-200 font-semibold">
+                      <span>Total tax</span>
+                      <span className="text-red-300">{fmt(regTaxBreakdown.total)}</span>
+                    </div>
+                    <p className="text-slate-500 text-xs pt-0.5">
+                      The full combined tax ({fmt(regTaxBreakdown.total)}) is counted as an upfront cash outflow in the simulation.
+                    </p>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <Field
+                    label="Your tax rate"
+                    hint="12% standard rate · 2% or 3% if this is your only property (klein beschrijf)"
+                  >
+                    <PctInput value={sim.soloTaxRate} onChange={set('soloTaxRate')} step="0.1" />
+                  </Field>
+                  <div className="rounded-lg bg-slate-800/60 p-3 text-xs flex justify-between text-slate-300">
+                    <span>Total registration tax</span>
+                    <span className="text-red-300 font-semibold">{fmt(regTaxBreakdown.total)}</span>
+                  </div>
+                </>
+              )}
             </div>
           </div>
 
@@ -317,6 +429,22 @@ export default function PropertySimulator({ properties }) {
               </p>
             </div>
           </div>
+
+          {/* Registration tax summary banner */}
+          {regTaxBreakdown.total > 0 && (
+            <div className="rounded-lg border border-red-800/40 bg-red-900/10 px-4 py-3 text-xs text-slate-300 flex flex-wrap gap-x-6 gap-y-1 items-center">
+              <span className="font-semibold text-red-300">Upfront registration tax</span>
+              {sim.coBuying ? (
+                <>
+                  <span>Your share: <span className="font-medium text-red-300">{fmt(regTaxBreakdown.myTax)}</span></span>
+                  <span>Co-buyer: <span className="font-medium text-amber-300">{fmt(regTaxBreakdown.partnerTax)}</span></span>
+                  <span>Combined: <span className="font-semibold text-red-200">{fmt(regTaxBreakdown.total)}</span></span>
+                </>
+              ) : (
+                <span><span className="font-semibold text-red-200">{fmt(regTaxBreakdown.total)}</span> — deducted from cash flow in year {sim.acquisitionYear > 0 ? `+${sim.acquisitionYear}` : 'now'}</span>
+              )}
+            </div>
+          )}
 
           {/* Net Worth chart */}
           <div className="card">

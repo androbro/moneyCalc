@@ -445,8 +445,11 @@ export function simulateNewProperty(existingProperties, sim) {
     // Renovation cost is a one-off hit in the acquisition year
     const renovationCost = year === acquisitionYear ? (sim.renovationCost || 0) : 0
 
+    // Registration tax is a one-off upfront cost in the acquisition year
+    const registrationTax = year === acquisitionYear ? (sim.registrationTax || 0) : 0
+
     // ── Combine with baseline ──
-    const addedCF = Math.round(newRent - newOpex - newLoanPayment - renovationCost)
+    const addedCF = Math.round(newRent - newOpex - newLoanPayment - renovationCost - registrationTax)
 
     const combinedPropValue  = basePoint.propertyValue + Math.round(newPropValue)
     const combinedLoanBal    = basePoint.loanBalance   + Math.round(newLoanBal)
