@@ -195,9 +195,12 @@ function PropertyCard({ property, onEdit, onDelete }) {
 
   // Rental income — only if active today
   const rentalActive  = isRentalActiveOn(property, today)
-  const monthlyIncome = rentalActive
+  const grossMonthlyIncome = rentalActive
     ? (property.startRentalIncome || property.monthlyRentalIncome || 0)
     : 0
+  const vacancyRate = property.vacancyRate ?? 0.05
+  // Apply vacancy rate: effectiveRent = grossRent × (1 - vacancyRate)
+  const monthlyIncome = grossMonthlyIncome * (1 - vacancyRate)
 
   // Operating costs
   const monthlyOpex =

@@ -83,7 +83,10 @@ export default function CashFlowAggregator({ properties, profile, onEditProfile 
     let monthlyRentalGross = 0
     for (const p of properties) {
       if (p.isRented !== false) {
-        monthlyRentalGross += p.startRentalIncome || p.monthlyRentalIncome || 0
+        const grossRent = p.startRentalIncome || p.monthlyRentalIncome || 0
+        const vacancyRate = p.vacancyRate ?? 0.05
+        // Apply vacancy rate: effectiveRent = grossRent × (1 - vacancyRate)
+        monthlyRentalGross += grossRent * (1 - vacancyRate)
       }
     }
 

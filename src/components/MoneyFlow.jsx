@@ -493,7 +493,10 @@ export default function MoneyFlow({ properties, profile }) {
     const propertyLines = properties.map((p) => {
       // Rental income only if currently active (respects rentalStartDate)
       const rentalActive = isRentalActiveOn(p, today)
-      const rent = rentalActive ? (p.startRentalIncome || p.monthlyRentalIncome || 0) : 0
+      const grossRent = rentalActive ? (p.startRentalIncome || p.monthlyRentalIncome || 0) : 0
+      const vacancyRate = p.vacancyRate ?? 0.05
+      // Apply vacancy rate: effectiveRent = grossRent × (1 - vacancyRate)
+      const rent = grossRent * (1 - vacancyRate)
 
       const opex =
         (p.annualMaintenanceCost || 0) / 12 +
@@ -641,7 +644,7 @@ export default function MoneyFlow({ properties, profile }) {
                     <FlowRow
                       operator="+"
                       label={p.name}
-                      sublabel="gross rental income"
+                      sublabel="rental income (net of vacancy)"
                       amount={p.rent}
                     />
                   ) : (

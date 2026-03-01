@@ -89,6 +89,7 @@ const EMPTY_PROPERTY = () => ({
   // Income
   startRentalIncome: '',
   indexationRate: '0.02',
+  vacancyRate: '0.05',
   // Costs
   monthlyExpenses: '',
   annualMaintenanceCost: '',
@@ -326,6 +327,7 @@ export default function PropertyForm({ property: editProperty, profile, onSave, 
         otherAcquisitionCosts: editProperty.otherAcquisitionCosts != null ? String(editProperty.otherAcquisitionCosts) : '',
         startRentalIncome:     String(editProperty.startRentalIncome ?? editProperty.monthlyRentalIncome ?? ''),
         indexationRate:        String(editProperty.indexationRate ?? 0.02),
+        vacancyRate:           String(editProperty.vacancyRate ?? 0.05),
         monthlyExpenses:       String(editProperty.monthlyExpenses ?? ''),
         annualMaintenanceCost: String(editProperty.annualMaintenanceCost ?? ''),
         annualInsuranceCost:   String(editProperty.annualInsuranceCost ?? ''),
@@ -422,6 +424,7 @@ export default function PropertyForm({ property: editProperty, profile, onSave, 
       startRentalIncome:     Number(form.startRentalIncome) || 0,
       monthlyRentalIncome:   Number(form.startRentalIncome) || 0, // legacy sync
       indexationRate:        Number(form.indexationRate) || 0.02,
+      vacancyRate:           Number(form.vacancyRate) || 0.05,
       monthlyExpenses:       Number(form.monthlyExpenses) || 0,
       annualMaintenanceCost: Number(form.annualMaintenanceCost) || 0,
       annualInsuranceCost:   Number(form.annualInsuranceCost) || 0,
@@ -732,6 +735,13 @@ export default function PropertyForm({ property: editProperty, profile, onSave, 
               hint="How much rent rises each year (Belgian health index ≈ 2%)">
               <PctInput value={form.indexationRate} onChange={sf('indexationRate')} />
             </Field>
+
+            <Field label="Expected Vacancy Rate"
+              hint="Average time property is vacant per year (5% = ~2 weeks). Reduces projected income.">
+              <PctInput value={form.vacancyRate} onChange={sf('vacancyRate')} placeholder="5.0" />
+            </Field>
+
+            <div></div>
 
             <Field label="Rental start date"
               hint="When the tenant moves in / rental income begins. Leave blank if already renting.">

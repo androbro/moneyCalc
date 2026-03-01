@@ -147,9 +147,13 @@ export function buildProjection(properties) {
 
       // ── Indexed rental income (only if property is rented out) ──
       if (property.isRented !== false) {
-        const baseRent  = (property.startRentalIncome || property.monthlyRentalIncome || 0) * 12
-        const indexRate = property.indexationRate ?? 0.02
-        totalAnnualIncome += baseRent * Math.pow(1 + indexRate, year)
+        const baseRent   = (property.startRentalIncome || property.monthlyRentalIncome || 0) * 12
+        const indexRate  = property.indexationRate ?? 0.02
+        const vacancyRate = property.vacancyRate ?? 0.05
+        // Apply vacancy rate: effectiveRent = grossRent × (1 - vacancyRate)
+        const grossRent = baseRent * Math.pow(1 + indexRate, year)
+        const effectiveRent = grossRent * (1 - vacancyRate)
+        totalAnnualIncome += effectiveRent
       }
 
       // ── Indexed operating costs ──
@@ -308,7 +312,10 @@ export function computeSummary(properties, profile = null) {
     personalAssets += value * myShare
 
     if (isRentalActiveOn(property, today)) {
-      annualRentalIncome += (property.startRentalIncome || property.monthlyRentalIncome || 0) * 12
+      const grossRent = (property.startRentalIncome || property.monthlyRentalIncome || 0) * 12
+      const vacancyRate = property.vacancyRate ?? 0.05
+      // Apply vacancy rate: effectiveRent = grossRent × (1 - vacancyRate)
+      annualRentalIncome += grossRent * (1 - vacancyRate)
       activeRentalCount++
     }
 
