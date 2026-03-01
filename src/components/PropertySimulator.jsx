@@ -153,11 +153,13 @@ const SIM_INFO = {
     <>
       <strong>Co-buying</strong> means you buy the property together with
       someone else, each owning a share. This matters for Belgian registration
-      tax because the reduced rate (<em>klein beschrijf</em> / abattement) only
-      applies if you do <em>not</em> already own another property.
+      tax because the reduced rate for an <em>enige eigen woning</em> (sole
+      primary home, currently 2 %) only applies if you do <em>not</em> already
+      own another property.
       <br /><br />
       If you already own a property, your share is taxed at the full rate (12 %)
-      while your co-buyer — who owns nothing else — gets the reduced rate (~2 %).
+      while your co-buyer — who owns nothing else and will domicile there —
+      gets the reduced rate (2 % since 01.01.2025).
     </>
   ),
   mySharePct: (
@@ -185,21 +187,27 @@ const SIM_INFO = {
       <strong>Co-buyer's tax rate</strong> — the rate applied to your co-buyer's
       share of the purchase price.
       <br /><br />
-      In Flanders: if this is your co-buyer's <em>only</em> property (first purchase
-      or sole owner), they can benefit from the <strong>klein beschrijf</strong>{' '}
-      reduced rate of approximately <strong>2 %</strong> (on the first €220 k of
-      their share) vs the standard 12 %. Enter 2 % here in that case.
+      In Flanders: if this is your co-buyer's <em>only</em> property and they
+      will domicile there within 3 years, they benefit from the{' '}
+      <strong>enige eigen woning</strong> rate of <strong>2 %</strong> (since
+      01.01.2025; was 3 % in 2022–2024). Otherwise the standard 12 % applies.
+      Note: the old "klein beschrijf" rate-based concept no longer exists —
+      the bescheiden woning benefit is now a fixed €1,867 reduction on the tax
+      bill, not a different percentage.
     </>
   ),
   soloTaxRate: (
     <>
       <strong>Your registration tax rate</strong> — the percentage of the purchase
-      price you owe as registration tax to the Belgian state.
+      price you owe as registration tax (verkooprecht) to the Flemish tax authority.
       <br /><br />
-      In Flanders: <strong>12 %</strong> standard rate. You pay 12 % because
-      you already own another property (no klein beschrijf reduction).
-      <br />
-      If this were your only property you could pay ~2–3 % instead.
+      In Flanders: <strong>12 %</strong> is the standard rate for any property
+      that is not your sole primary home (since 01.01.2022). Because you already
+      own another property, you pay 12 % — no reduction available.
+      <br /><br />
+      If this were your <em>only</em> home and you domicile there within 3 years,
+      you could pay <strong>2 %</strong> (since 01.01.2025) with a possible extra
+      reduction of €1,867 for a bescheiden woning (≤ €220k outside core cities).
     </>
   ),
   // Rental income
@@ -248,13 +256,15 @@ const SIM_INFO = {
   annualPropertyTax: (
     <>
       <strong>Property Tax</strong> (<em>onroerende voorheffing</em>) is the
-      annual Belgian property tax based on the cadastral income of the property.
+      annual Flemish property tax based on the indexed cadastral income (KI).
       <br /><br />
-      Unlike other costs, it is <strong>never indexed</strong> in this model —
-      it stays constant over 20 years, which is the conservative assumption
-      (in reality it can be reassessed, but rarely dramatically).
+      In reality, the KI is indexed by the Flemish government every year (based
+      on consumer price inflation), so the OV bill does grow over time. However,
+      since this model uses a fixed user-entered amount, enter your current
+      annual OV bill and be aware it will likely increase slightly each year
+      in real life (modelled as fixed here for simplicity).
       <br /><br />
-      As a landlord, you can often pass this cost on to the tenant in the lease.
+      As a landlord, you can contractually pass this cost on to the tenant.
     </>
   ),
   monthlyExpenses: (

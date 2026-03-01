@@ -121,9 +121,12 @@ function buildValueSpendData(property) {
   }
 
   // ── Acquisition costs: use actual values when entered, else estimate ─────────
-  const isKlein    = purchasePrice <= 220_000
-  const estRegRate = isKlein ? 0.06 : 0.125
-  const estRegTax  = Math.round(purchasePrice * estRegRate)
+  // Flemish registration tax (verkooprecht) since 01.01.2022:
+  //   - Investment / rental property (niet enige eigen woning): 12%
+  //   - Sole primary home (enige eigen woning): 2% (since 01.01.2025; was 3% in 2022–2024)
+  //   Note: "klein beschrijf" no longer exists as a separate rate since 2020.
+  //   For a rental/investment property the rate is always 12% regardless of price.
+  const estRegRate = 0.12   // standard Flemish rate for non-primary / investment properties
   const estNotary  = Math.round(purchasePrice * 0.01 + 1_500)
   // registrationTax stored as a rate fraction (e.g. 0.06); convert to EUR amount
   const regTaxRate = property.registrationTax != null ? property.registrationTax : estRegRate
@@ -383,8 +386,12 @@ export default function PropertyDetail({ property, onEdit, onBack }) {
   const pp = property.purchasePrice || 0
 
   // ── Acquisition costs — actual entries or Belgian estimate ─────────────────
-  const isKlein      = pp <= 220_000
-  const estRegRate   = isKlein ? 0.06 : 0.125
+  // Flemish registration tax (verkooprecht) since 01.01.2022:
+  //   - Investment / rental property: always 12% (geen enige eigen woning)
+  //   - "Klein beschrijf" as a rate-based concept no longer exists; there is
+  //     a fixed €1,867 reduction for bescheiden woningen (≤€220k) on a sole
+  //     primary home only — not applicable to investment/rental properties.
+  const estRegRate   = 0.12  // standard Flemish rate for investment/rental properties
   const estNotaryAmt = Math.round(pp * 0.01 + 1_500)
 
   // registrationTax is stored as a rate fraction; convert to EUR for display
@@ -665,7 +672,7 @@ export default function PropertyDetail({ property, onEdit, onBack }) {
                 <td className="py-2 px-2 text-right font-medium text-amber-300">{fmt(regTaxAmt)}</td>
                 <td className="py-2 pl-2 text-slate-500 text-xs">
                   {(regTaxRate * 100).toFixed(2)}%
-                  {hasActualRegRate ? ' (actual)' : ` — estimated (${isKlein ? 'klein beschrijf' : 'standard'})`}
+                  {hasActualRegRate ? ' (actual)' : ' — estimated (standard 12%, Flemish investment property rate)'}
                 </td>
               </tr>
               <tr className="hover:bg-slate-700/30">

@@ -3,7 +3,7 @@ import {
   AreaChart, Area,
   ComposedChart, Bar, Line,
   XAxis, YAxis, CartesianGrid,
-  Tooltip, Legend, ResponsiveContainer,
+  Tooltip, ResponsiveContainer,
   ReferenceLine,
 } from 'recharts'
 import { buildProjection, formatEUR } from '../utils/projectionUtils'
@@ -593,69 +593,46 @@ export default function ProjectionChart({ properties, profile }) {
         </p>
       </div>
 
-      {/* ── Chart 1: Net Worth ── */}
+      {/* ── Chart 1: Portfolio Value vs Debt — stacked bar ── */}
       <div className="card">
         <div className="flex flex-wrap items-start justify-between gap-3 mb-5">
-          <h2 className="font-semibold text-slate-100">Portfolio Value vs. Debt</h2>
+          <div>
+            <h2 className="font-semibold text-slate-100">Portfolio Value vs. Debt</h2>
+            <p className="text-xs text-slate-400 mt-0.5">
+              Each bar = total wealth stack: debt (red) → real estate equity (green){hasInvestments ? ' → investments (purple)' : ''}.
+              Dashed line = total return including cash flow.
+            </p>
+          </div>
           <ChartLegend items={[
-            { label: 'Property Value', color: '#10b981', info: INFO.propertyValue },
-            { label: 'Loan Balance',   color: '#ef4444', info: INFO.loanBalance },
-            { label: 'Net Worth',      color: '#38bdf8', info: INFO.netWorth },
-            { label: 'Total Return',   color: '#f59e0b', info: INFO.totalReturn },
+            { label: 'Equity (Net Worth)',   color: '#10b981', info: INFO.netWorth },
+            { label: 'Loan Balance',         color: '#ef4444', info: INFO.loanBalance },
             ...(hasInvestments ? [
               { label: 'Investment Portfolio', color: '#a78bfa', info: INFO.investmentPortfolio },
-              { label: 'Personal Net Worth',   color: '#e879f9', info: INFO.personalNetWorth },
             ] : []),
+            { label: 'Total Return',         color: '#f59e0b', info: INFO.totalReturn },
           ]} />
         </div>
 
-        <ResponsiveContainer width="100%" height={320}>
-          <AreaChart data={mergedData} margin={{ top: 10, right: 8, left: 0, bottom: 0 }}>
-            <defs>
-              <linearGradient id="gProp" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%"  stopColor="#10b981" stopOpacity={0.35} />
-                <stop offset="95%" stopColor="#10b981" stopOpacity={0.02} />
-              </linearGradient>
-              <linearGradient id="gLoan" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%"  stopColor="#ef4444" stopOpacity={0.30} />
-                <stop offset="95%" stopColor="#ef4444" stopOpacity={0.02} />
-              </linearGradient>
-              <linearGradient id="gNW" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%"  stopColor="#38bdf8" stopOpacity={0.40} />
-                <stop offset="95%" stopColor="#38bdf8" stopOpacity={0.02} />
-              </linearGradient>
-              <linearGradient id="gTotalReturn" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%"  stopColor="#f59e0b" stopOpacity={0.30} />
-                <stop offset="95%" stopColor="#f59e0b" stopOpacity={0.02} />
-              </linearGradient>
-              <linearGradient id="gInv" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%"  stopColor="#a78bfa" stopOpacity={0.45} />
-                <stop offset="95%" stopColor="#a78bfa" stopOpacity={0.05} />
-              </linearGradient>
-              <linearGradient id="gPersonal" x1="0" y1="0" x2="0" y2="1">
-                <stop offset="5%"  stopColor="#e879f9" stopOpacity={0.35} />
-                <stop offset="95%" stopColor="#e879f9" stopOpacity={0.02} />
-              </linearGradient>
-            </defs>
+        <ResponsiveContainer width="100%" height={340}>
+          <ComposedChart data={mergedData} margin={{ top: 10, right: 8, left: 0, bottom: 0 }} barCategoryGap="20%">
             <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
             <XAxis dataKey="label" tick={{ fill: '#94a3b8', fontSize: 11 }} axisLine={{ stroke: '#1e293b' }} tickLine={false} />
             <YAxis tickFormatter={formatYAxis} tick={{ fill: '#94a3b8', fontSize: 10 }} axisLine={false} tickLine={false} width={68} />
             <Tooltip content={<CustomTooltip />} />
-            <Area type="monotone" dataKey="propertyValue" name="Property Value" stroke="#10b981" strokeWidth={2} fill="url(#gProp)" dot={false} activeDot={{ r: 4 }} />
-            <Area type="monotone" dataKey="loanBalance"   name="Loan Balance"   stroke="#ef4444" strokeWidth={2} fill="url(#gLoan)" dot={false} activeDot={{ r: 4 }} />
-            <Area type="monotone" dataKey="netWorth"      name="Net Worth"       stroke="#38bdf8" strokeWidth={2.5} fill="url(#gNW)"          dot={false} activeDot={{ r: 5 }} />
-            <Area type="monotone" dataKey="totalReturn"   name="Total Return"    stroke="#f59e0b" strokeWidth={2}   fill="url(#gTotalReturn)"  dot={false} activeDot={{ r: 4 }} strokeDasharray="5 3" />
+            {/* Stacked bars: loan (red) → real estate equity (green) → investments (purple) */}
+            <Bar dataKey="loanBalance"        name="Loan Balance"         stackId="value" fill="#ef4444" fillOpacity={0.85} radius={[0,0,0,0]} />
+            <Bar dataKey="netWorth"           name="Equity (Net Worth)"   stackId="value" fill="#10b981" fillOpacity={0.85} radius={hasInvestments ? [0,0,0,0] : [4,4,0,0]} />
             {hasInvestments && (
-              <Area type="monotone" dataKey="investmentPortfolio" name="Investment Portfolio" stroke="#a78bfa" strokeWidth={2} fill="url(#gInv)" dot={false} activeDot={{ r: 4 }} />
+              <Bar dataKey="investmentPortfolio" name="Investment Portfolio" stackId="value" fill="#a78bfa" fillOpacity={0.85} radius={[4,4,0,0]} />
             )}
-            {hasInvestments && (
-              <Area type="monotone" dataKey="personalNetWorth" name="Personal Net Worth" stroke="#e879f9" strokeWidth={2.5} fill="url(#gPersonal)" dot={false} activeDot={{ r: 5 }} strokeDasharray="6 2" />
-            )}
+            {/* Total Return line overlaid */}
+            <Line type="monotone" dataKey="totalReturn" name="Total Return" stroke="#f59e0b" strokeWidth={2} dot={false} activeDot={{ r: 5, fill: '#f59e0b' }} strokeDasharray="5 3" />
+            {/* Planned investment markers */}
             {Object.entries(investmentMarkers).map(([label, invs]) => (
               <ReferenceLine
                 key={label}
                 x={label}
-                stroke="#f59e0b"
+                stroke="#fbbf24"
                 strokeWidth={1.5}
                 strokeDasharray="4 3"
                 label={{
@@ -666,7 +643,7 @@ export default function ProjectionChart({ properties, profile }) {
                 }}
               />
             ))}
-          </AreaChart>
+          </ComposedChart>
         </ResponsiveContainer>
 
         <SummaryStrip data={mergedData} hasInvestments={hasInvestments} />

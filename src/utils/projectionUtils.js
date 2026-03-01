@@ -381,13 +381,18 @@ export function computeSummary(properties, profile = null) {
  *
  * saleYear        – years from today
  * brokeragePct    – agent commission as decimal (e.g. 0.03)
- * registrationPct – Belgian registration/notary fees as decimal (e.g. 0.12)
- * prepaymentPct   – bank penalty as decimal of remaining balance (e.g. 0.02)
+ * registrationPct – Additional seller-side closing costs as decimal (default 0).
+ *                   Note: in Belgium the BUYER pays registration tax, not the seller.
+ *                   Only include if you have specific additional costs on the seller side.
+ * prepaymentPct   – bank prepayment penalty (wederbeleggingsvergoeding) as decimal of remaining
+ *                   balance. Belgian law caps this at 3 months' interest; as % of balance
+ *                   this is typically 0.5–1.5% depending on rate and remaining term (e.g. 0.01).
  */
 export function computeSaleProceeds(properties, saleYear, {
   brokeragePct    = 0.03,
   registrationPct = 0,
-  prepaymentPct   = 0.02,
+  prepaymentPct   = 0.01,  // Belgian law caps wederbeleggingsvergoeding at 3 months' interest;
+                            // at typical rates (3–4%) this equals ~0.75–1% of remaining balance.
 } = {}) {
   const today = new Date()
   const saleDate = new Date(today.getFullYear() + saleYear, today.getMonth(), today.getDate())
@@ -433,7 +438,7 @@ export function buildScenarioComparison(properties, saleYear, {
   reinvestRate    = 0.05,
   brokeragePct    = 0.03,
   registrationPct = 0,
-  prepaymentPct   = 0.02,
+  prepaymentPct   = 0.01,  // Belgian cap: 3 months' interest ≈ 0.75–1% of remaining balance
 } = {}) {
   const projection = buildProjection(properties)
   const sale = computeSaleProceeds(properties, saleYear, { brokeragePct, registrationPct, prepaymentPct })

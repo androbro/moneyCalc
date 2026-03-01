@@ -437,7 +437,7 @@ export default function PropertyForm({ property: editProperty, onSave, onCancel 
       {/* ── Section 1b: Acquisition Costs ── */}
       <Section title="Acquisition Costs">
         <Field label="Registration tax (registratierechten)"
-          hint="Leave blank to auto-estimate (6% klein beschrijf / 12.5%). Enter the actual % you paid.">
+          hint="Leave blank to auto-estimate (12% — standard Flemish rate for investment/rental properties since 2022). Enter the actual % you paid if different (e.g. 2% for enige eigen woning since 2025).">
           <PctInput
             value={form.registrationTax}
             onChange={sf('registrationTax')}
@@ -655,7 +655,7 @@ export default function PropertyForm({ property: editProperty, onSave, onCancel 
         </Field>
 
         <Field label="Annual Property Tax (EUR)"
-          hint="Onroerende voorheffing — fixed amount, never indexed">
+          hint="Onroerende voorheffing — enter your current annual bill. In reality it rises yearly with KI indexation (≈inflation), but is kept fixed in this model.">
           <input className="input" type="number" min="0" placeholder="800"
             value={form.annualPropertyTax} onChange={si('annualPropertyTax')} />
         </Field>

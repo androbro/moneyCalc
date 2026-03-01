@@ -37,6 +37,12 @@ const INFO = {
         <li>Includes maintenance, insurance, property tax, syndic</li>
         <li>Interest = true cost; capital = equity investment</li>
       </ul>
+      <p className="mt-2 text-amber-300 text-xs font-semibold">⚠ Belgian income tax not included</p>
+      <p className="mt-0.5 text-slate-400 text-xs">
+        Rental income for private lettings is taxed via your personal income tax on{' '}
+        <em>indexed KI × 1.4</em> — not on actual rent. Loan interest is not deductible.
+        Your real after-tax cash flow is lower than shown here.
+      </p>
     </>
   ),
   ltv: (
@@ -89,6 +95,11 @@ const INFO = {
         <li>Includes maintenance, insurance, syndic ÷ 12</li>
         <li>Interest only from loans (not full payment)</li>
       </ul>
+      <p className="mt-2 text-amber-300 text-xs font-semibold">⚠ Belgian income tax not modelled</p>
+      <p className="mt-0.5 text-slate-400 text-xs">
+        Rental income is taxed via personal income tax on indexed KI × 1.4.
+        Subtract this from your actual net cash flow.
+      </p>
     </>
   ),
   appreciation: (
@@ -578,6 +589,26 @@ export default function Dashboard({ properties, profile, onAddProperty, onEditPr
             sub="annual net CF / portfolio value"
             info={INFO.netYield}
           />
+        </div>
+      )}
+
+      {/* ── Belgian rental tax notice ── */}
+      {properties.some((p) => isRentalActiveOn(p)) && (
+        <div className="rounded-xl border border-amber-700/40 bg-amber-950/30 p-4 text-xs text-amber-300 space-y-1.5">
+          <p className="font-semibold text-amber-200 text-sm">Belgian Rental Income Tax — not modelled here</p>
+          <p>
+            When you rent to a private person for residential use, Belgian tax law (FOD Financiën) taxes you on the
+            {' '}<strong>indexed cadastral income (KI) × 1.4</strong> — <em>not</em> on the actual rent you receive.
+            This is added to your personal income and taxed at progressive rates (25–50%).
+          </p>
+          <p>
+            This is a significant cost the cash flow numbers above do <strong>not include</strong>.
+            Example: KI = €800 → taxable base ≈ €800 × 2.18 × 1.4 ≈ €2,441/yr → tax at 40% ≈ <strong>€976/yr extra</strong>.
+          </p>
+          <p>
+            To properly assess profitability, subtract your marginal income tax rate × (indexed KI × 1.4) from the cash flow.
+            Also: <strong>no deduction for loan interest</strong> is allowed for private lettings to individuals.
+          </p>
         </div>
       )}
 

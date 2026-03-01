@@ -192,7 +192,7 @@ export default function ScenarioPlanner({ properties }) {
   const [saleYear,        setSaleYear]        = useState(10)
   const [brokeragePct,    setBrokeragePct]    = useState(0.03)
   const [registrationPct, setRegistrationPct] = useState(0)
-  const [prepaymentPct,   setPrepaymentPct]   = useState(0.02)
+  const [prepaymentPct,   setPrepaymentPct]   = useState(0.01)
   const [reinvestRate,    setReinvestRate]    = useState(0.05)
 
   const params = { brokeragePct, registrationPct, prepaymentPct, reinvestRate }
@@ -252,13 +252,13 @@ export default function ScenarioPlanner({ properties }) {
             <PctInput value={brokeragePct} onChange={setBrokeragePct} placeholder="3.0" />
           </ParamRow>
 
-          <ParamRow label="Registration / notary fees"
-            hint="Belgian registration taxes on sale (0% if primary residence)">
+          <ParamRow label="Registration / notary fees on sale"
+            hint="In Belgium, the seller pays NO registration tax — the buyer does. Set to 0 unless you have specific sale costs (e.g. notary deed fee ≈ 0.3–0.5%).">
             <PctInput value={registrationPct} onChange={setRegistrationPct} placeholder="0.0" />
           </ParamRow>
 
-          <ParamRow label="Bank prepayment penalty"
-            hint="Penalty on remaining loan balance (typically 3 months interest ≈ ~1-2%)">
+          <ParamRow label="Bank prepayment penalty (wederbeleggingsvergoeding)"
+            hint="Belgian law caps this at 3 months' interest on the amount repaid early. As a % of remaining balance this is typically 0.5–1.5% depending on the rate and remaining term.">
             <PctInput value={prepaymentPct} onChange={setPrepaymentPct} placeholder="2.0" />
           </ParamRow>
 

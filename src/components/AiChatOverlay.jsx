@@ -244,14 +244,36 @@ function buildFinancialContext(properties, profile) {
     if (profile.newResidencePurchaseDate) profileBlock += `- Planned purchase date: ${profile.newResidencePurchaseDate}\n`
   }
 
-  const systemPrompt = `You are a sharp, data-driven real estate financial advisor.
+  const systemPrompt = `You are a sharp, data-driven real estate financial advisor specialised in Belgian (Flemish) real estate law and taxation.
 You have been given the user's COMPLETE financial picture including every property, every loan (balance, rate, monthly payment, term), all operating costs, all household income, and all expenses.
 Do NOT ask for information that has already been provided — it is all in the context.
 Be concise, specific, and use the exact numbers from the data provided.
 Avoid generic advice — ground every recommendation in the provided figures.
 Only ask for missing information if it is genuinely absent from the context.
 Format responses with clear headings and bullet points.
-Always state any assumptions you make.`
+Always state any assumptions you make.
+
+## Key Belgian/Flemish tax rules you must apply correctly:
+
+**Rental income tax (huurinkomsten — particuliere verhuur):**
+- When renting to a private person for residential use (not professional), the landlord is NOT taxed on actual rent received.
+- Instead, Belgian income tax is due on: indexed KI × 1.4 (added to personal income, taxed at progressive rates 25–50%).
+- Loan interest is NOT deductible for private residential lettings.
+- This tax is NOT modelled in the app's cash flow figures — always flag this when discussing profitability.
+
+**Registration tax (verkooprecht) — Flanders, since 01.01.2022:**
+- Investment / rental / second property (niet enige eigen woning): always 12%.
+- Sole primary home (enige eigen woning): 2% since 01.01.2025 (was 3% in 2022–2024, 6% in 2020–2021).
+- "Klein beschrijf" no longer exists as a rate. A bescheiden woning (≤€220k outside core cities) buying their only home gets a fixed €1,867 reduction off the tax bill (not a different %).
+- The BUYER pays registration tax, not the seller. Sellers pay NO registration tax on a normal sale.
+
+**Prepayment penalty (wederbeleggingsvergoeding):**
+- Belgian law caps this at 3 months' interest on the repaid amount.
+- As % of remaining balance, this is approximately 0.75–1.5% depending on interest rate and remaining term.
+
+**Onroerende voorheffing (property tax):**
+- Based on indexed KI × rate (Flemish base: 3.97% + provincial + municipal opcentiemen).
+- The KI is indexed annually by the government — the OV bill therefore rises with inflation every year.`
 
   const contextPrompt = `Here is the user's complete financial picture:\n\n${portfolioBlock}${profileBlock}`
 
@@ -371,7 +393,7 @@ function buildScreenContext(activeTab, simState, properties, profile) {
           block += `- Buying together with co-buyer: YES\n`
           block += `  - My ownership share: ${((simState.mySharePct || 0.5) * 100).toFixed(0)}%\n`
           block += `  - My registration tax rate: ${((simState.myTaxRate || 0.12) * 100).toFixed(1)}% (already owns another property)\n`
-          block += `  - Co-buyer registration tax rate: ${((simState.partnerTaxRate || 0.02) * 100).toFixed(1)}% (first property / klein beschrijf)\n`
+          block += `  - Co-buyer registration tax rate: ${((simState.partnerTaxRate || 0.02) * 100).toFixed(1)}% (enige eigen woning rate — sole primary home, must domicile within 3 years)\n`
           block += `  - My registration tax share: ${fmt(price * (simState.mySharePct || 0.5) * (simState.myTaxRate || 0.12))}\n`
           block += `  - Co-buyer registration tax share: ${fmt(price * (1 - (simState.mySharePct || 0.5)) * (simState.partnerTaxRate || 0.02))}\n`
         } else {
