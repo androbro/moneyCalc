@@ -41,7 +41,7 @@ import {
 	saveSimulatorProfile,
 	defaultHousehold,
 } from "./services/portfolioService";
-import { Analytics } from "@vercel/analytics/next";
+import { Analytics } from "@vercel/analytics/react";
 
 // ─── Loading screen ───────────────────────────────────────────────────────────
 
