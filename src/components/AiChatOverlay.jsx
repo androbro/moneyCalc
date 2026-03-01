@@ -189,7 +189,6 @@ function buildFinancialContext(properties, profile) {
   const totalOutflow =
     monthlyPropertyLoans + monthlyPropertyOpex +
     (profile.householdExpenses || 0) +
-    (profile.newResidenceMonthlyPayment || 0) +
     totalInflow * (profile.personalSavingsRate || 0)
   const availableCash = totalInflow - totalOutflow
 
@@ -215,34 +214,12 @@ function buildFinancialContext(properties, profile) {
   profileBlock += `**Outflows:**\n`
   profileBlock += `- Property operating costs: ${fmt(monthlyPropertyOpex)}\n`
   profileBlock += `- Property loan payments: ${fmt(monthlyPropertyLoans)}\n`
-  if (profile.newResidenceMonthlyPayment) profileBlock += `- New residence loan payment: ${fmt(profile.newResidenceMonthlyPayment)}\n`
   profileBlock += `- Household living expenses: ${fmt(profile.householdExpenses || 0)}\n`
   profileBlock += `- Savings set aside (${((profile.personalSavingsRate || 0) * 100).toFixed(0)}%): ${fmt(totalInflow * (profile.personalSavingsRate || 0))}\n`
   profileBlock += `- Total monthly outflow: ${fmt(totalOutflow)}\n\n`
   profileBlock += `**Result: Available for new investments: ${fmt(availableCash)}/month (${fmt(availableCash * 12)}/year)**\n\n`
 
-  if (profile.targetDownPayment > 0) {
-    const remaining = Math.max(0, (profile.targetDownPayment || 0) - totalMemberCash)
-    profileBlock += `### Acquisition Target\n`
-    profileBlock += `- Target down payment: ${fmt(profile.targetDownPayment)}\n`
-    if (profile.targetPurchaseYear) profileBlock += `- Target purchase year: ${profile.targetPurchaseYear}\n`
-    profileBlock += `- Current household cash: ${fmt(totalMemberCash)}\n`
-    profileBlock += `- Still needed: ${fmt(remaining)}\n`
-    if (availableCash > 0 && remaining > 0) {
-      const months = Math.ceil(remaining / availableCash)
-      profileBlock += `- Months to goal at current savings rate: ~${months} months (~${(months / 12).toFixed(1)} years)\n`
-    }
-    profileBlock += `\n`
-  }
 
-  if (profile.newResidencePrice > 0) {
-    profileBlock += `### New Primary Residence (Planned Joint Purchase)\n`
-    profileBlock += `- Purchase price: ${fmt(profile.newResidencePrice)}\n`
-    profileBlock += `- Joint mortgage amount: ${fmt(profile.newResidenceLoanAmount)}\n`
-    profileBlock += `- Down payment required: ${fmt(profile.newResidencePrice - (profile.newResidenceLoanAmount || 0))}\n`
-    profileBlock += `- Monthly joint mortgage payment: ${fmt(profile.newResidenceMonthlyPayment)}\n`
-    if (profile.newResidencePurchaseDate) profileBlock += `- Planned purchase date: ${profile.newResidencePurchaseDate}\n`
-  }
 
   const systemPrompt = `You are a sharp, data-driven real estate financial advisor specialised in Belgian (Flemish) real estate law and taxation.
 You have been given the user's COMPLETE financial picture including every property, every loan (balance, rate, monthly payment, term), all operating costs, all household income, and all expenses.

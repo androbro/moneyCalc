@@ -452,14 +452,8 @@ function dbToHousehold(row) {
 
   return {
     members,
-    householdExpenses:          Number(row.household_expenses ?? 0),
-    personalSavingsRate:        Number(row.personal_savings_rate ?? 0.10),
-    targetDownPayment:          Number(row.target_down_payment ?? 0),
-    targetPurchaseYear:         row.target_purchase_year ?? null,
-    newResidencePrice:          Number(row.new_residence_price ?? 0),
-    newResidenceLoanAmount:     Number(row.new_residence_loan_amount ?? 0),
-    newResidenceMonthlyPayment: Number(row.new_residence_monthly_payment ?? 0),
-    newResidencePurchaseDate:   row.new_residence_purchase_date ?? '',
+    householdExpenses:   Number(row.household_expenses ?? 0),
+    personalSavingsRate: Number(row.personal_savings_rate ?? 0.10),
   }
 }
 
@@ -478,14 +472,8 @@ function householdToDb(h) {
     partner_net_income:           0,
     partner_cash:                 totalCash,
     // Shared fields
-    household_expenses:           h.householdExpenses ?? 0,
-    personal_savings_rate:        h.personalSavingsRate ?? 0.10,
-    target_down_payment:          h.targetDownPayment ?? 0,
-    target_purchase_year:         h.targetPurchaseYear ?? null,
-    new_residence_price:          h.newResidencePrice ?? 0,
-    new_residence_loan_amount:    h.newResidenceLoanAmount ?? 0,
-    new_residence_monthly_payment: h.newResidenceMonthlyPayment ?? 0,
-    new_residence_purchase_date:  h.newResidencePurchaseDate || null,
+    household_expenses:    h.householdExpenses ?? 0,
+    personal_savings_rate: h.personalSavingsRate ?? 0.10,
   }
 }
 
@@ -494,12 +482,6 @@ export function defaultHousehold() {
     members: [],
     householdExpenses: 0,
     personalSavingsRate: 0.10,
-    targetDownPayment: 0,
-    targetPurchaseYear: null,
-    newResidencePrice: 0,
-    newResidenceLoanAmount: 0,
-    newResidenceMonthlyPayment: 0,
-    newResidencePurchaseDate: '',
   }
 }
 

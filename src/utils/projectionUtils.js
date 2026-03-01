@@ -293,7 +293,11 @@ export function computeSummary(properties, profile = null) {
   const today    = new Date()
   const todayISO = today.toISOString()
 
-  for (const property of properties) {
+  // Planned/simulated properties are excluded from live dashboard metrics.
+  // They appear in projections only (projectPortfolio handles them separately).
+  const liveProperties = properties.filter((p) => p.status !== 'planned')
+
+  for (const property of liveProperties) {
     const value = property.currentValue || 0
     totalAssets += value
 
@@ -368,8 +372,8 @@ export function computeSummary(properties, profile = null) {
     annualInterest,
     annualCapital,
     roe,
-    propertyCount:                properties.length,
-    loanCount:                    properties.reduce((sum, p) => sum + (p.loans?.length || 0), 0),
+    propertyCount:                liveProperties.length,
+    loanCount:                    liveProperties.reduce((sum, p) => sum + (p.loans?.length || 0), 0),
     activeRentalCount,
   }
 }

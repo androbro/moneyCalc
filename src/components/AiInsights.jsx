@@ -84,7 +84,6 @@ function buildFinancialContext(properties, profile) {
   const totalOutflow =
     monthlyPropertyLoans + monthlyPropertyOpex +
     (profile.householdExpenses || 0) +
-    (profile.newResidenceMonthlyPayment || 0) +
     totalInflow * (profile.personalSavingsRate || 0)
   const availableCash = totalInflow - totalOutflow
 
@@ -104,26 +103,7 @@ function buildFinancialContext(properties, profile) {
   profileBlock += `- Total monthly outflow (all obligations + savings): ${fmt(totalOutflow)}\n`
   profileBlock += `- **Available for new investments: ${fmt(availableCash)} /month (${fmt(availableCash * 12)} /year)**\n\n`
 
-  if (profile.targetDownPayment > 0) {
-    profileBlock += `### Acquisition Target\n`
-    profileBlock += `- Target down payment: ${fmt(profile.targetDownPayment)}\n`
-    if (profile.targetPurchaseYear) profileBlock += `- Target purchase year: ${profile.targetPurchaseYear}\n`
-    const remaining = Math.max(0, (profile.targetDownPayment || 0) - (profile.partnerCash || 0))
-    profileBlock += `- Down payment still needed (after partner cash): ${fmt(remaining)}\n`
-    if (availableCash > 0 && remaining > 0) {
-      const months = Math.ceil(remaining / availableCash)
-      profileBlock += `- Estimated months to reach goal at current savings: ~${months} months\n`
-    }
-    profileBlock += `\n`
-  }
 
-  if (profile.newResidencePrice > 0) {
-    profileBlock += `### New Primary Residence (Joint with Partner)\n`
-    profileBlock += `- Purchase price: ${fmt(profile.newResidencePrice)}\n`
-    profileBlock += `- Joint loan: ${fmt(profile.newResidenceLoanAmount)}\n`
-    profileBlock += `- Down payment needed: ${fmt(profile.newResidencePrice - profile.newResidenceLoanAmount)}\n`
-    profileBlock += `- Monthly joint mortgage: ${fmt(profile.newResidenceMonthlyPayment)}\n`
-  }
 
   const systemPrompt = `You are a sharp, data-driven real estate financial advisor. 
 You have full access to the user's real estate portfolio and household financial situation.

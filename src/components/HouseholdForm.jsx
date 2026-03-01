@@ -424,51 +424,6 @@ export default function HouseholdForm({ profile, onSave, saving }) {
         </div>
       </Section>
 
-      {/* ── Next acquisition target ── */}
-      <Section title="Next Rental Property — Acquisition Target">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Field label="Target Down Payment (€)" hint="Cash needed for the next rental property purchase">
-            <MoneyInput value={form.targetDownPayment} onChange={set('targetDownPayment')} />
-          </Field>
-          <Field label="Target Purchase Year" hint="Calendar year you plan to buy the next rental property">
-            <input
-              type="number"
-              min={new Date().getFullYear()}
-              max={new Date().getFullYear() + 30}
-              value={form.targetPurchaseYear ?? ''}
-              onChange={(e) =>
-                setForm((f) => ({ ...f, targetPurchaseYear: e.target.value ? parseInt(e.target.value) : null }))
-              }
-              placeholder={String(new Date().getFullYear() + 3)}
-              className="input w-full"
-            />
-          </Field>
-        </div>
-      </Section>
-
-      {/* ── New primary residence ── */}
-      <Section title="New Primary Residence (Joint Purchase)">
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Field label="Purchase Price" hint="Agreed or expected price of the new home">
-            <MoneyInput value={form.newResidencePrice} onChange={set('newResidencePrice')} />
-          </Field>
-          <Field label="Joint Loan Amount" hint="Total mortgage taken together">
-            <MoneyInput value={form.newResidenceLoanAmount} onChange={set('newResidenceLoanAmount')} />
-          </Field>
-          <Field label="Estimated Monthly Payment" hint="Combined monthly mortgage repayment">
-            <MoneyInput value={form.newResidenceMonthlyPayment} onChange={set('newResidenceMonthlyPayment')} />
-          </Field>
-          <Field label="Planned Purchase Date" hint="Approximate settlement or notary date">
-            <input
-              type="date"
-              value={form.newResidencePurchaseDate ?? ''}
-              onChange={(e) => setForm((f) => ({ ...f, newResidencePurchaseDate: e.target.value }))}
-              className="input w-full"
-            />
-          </Field>
-        </div>
-      </Section>
-
       {/* Actions */}
       <div className="flex gap-3 justify-end">
         <button type="submit" disabled={saving} className="btn-primary">

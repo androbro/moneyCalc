@@ -113,11 +113,10 @@ export default function CashFlowAggregator({ properties, profile, onEditProfile 
       }
     }
 
-    const newResidenceLoan = profile.newResidenceMonthlyPayment || 0
-    const householdExp     = profile.householdExpenses || 0
+    const householdExp = profile.householdExpenses || 0
 
     const totalOutflowBeforeSavings =
-      monthlyPropertyOpex + monthlyPropertyLoans + newResidenceLoan + householdExp
+      monthlyPropertyOpex + monthlyPropertyLoans + householdExp
 
     // Savings set-aside = savingsRate × total income
     const savingsRate     = profile.personalSavingsRate || 0
@@ -145,15 +144,10 @@ export default function CashFlowAggregator({ properties, profile, onEditProfile 
       totalInflow,
       monthlyPropertyOpex,
       monthlyPropertyLoans,
-      newResidenceLoan,
       householdExp,
       savingsSetAside,
       totalOutflow,
       availableCash,
-      target,
-      remaining,
-      monthsToGoal,
-      targetYear,
     }
   }, [properties, profile])
 
@@ -166,15 +160,10 @@ export default function CashFlowAggregator({ properties, profile, onEditProfile 
     totalInflow,
     monthlyPropertyOpex,
     monthlyPropertyLoans,
-    newResidenceLoan,
     householdExp,
     savingsSetAside,
     totalOutflow,
     availableCash,
-    target,
-    remaining,
-    monthsToGoal,
-    targetYear,
   } = aggregated
 
   const hasMissingProfile = members.length === 0
@@ -256,8 +245,7 @@ export default function CashFlowAggregator({ properties, profile, onEditProfile 
 
           {/* Outflows */}
           <FormulaRow operator="−" label="Property Operating Costs"  value={monthlyPropertyOpex}  color="text-red-400" sublabel="maintenance + insurance + tax + other" />
-          <FormulaRow operator="−" label="Property Loan Payments"    value={monthlyPropertyLoans} color="text-red-400" />
-          <FormulaRow operator="−" label="New Residence Loan Payment" value={newResidenceLoan}    color="text-red-400" />
+          <FormulaRow operator="−" label="Property Loan Payments" value={monthlyPropertyLoans} color="text-red-400" />
           <FormulaRow operator="−" label="Household Expenses"        value={householdExp}         color="text-red-400" />
           <FormulaRow
             operator="−"
@@ -328,123 +316,7 @@ export default function CashFlowAggregator({ properties, profile, onEditProfile 
             </div>
           )}
 
-          {/* Down-payment progress */}
-          <div className="card space-y-4">
-            <h3 className="text-sm font-semibold text-slate-300 uppercase tracking-wider">
-              Down Payment Progress
-            </h3>
 
-            {target === 0 ? (
-              <p className="text-slate-500 text-sm">
-                Set a target down payment in your profile to track progress.
-              </p>
-            ) : (
-              <>
-                <div className="space-y-2">
-                  <div className="flex justify-between text-xs text-slate-400">
-                    <span>Total household cash on hand</span>
-                    <span>{fmt(Math.min(totalMemberCash, target))} / {fmt(target)}</span>
-                  </div>
-                  <div className="w-full bg-slate-700 rounded-full h-3">
-                    <div
-                      className="bg-brand-500 h-3 rounded-full transition-all duration-500"
-                      style={{ width: `${Math.min(100, (totalMemberCash / target) * 100).toFixed(1)}%` }}
-                    />
-                  </div>
-                  <p className="text-xs text-slate-500">
-                    {((totalMemberCash / target) * 100).toFixed(0)}% funded by household cash
-                  </p>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div className="space-y-0.5">
-                    <p className="text-xs text-slate-500">Still needed</p>
-                    <p className="font-semibold text-white">{fmt(remaining)}</p>
-                  </div>
-                  <div className="space-y-0.5">
-                    <p className="text-xs text-slate-500">Months to goal</p>
-                    <p className="font-semibold text-white">
-                      {remaining === 0
-                        ? 'Funded!'
-                        : monthsToGoal !== null
-                          ? `~${monthsToGoal}m`
-                          : availableCash <= 0
-                            ? 'No free cash'
-                            : '—'}
-                    </p>
-                  </div>
-                  {targetYear && (
-                    <div className="space-y-0.5 col-span-2">
-                      <p className="text-xs text-slate-500">Target purchase year</p>
-                      <p className="font-semibold text-white">
-                        {targetYear}
-                        {monthsToGoal !== null && (() => {
-                          const reachYear = new Date().getFullYear() + Math.ceil(monthsToGoal / 12)
-                          const delta = reachYear - targetYear
-                          if (delta <= 0) return <span className="ml-2 text-xs text-emerald-400">On track</span>
-                          return <span className="ml-2 text-xs text-amber-400">{delta}y behind target</span>
-                        })()}
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </>
-            )}
-          </div>
-
-          {/* New residence summary */}
-          {profile.newResidencePrice > 0 && (
-            <div className="card space-y-3">
-              <h3 className="text-sm font-semibold text-slate-300 uppercase tracking-wider">
-                New Residence (Joint Purchase)
-              </h3>
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div>
-                  <p className="text-xs text-slate-500">Price</p>
-                  <p className="font-semibold text-white">{fmt(profile.newResidencePrice)}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-slate-500">Joint Loan</p>
-                  <p className="font-semibold text-white">{fmt(profile.newResidenceLoanAmount)}</p>
-                </div>
-                <div>
-                  <p className="text-xs text-slate-500">Down Payment Required</p>
-                  <p className="font-semibold text-white">
-                    {fmt(profile.newResidencePrice - profile.newResidenceLoanAmount)}
-                  </p>
-                </div>
-                <div>
-                  <p className="text-xs text-slate-500">Household Cash Covers</p>
-                  {(() => {
-                    const needed = profile.newResidencePrice - profile.newResidenceLoanAmount
-                    const covered = Math.min(totalMemberCash, needed)
-                    const pct = Math.min(100, Math.round((totalMemberCash / Math.max(1, needed)) * 100))
-                    return (
-                      <p className={`font-semibold ${totalMemberCash >= needed ? 'text-emerald-400' : 'text-amber-400'}`}>
-                        {fmt(covered)} ({pct}%)
-                      </p>
-                    )
-                  })()}
-                </div>
-                {profile.newResidenceMonthlyPayment > 0 && (
-                  <div className="col-span-2">
-                    <p className="text-xs text-slate-500">Monthly Payment (joint)</p>
-                    <p className="font-semibold text-white">{fmt(profile.newResidenceMonthlyPayment)}</p>
-                  </div>
-                )}
-                {profile.newResidencePurchaseDate && (
-                  <div className="col-span-2">
-                    <p className="text-xs text-slate-500">Planned Purchase</p>
-                    <p className="font-semibold text-white">
-                      {new Date(profile.newResidencePurchaseDate).toLocaleDateString('nl-BE', {
-                        month: 'long', year: 'numeric',
-                      })}
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
-          )}
         </div>
       </div>
     </div>

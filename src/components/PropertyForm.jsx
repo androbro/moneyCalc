@@ -11,6 +11,7 @@ export const PROPERTY_STATUSES = [
   { value: 'vacant',         label: 'Vacant',            color: 'text-amber-400',   bg: 'bg-amber-900/30 border-amber-700/40' },
   { value: 'for_sale',       label: 'For sale',          color: 'text-orange-400',  bg: 'bg-orange-900/30 border-orange-700/40' },
   { value: 'renovation',     label: 'Under renovation',  color: 'text-purple-400',  bg: 'bg-purple-900/30 border-purple-700/40' },
+  { value: 'planned',        label: 'Planned / Simulated', color: 'text-sky-400',   bg: 'bg-sky-900/30 border-sky-700/40' },
 ]
 
 export function getStatusMeta(status) {
@@ -83,6 +84,8 @@ const EMPTY_PROPERTY = () => ({
   residenceEndDate: '',
   // Legacy (kept for back-compat)
   isRented: false,
+  // Rental intent flag (independent of current status)
+  intendedRental: false,
   // Income
   startRentalIncome: '',
   indexationRate: '0.02',
@@ -281,21 +284,33 @@ const STATUS_ICONS = {
   vacant:         '⬜',
   for_sale:       '🏷️',
   renovation:     '🔨',
+  planned:        '💡',
 }
 
 // ─── Main form ────────────────────────────────────────────────────────────────
 
-export default function PropertyForm({ property: editProperty, onSave, onCancel }) {
+export default function PropertyForm({ property: editProperty, profile, onSave, onCancel }) {
+  // Names available to pick from: household members + a fallback "Other"
+  const memberNames = (profile?.members || []).map((m) => m.name).filter(Boolean)
   const [form, setForm] = useState(EMPTY_PROPERTY)
   const [loans, setLoans] = useState([])
 
   useEffect(() => {
     if (editProperty) {
+      const existingRegTaxRate = editProperty.registrationTax != null ? Number(editProperty.registrationTax) : null
       setForm({
         ...EMPTY_PROPERTY(),
         ...editProperty,
-        owners:                editProperty.owners?.length ? editProperty.owners : [{ name: 'Me', share: 1 }],
+        owners: (editProperty.owners?.length ? editProperty.owners : [{ name: 'Me', share: 1 }])
+          .map((o) => ({
+            ...o,
+            // migrate: if no per-owner rate, seed from property-level rate
+            registrationTaxRate: o.registrationTaxRate != null
+              ? o.registrationTaxRate
+              : existingRegTaxRate,
+          })),
         status:                editProperty.status ?? (editProperty.isRented ? 'rented' : 'owner_occupied'),
+        intendedRental:        editProperty.intendedRental ?? editProperty.isRented ?? (editProperty.status === 'rented'),
         rentalStartDate:       editProperty.rentalStartDate ?? '',
         rentalEndDate:         editProperty.rentalEndDate ?? '',
         isPrimaryResidence:    editProperty.isPrimaryResidence ?? false,
@@ -332,6 +347,31 @@ export default function PropertyForm({ property: editProperty, onSave, onCancel 
   const si  = (field) => (e)     => setForm((prev) => ({ ...prev, [field]: e.target.value }))
   const sib = (field) => (v)     => setForm((prev) => ({ ...prev, [field]: v }))
 
+  // Planned / simulated toggle — flips status to 'planned' and back
+  const isPlanned = form.status === 'planned'
+  const togglePlanned = () => {
+    if (isPlanned) {
+      setForm((prev) => ({ ...prev, status: prev._prePlannedStatus ?? 'owner_occupied' }))
+    } else {
+      setForm((prev) => ({ ...prev, status: 'planned', _prePlannedStatus: prev.status }))
+    }
+  }
+
+  // Rental intent — true if status is 'rented' OR explicitly flagged
+  const isIntendedRental = form.status === 'rented' || Boolean(form.intendedRental)
+  const toggleIntendedRental = () => {
+    if (isIntendedRental) {
+      setForm((prev) => ({
+        ...prev,
+        intendedRental: false,
+        // If currently rented, switch to owner_occupied (or planned if that's active)
+        status: prev.status === 'rented' ? (prev._prePlannedStatus === 'planned' || prev.status === 'planned' ? 'planned' : 'owner_occupied') : prev.status,
+      }))
+    } else {
+      setForm((prev) => ({ ...prev, intendedRental: true }))
+    }
+  }
+
   const addLoan        = () => setLoans((prev) => [...prev, EMPTY_LOAN()])
   const updateLoan     = (i, u) => setLoans((prev) => prev.map((l, idx) => idx === i ? u : l))
   const removeLoan     = (i)    => setLoans((prev) => prev.filter((_, idx) => idx !== i))
@@ -343,23 +383,39 @@ export default function PropertyForm({ property: editProperty, onSave, onCancel 
 
   const handleSubmit = (e) => {
     e.preventDefault()
+    const owners = (form.owners?.length ? form.owners : [{ name: 'Me', share: 1 }])
+      .map((o) => ({ ...o, registrationTaxRate: o.registrationTaxRate != null ? o.registrationTaxRate : null }))
+
+    // Aggregate registrationTax: sum of (share × rate × purchasePrice) per owner
+    // Store as a blended rate on the property so downstream code still works
+    const purchasePriceNum = Number(form.purchasePrice) || 0
+    const totalRegTax = owners.reduce((sum, o) => {
+      if (o.registrationTaxRate == null) return sum
+      return sum + (Number(o.share) || 0) * o.registrationTaxRate * purchasePriceNum
+    }, 0)
+    const blendedRegRate = purchasePriceNum > 0 && owners.some((o) => o.registrationTaxRate != null)
+      ? totalRegTax / purchasePriceNum
+      : null
+
     const property = {
       ...form,
-      owners:                form.owners?.length ? form.owners : [{ name: 'Me', share: 1 }],
+      _prePlannedStatus: undefined, // strip internal temp field
+      owners,
       // Derive legacy isRented flag from status for backward compat
       isRented:              isRented,
+      intendedRental:        isIntendedRental,
       status:                form.status,
       rentalStartDate:       form.rentalStartDate || '',
       rentalEndDate:         form.rentalEndDate || '',
       isPrimaryResidence:    form.isPrimaryResidence ?? false,
       residenceStartDate:    form.residenceStartDate || '',
       residenceEndDate:      form.residenceEndDate || '',
-      purchasePrice:         Number(form.purchasePrice) || 0,
+      purchasePrice:         purchasePriceNum,
       currentValue:          Number(form.currentValue) || 0,
       valuationDate:         form.valuationDate || '',
       appreciationRate:      Number(form.appreciationRate) || 0.02,
-      // null = not entered (use estimate); registrationTax is a rate fraction (e.g. 0.06)
-      registrationTax:       form.registrationTax !== '' ? Number(form.registrationTax) : null,
+      // blended rate stored for backward compat with PropertyDetail cost calculations
+      registrationTax:       blendedRegRate,
       notaryFees:            form.notaryFees       !== '' ? Number(form.notaryFees)       : null,
       agencyFees:            form.agencyFees       !== '' ? Number(form.agencyFees)       : null,
       otherAcquisitionCosts: form.otherAcquisitionCosts !== '' ? Number(form.otherAcquisitionCosts) : null,
@@ -396,6 +452,29 @@ export default function PropertyForm({ property: editProperty, onSave, onCancel 
         <button type="button" onClick={onCancel} className="text-slate-400 hover:text-slate-100">
           <CloseIcon />
         </button>
+      </div>
+
+      {/* ── Top-level toggles ── */}
+      <div className="card space-y-3">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+            <p className="text-sm font-medium text-slate-200">Planned / simulated property</p>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Turn on for properties you don't own yet — projections include it but it won't affect today's cash flow.
+            </p>
+          </div>
+          <Toggle checked={isPlanned} onChange={togglePlanned} label="" />
+        </div>
+
+        <div className="border-t border-slate-700/60 pt-3 flex items-start justify-between gap-4">
+          <div>
+            <p className="text-sm font-medium text-slate-200">Will be rented out</p>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Show rental income fields. Set a start date if you're not renting yet.
+            </p>
+          </div>
+          <Toggle checked={isIntendedRental} onChange={toggleIntendedRental} label="" />
+        </div>
       </div>
 
       {/* ── Section 1: Property Details ── */}
@@ -436,15 +515,6 @@ export default function PropertyForm({ property: editProperty, onSave, onCancel 
 
       {/* ── Section 1b: Acquisition Costs ── */}
       <Section title="Acquisition Costs">
-        <Field label="Registration tax (registratierechten)"
-          hint="Leave blank to auto-estimate (12% — standard Flemish rate for investment/rental properties since 2022). Enter the actual % you paid if different (e.g. 2% for enige eigen woning since 2025).">
-          <PctInput
-            value={form.registrationTax}
-            onChange={sf('registrationTax')}
-            placeholder="Auto-estimated"
-            step="0.01"
-          />
-        </Field>
         <Field label="Notary fees (EUR)"
           hint="Actual notary invoice total incl. VAT. Leave blank to auto-estimate (1% + €1,500).">
           <input className="input" type="number" min="0" placeholder="Auto-estimated"
@@ -473,7 +543,7 @@ export default function PropertyForm({ property: editProperty, onSave, onCancel 
         </div>
 
         {/* Owner rows */}
-        <div className="space-y-2">
+        <div className="space-y-3">
           {(form.owners || [{ name: 'Me', share: 1 }]).map((owner, i) => {
             const owners = form.owners || [{ name: 'Me', share: 1 }]
             const updateOwner = (updated) => {
@@ -483,40 +553,100 @@ export default function PropertyForm({ property: editProperty, onSave, onCancel 
             const removeOwner = () => sf('owners')(owners.filter((_, idx) => idx !== i))
             const totalShare  = owners.reduce((s, o) => s + (Number(o.share) || 0), 0)
             const isOver      = totalShare > 1.001
-            const isUnder     = totalShare < 0.999
+
+            // Determine if the current name matches a known member or is "other"
+            const isKnownMember = memberNames.length === 0 || memberNames.includes(owner.name)
+            const dropdownValue = isKnownMember ? (owner.name || '') : '__other__'
 
             return (
-              <div key={i} className="flex items-center gap-2">
-                <input
-                  className="input flex-1 text-sm"
-                  placeholder={i === 0 ? 'Me' : 'Partner name…'}
-                  value={owner.name}
-                  onChange={(e) => updateOwner({ ...owner, name: e.target.value })}
-                />
-                <div className="relative w-24">
-                  <input
-                    className={`input pr-6 text-sm text-right w-full ${isOver ? 'border-red-500' : ''}`}
-                    type="number"
-                    min="0"
-                    max="100"
-                    step="1"
-                    placeholder="50"
-                    value={owner.share !== '' ? Math.round(Number(owner.share) * 100) : ''}
-                    onChange={(e) => updateOwner({ ...owner, share: Number(e.target.value) / 100 })}
-                  />
-                  <span className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 text-xs">%</span>
+              <div key={i} className="border border-slate-700/60 rounded-xl p-3 space-y-2.5">
+                {/* Row 1: name selector + share + remove */}
+                <div className="flex items-center gap-2">
+                  {/* Name — dropdown if household members exist, plain input otherwise */}
+                  {memberNames.length > 0 ? (
+                    <div className="flex-1 flex flex-col gap-1.5">
+                      <select
+                        className="input text-sm"
+                        value={dropdownValue}
+                        onChange={(e) => {
+                          const val = e.target.value
+                          if (val !== '__other__') {
+                            updateOwner({ ...owner, name: val })
+                          } else {
+                            updateOwner({ ...owner, name: '' })
+                          }
+                        }}
+                      >
+                        <option value="">— select owner —</option>
+                        {memberNames.map((n) => (
+                          <option key={n} value={n}>{n}</option>
+                        ))}
+                        <option value="__other__">Other…</option>
+                      </select>
+                      {/* Free-text fallback when "Other…" is chosen */}
+                      {dropdownValue === '__other__' && (
+                        <input
+                          className="input text-sm"
+                          placeholder="Owner name…"
+                          value={owner.name}
+                          onChange={(e) => updateOwner({ ...owner, name: e.target.value })}
+                        />
+                      )}
+                    </div>
+                  ) : (
+                    <input
+                      className="input flex-1 text-sm"
+                      placeholder={i === 0 ? 'Me' : 'Partner name…'}
+                      value={owner.name}
+                      onChange={(e) => updateOwner({ ...owner, name: e.target.value })}
+                    />
+                  )}
+
+                  {/* Share % */}
+                  <div className="relative w-24 shrink-0">
+                    <input
+                      className={`input pr-6 text-sm text-right w-full ${isOver ? 'border-red-500' : ''}`}
+                      type="number"
+                      min="0"
+                      max="100"
+                      step="1"
+                      placeholder="50"
+                      value={owner.share !== '' ? Math.round(Number(owner.share) * 100) : ''}
+                      onChange={(e) => updateOwner({ ...owner, share: Number(e.target.value) / 100 })}
+                    />
+                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 text-xs">%</span>
+                  </div>
+
+                  {/* Remove button */}
+                  {owners.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={removeOwner}
+                      className="text-slate-500 hover:text-red-400 transition-colors shrink-0"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                      </svg>
+                    </button>
+                  )}
                 </div>
-                {owners.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={removeOwner}
-                    className="text-slate-500 hover:text-red-400 transition-colors shrink-0"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                  </button>
-                )}
+
+                {/* Row 2: registration tax rate for this owner */}
+                <div>
+                  <label className="label text-xs mb-1">
+                    Registration tax rate for {owner.name || 'this owner'}
+                  </label>
+                  <PctInput
+                    step="0.01"
+                    placeholder="12"
+                    value={owner.registrationTaxRate != null ? owner.registrationTaxRate : ''}
+                    onChange={(v) => updateOwner({ ...owner, registrationTaxRate: v !== '' ? v : null })}
+                  />
+                  <p className="text-xs text-slate-500 mt-1">
+                    Standard: 12% (Flemish investment/rental). Enige eigen woning since 2025: 2%.
+                    Leave blank to skip.
+                  </p>
+                </div>
               </div>
             )
           })}
@@ -581,64 +711,66 @@ export default function PropertyForm({ property: editProperty, onSave, onCancel 
       </div>
 
       {/* ── Section 3: Rental Income & Period ── */}
-      <div className="card space-y-4">
-        <div>
-          <h3 className="section-title mb-0">Rental Income &amp; Period</h3>
-          <p className="text-xs text-slate-500 mt-0.5">
-            Set the expected rent and when the rental period starts — even if you're not renting yet.
-            Cash flow only counts rent once the start date is reached and status is "Rented out".
-          </p>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <Field label="Monthly Rental Income (EUR)"
-            hint="Gross rent — starting point for annual indexation">
-            <input className="input" type="number" min="0" placeholder="1200"
-              value={form.startRentalIncome} onChange={si('startRentalIncome')} />
-          </Field>
-
-          <Field label="Annual Rent Indexation Rate"
-            hint="How much rent rises each year (Belgian health index ≈ 2%)">
-            <PctInput value={form.indexationRate} onChange={sf('indexationRate')} />
-          </Field>
-
-          <Field label="Rental start date"
-            hint="When the tenant moves in / rental income begins. Leave blank if already renting.">
-            <input className="input" type="date"
-              value={form.rentalStartDate} onChange={si('rentalStartDate')} />
-          </Field>
-
-          <Field label="Rental end date"
-            hint="When the current lease ends. Leave blank if open-ended.">
-            <input className="input" type="date"
-              value={form.rentalEndDate} onChange={si('rentalEndDate')} />
-          </Field>
-        </div>
-
-        {/* Contextual notices */}
-        {!isRented && form.rentalStartDate && (
-          <div className="flex items-start gap-2 bg-slate-800/60 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-slate-400">
-            <svg className="w-4 h-4 shrink-0 mt-0.5 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <span>
-              Rental date set. Switch status to <strong className="text-emerald-400">Rented out</strong> when the tenant moves in — that's when rent will appear in cash flow.
-            </span>
+      {isIntendedRental && (
+        <div className="card space-y-4">
+          <div>
+            <h3 className="section-title mb-0">Rental Income &amp; Period</h3>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Set the expected rent and when the rental period starts — even if you're not renting yet.
+              Cash flow only counts rent once the start date is reached and status is "Rented out".
+            </p>
           </div>
-        )}
-        {isRented && form.rentalStartDate && new Date(form.rentalStartDate) > new Date() && (
-          <div className="flex items-start gap-2 bg-amber-900/20 border border-amber-700/40 rounded-xl px-3 py-2.5 text-xs text-amber-300">
-            <svg className="w-4 h-4 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
-            </svg>
-            <span>
-              Rental income starts <strong>{new Date(form.rentalStartDate).toLocaleDateString('nl-BE', { day: 'numeric', month: 'long', year: 'numeric' })}</strong>.
-              Until then, cash flow shows €0 rental income — only costs.
-            </span>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <Field label="Monthly Rental Income (EUR)"
+              hint="Gross rent — starting point for annual indexation">
+              <input className="input" type="number" min="0" placeholder="1200"
+                value={form.startRentalIncome} onChange={si('startRentalIncome')} />
+            </Field>
+
+            <Field label="Annual Rent Indexation Rate"
+              hint="How much rent rises each year (Belgian health index ≈ 2%)">
+              <PctInput value={form.indexationRate} onChange={sf('indexationRate')} />
+            </Field>
+
+            <Field label="Rental start date"
+              hint="When the tenant moves in / rental income begins. Leave blank if already renting.">
+              <input className="input" type="date"
+                value={form.rentalStartDate} onChange={si('rentalStartDate')} />
+            </Field>
+
+            <Field label="Rental end date"
+              hint="When the current lease ends. Leave blank if open-ended.">
+              <input className="input" type="date"
+                value={form.rentalEndDate} onChange={si('rentalEndDate')} />
+            </Field>
           </div>
-        )}
-      </div>
+
+          {/* Contextual notices */}
+          {!isRented && form.rentalStartDate && (
+            <div className="flex items-start gap-2 bg-slate-800/60 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-slate-400">
+              <svg className="w-4 h-4 shrink-0 mt-0.5 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span>
+                Rental date set. Switch status to <strong className="text-emerald-400">Rented out</strong> when the tenant moves in — that's when rent will appear in cash flow.
+              </span>
+            </div>
+          )}
+          {isRented && form.rentalStartDate && new Date(form.rentalStartDate) > new Date() && (
+            <div className="flex items-start gap-2 bg-amber-900/20 border border-amber-700/40 rounded-xl px-3 py-2.5 text-xs text-amber-300">
+              <svg className="w-4 h-4 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                  d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
+              </svg>
+              <span>
+                Rental income starts <strong>{new Date(form.rentalStartDate).toLocaleDateString('nl-BE', { day: 'numeric', month: 'long', year: 'numeric' })}</strong>.
+                Until then, cash flow shows €0 rental income — only costs.
+              </span>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ── Section 5: Operating Expenses ── */}
       <Section title="Operating Expenses">

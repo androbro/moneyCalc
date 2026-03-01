@@ -534,9 +534,8 @@ export default function MoneyFlow({ properties, profile }) {
     const totalMemberInvestment = members.reduce((s, m) => s + (m.investmentIncome || 0), 0)
     const totalMemberCash       = members.reduce((s, m) => s + (m.cash || 0), 0)
 
-    const householdExpenses  = profile.householdExpenses || 0
-    const newResidenceLoan   = profile.newResidenceMonthlyPayment || 0
-    const savingsRate        = profile.personalSavingsRate || 0
+    const householdExpenses = profile.householdExpenses || 0
+    const savingsRate       = profile.personalSavingsRate || 0
 
     const totalInflow = monthlyRentalGross + totalMemberSalary + totalMemberInvestment
     const savingsSetAside = totalInflow * savingsRate
@@ -544,7 +543,7 @@ export default function MoneyFlow({ properties, profile }) {
     // Outflow uses interest-only (capital is equity-building, not a true cost)
     const totalOutflow =
       monthlyPropertyOpex + monthlyInterestTotal +
-      newResidenceLoan + householdExpenses + savingsSetAside
+      householdExpenses + savingsSetAside
 
     const availableCash = totalInflow - totalOutflow
 
@@ -563,7 +562,6 @@ export default function MoneyFlow({ properties, profile }) {
       totalMemberInvestment,
       totalMemberCash,
       householdExpenses,
-      newResidenceLoan,
       savingsRate,
       savingsSetAside,
       totalInflow,
@@ -585,7 +583,6 @@ export default function MoneyFlow({ properties, profile }) {
     totalMemberInvestment,
     totalMemberCash,
     householdExpenses,
-    newResidenceLoan,
     savingsRate,
     savingsSetAside,
     totalInflow,
@@ -752,10 +749,6 @@ export default function MoneyFlow({ properties, profile }) {
           {monthlyCapitalTotal > 0 && (
             <FlowRow operator="↑" label="Capital Repayment" amount={monthlyCapitalTotal}
               sublabel="equity building — not a true expense" />
-          )}
-          {newResidenceLoan > 0 && (
-            <FlowRow operator="−" label="New Residence Loan" amount={newResidenceLoan}
-              sublabel="joint mortgage payment" />
           )}
           {householdExpenses > 0 && (
             <FlowRow operator="−" label="Living Expenses" amount={householdExpenses}

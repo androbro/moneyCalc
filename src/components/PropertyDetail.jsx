@@ -19,7 +19,7 @@ import {
   ResponsiveContainer,
 } from 'recharts'
 import PropertyTimeline from './PropertyTimeline'
-import { getLoanPaymentSplit } from '../utils/projectionUtils'
+import { getLoanPaymentSplit, getRemainingBalance } from '../utils/projectionUtils'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -371,8 +371,7 @@ export default function PropertyDetail({ property, onEdit, onBack }) {
     .sort((a, b) => new Date(a.plannedDate) - new Date(b.plannedDate))
 
   const totalLoanBalance = loans.reduce((s, l) => {
-    const { remaining } = getLoanPaymentSplit(l, today)
-    return s + remaining
+    return s + getRemainingBalance(l, today.toISOString())
   }, 0)
 
   const totalRenovCost   = renovations.reduce((s, r) => s + (r.cost || 0), 0)
@@ -800,7 +799,8 @@ export default function PropertyDetail({ property, onEdit, onBack }) {
         <Section title="Loans">
           <div className="space-y-3">
             {loans.map((loan, i) => {
-              const { monthly, interest, capital, remaining } = getLoanPaymentSplit(loan, today)
+              const { monthlyTotal: monthly, monthlyInterest: interest, monthlyCapital: capital } = getLoanPaymentSplit(loan, today)
+              const remaining = getRemainingBalance(loan, today.toISOString())
               const pctRepaid = loan.originalAmount > 0
                 ? (1 - remaining / loan.originalAmount) * 100
                 : 0

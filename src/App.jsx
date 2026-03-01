@@ -403,6 +403,7 @@ export default function App() {
             )}
             <PropertyForm
               property={editingProperty}
+              profile={householdProfile}
               onSave={handleSave}
               onCancel={handleCancelForm}
             />
