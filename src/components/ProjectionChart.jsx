@@ -549,6 +549,8 @@ function getInvestmentMarkers(properties) {
 }
 
 export default function ProjectionChart({ properties, profile }) {
+  const [inflationAdjusted, setInflationAdjusted] = useState(false)
+  
   if (!properties || properties.length === 0) return <EmptyState />
 
   const data = buildProjection(properties)
@@ -583,14 +585,72 @@ export default function ProjectionChart({ properties, profile }) {
     return { ...pt, investmentPortfolio: inv, personalNetWorth: myEquity + inv }
   })
 
+  // Apply inflation adjustment if toggle is enabled
+  // Adjust all monetary values to today's purchasing power using 2% global inflation
+  const GLOBAL_INFLATION_RATE = 0.02
+  const displayData = inflationAdjusted
+    ? mergedData.map((pt) => {
+        const inflationFactor = Math.pow(1 + GLOBAL_INFLATION_RATE, pt.year)
+        return {
+          ...pt,
+          propertyValue: Math.round(pt.propertyValue / inflationFactor),
+          loanBalance: Math.round(pt.loanBalance / inflationFactor),
+          netWorth: Math.round(pt.netWorth / inflationFactor),
+          equityGain: Math.round(pt.equityGain / inflationFactor),
+          annualCashFlow: Math.round(pt.annualCashFlow / inflationFactor),
+          annualCosts: Math.round(pt.annualCosts / inflationFactor),
+          cumulativeCF: Math.round(pt.cumulativeCF / inflationFactor),
+          plannedInvestCost: Math.round(pt.plannedInvestCost / inflationFactor),
+          totalReturn: Math.round(pt.totalReturn / inflationFactor),
+          investmentPortfolio: Math.round(pt.investmentPortfolio / inflationFactor),
+          personalNetWorth: Math.round(pt.personalNetWorth / inflationFactor),
+        }
+      })
+    : mergedData
+
+
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-2xl font-bold text-white">20-Year Projection</h1>
-        <p className="text-slate-400 text-sm mt-0.5">
-          Indexed rental income, inflation-adjusted costs, and amortization-based loan balance.
-          Click any <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-slate-600 text-[10px] font-bold text-slate-300 mx-0.5">?</span> for a detailed explanation.
-        </p>
+      <div className="flex items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-white">20-Year Projection</h1>
+          <p className="text-slate-400 text-sm mt-0.5">
+            Indexed rental income, inflation-adjusted costs, and amortization-based loan balance.
+            Click any <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-slate-600 text-[10px] font-bold text-slate-300 mx-0.5">?</span> for a detailed explanation.
+          </p>
+        </div>
+        
+        {/* Inflation Toggle */}
+        <div className="flex items-center gap-3 bg-slate-800/50 px-4 py-2.5 rounded-lg border border-slate-700/50">
+          <label htmlFor="inflation-toggle" className="flex items-center gap-2 cursor-pointer">
+            <span className="text-sm text-slate-300 font-medium">Adjust for Inflation</span>
+            <InfoPopover>
+              <strong className="text-white block mb-1">Inflation Adjustment</strong>
+              When enabled, all future values are adjusted to today's purchasing power using a 2% annual inflation rate.
+              <br /><br />
+              This shows you the <strong>real value</strong> of your money, accounting for how inflation reduces purchasing power over time.
+              <br /><br />
+              <code className="text-brand-300">Real Value = Nominal Value ÷ (1.02)^year</code>
+              <br /><br />
+              Example: €100,000 in 20 years = €67,297 in today's money.
+            </InfoPopover>
+          </label>
+          <button
+            id="inflation-toggle"
+            role="switch"
+            aria-checked={inflationAdjusted}
+            onClick={() => setInflationAdjusted(!inflationAdjusted)}
+            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 focus:ring-offset-slate-900 ${
+              inflationAdjusted ? 'bg-brand-500' : 'bg-slate-600'
+            }`}
+          >
+            <span
+              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                inflationAdjusted ? 'translate-x-6' : 'translate-x-1'
+              }`}
+            />
+          </button>
+        </div>
       </div>
 
       {/* ── Chart 1: Portfolio Value vs Debt — stacked bar ── */}
@@ -614,7 +674,7 @@ export default function ProjectionChart({ properties, profile }) {
         </div>
 
         <ResponsiveContainer width="100%" height={340}>
-          <ComposedChart data={mergedData} margin={{ top: 10, right: 8, left: 0, bottom: 0 }} barCategoryGap="20%">
+          <ComposedChart data={displayData} margin={{ top: 10, right: 8, left: 0, bottom: 0 }} barCategoryGap="20%">
             <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
             <XAxis dataKey="label" tick={{ fill: '#94a3b8', fontSize: 11 }} axisLine={{ stroke: '#1e293b' }} tickLine={false} />
             <YAxis tickFormatter={formatYAxis} tick={{ fill: '#94a3b8', fontSize: 10 }} axisLine={false} tickLine={false} width={68} />
@@ -646,20 +706,20 @@ export default function ProjectionChart({ properties, profile }) {
           </ComposedChart>
         </ResponsiveContainer>
 
-        <SummaryStrip data={mergedData} hasInvestments={hasInvestments} />
+        <SummaryStrip data={displayData} hasInvestments={hasInvestments} />
       </div>
 
       {/* ── Chart 2: Cash Flow (only when portfolio has rented properties) ── */}
       {properties.some((p) => p.isRented !== false) && (
-        <CashFlowChart data={mergedData} />
+        <CashFlowChart data={displayData} />
       )}
 
       {/* ── Chart 3: Equity Growth (always shown) ── */}
-      <EquityGrowthChart data={mergedData} />
+      <EquityGrowthChart data={displayData} />
 
       {/* ── Tables ── */}
       <PropertyBreakdown properties={properties} />
-      <CashFlowTable data={mergedData} hasInvestments={hasInvestments} />
+      <CashFlowTable data={displayData} hasInvestments={hasInvestments} />
     </div>
   )
 }
