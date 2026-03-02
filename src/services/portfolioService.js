@@ -621,9 +621,16 @@ export async function createShareToken(permissions = DEFAULT_PERMISSIONS) {
   const userId = await getCurrentUserId()
   if (!userId) throw new Error('Must be signed in to create a share link')
 
+  // Generate a URL-safe random token client-side (24 random bytes → 32 base64url chars)
+  const raw = crypto.getRandomValues(new Uint8Array(24))
+  const token = btoa(String.fromCharCode(...raw))
+    .replace(/\+/g, '-')
+    .replace(/\//g, '_')
+    .replace(/=+$/, '')
+
   const { data, error } = await supabase
     .from('share_tokens')
-    .insert({ user_id: userId, permissions })
+    .insert({ user_id: userId, token, permissions })
     .select('id, token, permissions, created_at')
     .single()
   check(error, 'createShareToken')

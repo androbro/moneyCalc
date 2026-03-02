@@ -11,7 +11,7 @@
 create table if not exists share_tokens (
   id          uuid primary key default gen_random_uuid(),
   user_id     uuid not null references auth.users(id) on delete cascade,
-  token       text not null unique default encode(gen_random_bytes(18), 'base64url'),
+  token       text not null unique,
   permissions jsonb not null default '{"dashboard":true,"properties":true,"financials":true,"household":false}'::jsonb,
   created_at  timestamptz not null default now()
 );
