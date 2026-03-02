@@ -587,6 +587,133 @@ export async function claimOwnerlessData() {
   return data
 }
 
+// ─── Share tokens ─────────────────────────────────────────────────────────────
+
+const DEFAULT_PERMISSIONS = {
+  dashboard:   true,
+  properties:  true,
+  financials:  true,
+  household:   false,
+}
+
+/**
+ * Returns the current user's share token row, or null if none exists.
+ * Shape: { id, token, permissions, created_at }
+ */
+export async function getShareToken() {
+  const userId = await getCurrentUserId()
+  if (!userId) return null
+
+  const { data, error } = await supabase
+    .from('share_tokens')
+    .select('id, token, permissions, created_at')
+    .eq('user_id', userId)
+    .maybeSingle()
+  check(error, 'getShareToken')
+  return data ?? null
+}
+
+/**
+ * Creates a new share token for the current user with the given permissions.
+ * Returns the created row.
+ */
+export async function createShareToken(permissions = DEFAULT_PERMISSIONS) {
+  const userId = await getCurrentUserId()
+  if (!userId) throw new Error('Must be signed in to create a share link')
+
+  const { data, error } = await supabase
+    .from('share_tokens')
+    .insert({ user_id: userId, permissions })
+    .select('id, token, permissions, created_at')
+    .single()
+  check(error, 'createShareToken')
+  return data
+}
+
+/**
+ * Updates the permissions on the current user's share token.
+ * Returns the updated row.
+ */
+export async function updateSharePermissions(tokenId, permissions) {
+  const { data, error } = await supabase
+    .from('share_tokens')
+    .update({ permissions })
+    .eq('id', tokenId)
+    .select('id, token, permissions, created_at')
+    .single()
+  check(error, 'updateSharePermissions')
+  return data
+}
+
+/**
+ * Deletes (revokes) the current user's share token.
+ */
+export async function revokeShareToken(tokenId) {
+  const { error } = await supabase
+    .from('share_tokens')
+    .delete()
+    .eq('id', tokenId)
+  check(error, 'revokeShareToken')
+}
+
+/**
+ * Resolves a public share token (callable by unauthenticated users).
+ * Returns the full portfolio snapshot via the `get_shared_portfolio` RPC.
+ * The RPC returns { user_id, permissions, properties (raw DB rows), household (raw DB row) }
+ */
+export async function getSharedPortfolio(token) {
+  const { data, error } = await supabase.rpc('get_shared_portfolio', { p_token: token })
+  if (error) throw new Error(error.message)
+  if (!data) return null
+
+  // Map raw DB rows to the same camelCase shape the rest of the app uses
+  const rawProperties = Array.isArray(data.properties) ? data.properties : []
+  const properties = rawProperties.map(raw => {
+    const p = dbToProperty(raw)
+    // Attach nested loans (already assembled by the SQL function)
+    p.loans = (raw.loans || []).map(l => ({
+      id:               l.id,
+      propertyId:       l.property_id,
+      lenderName:       l.lender_name ?? '',
+      originalAmount:   Number(l.original_amount ?? 0),
+      currentBalance:   Number(l.current_balance ?? 0),
+      monthlyPayment:   Number(l.monthly_payment ?? 0),
+      interestRate:     Number(l.interest_rate ?? 0),
+      startDate:        l.start_date ?? '',
+      termMonths:       Number(l.term_months ?? 0),
+      type:             l.type ?? 'annuity',
+      myShare:          Number(l.my_share ?? 1),
+      amortizationSchedule: (l.amortization_schedule || []).map(a => ({
+        month:            Number(a.month),
+        payment:          Number(a.payment ?? 0),
+        principal:        Number(a.principal ?? 0),
+        interest:         Number(a.interest ?? 0),
+        balance:          Number(a.balance ?? 0),
+      })),
+    }))
+    p.plannedInvestments = (raw.planned_investments || []).map(pi => ({
+      id:           pi.id,
+      propertyId:   pi.property_id,
+      type:         pi.type ?? '',
+      description:  pi.description ?? '',
+      amount:       Number(pi.amount ?? 0),
+      targetYear:   Number(pi.target_year ?? 0),
+      targetMonth:  Number(pi.target_month ?? 1),
+    }))
+    return p
+  })
+
+  const household = data.household
+    ? dbToHousehold(data.household)
+    : defaultHousehold()
+
+  return {
+    permissions: data.permissions,
+    properties,
+    household,
+  }
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function defaultMeta() {

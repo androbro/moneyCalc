@@ -207,7 +207,7 @@ function UserMenu({ user, onSignOut, onResetDemo }) {
 
 // ─── Layout ───────────────────────────────────────────────────────────────────
 
-export default function Layout({ activeTab, onTabChange, children, isLoggedIn, user, onSignOut, onResetDemo }) {
+export default function Layout({ activeTab, onTabChange, children, isLoggedIn, user, onSignOut, onResetDemo, onShare }) {
   const [mobileOpen, setMobileOpen] = useState(false)
 
   const handleNav = (id) => {
@@ -226,6 +226,7 @@ export default function Layout({ activeTab, onTabChange, children, isLoggedIn, u
           user={user}
           onSignOut={onSignOut}
           onResetDemo={onResetDemo}
+          onShare={onShare}
         />
       </aside>
 
@@ -256,6 +257,7 @@ export default function Layout({ activeTab, onTabChange, children, isLoggedIn, u
           user={user}
           onSignOut={onSignOut}
           onResetDemo={onResetDemo}
+          onShare={onShare}
         />
       </aside>
 
@@ -301,7 +303,7 @@ const NAV_GROUPS = [
   { id: 'strategy',  label: 'Strategy & AI' },
 ]
 
-function SidebarContent({ active, onNav, isLoggedIn, user, onSignOut, onResetDemo }) {
+function SidebarContent({ active, onNav, isLoggedIn, user, onSignOut, onResetDemo, onShare }) {
   return (
     <div className="flex flex-col h-full">
       {/* Logo */}
@@ -365,6 +367,23 @@ function SidebarContent({ active, onNav, isLoggedIn, user, onSignOut, onResetDem
           )
         })}
       </nav>
+
+      {/* Share button — authenticated only */}
+      {isLoggedIn && (
+        <div className="px-3 pb-1 border-t border-slate-800 pt-3">
+          <button
+            onClick={onShare}
+            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium
+                       text-slate-400 hover:text-slate-100 hover:bg-slate-800 transition-colors"
+          >
+            <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+            </svg>
+            Share portfolio
+          </button>
+        </div>
+      )}
 
       {/* Footer — user menu */}
       <UserMenu user={user} onSignOut={onSignOut} onResetDemo={onResetDemo} />

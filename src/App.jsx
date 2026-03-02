@@ -11,6 +11,7 @@ import PropertySimulator from "./components/PropertySimulator";
 import MoneyFlow from "./components/MoneyFlow";
 import PropertyDetail from "./components/PropertyDetail";
 import AiChatOverlay from "./components/AiChatOverlay";
+import ShareModal from "./components/ShareModal";
 import { useAuth } from "./lib/AuthContext";
 import { supabase } from "./lib/supabase";
 import {
@@ -211,6 +212,9 @@ export default function App() {
 	// Migration banner — show once after first login if unclaimed data exists
 	const [showMigrationBanner, setShowMigrationBanner] = useState(false);
 	const [migrationChecked, setMigrationChecked] = useState(false);
+
+	// Share modal
+	const [showShareModal, setShowShareModal] = useState(false);
 
 	// Pick the right data-layer functions based on auth state
 	const db = isLoggedIn
@@ -423,6 +427,11 @@ export default function App() {
 				/>
 			)}
 
+			{/* Share modal */}
+			{showShareModal && (
+				<ShareModal onClose={() => setShowShareModal(false)} />
+			)}
+
 			<Layout
 				activeTab={activeTab}
 				onTabChange={(tab) => {
@@ -434,6 +443,7 @@ export default function App() {
 				user={user}
 				onSignOut={handleSignOut}
 				onResetDemo={handleResetDemo}
+				onShare={() => setShowShareModal(true)}
 			>
 				{/* ── Dashboard ── */}
 				{activeTab === "dashboard" && (
