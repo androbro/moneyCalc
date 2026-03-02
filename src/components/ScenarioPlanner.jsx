@@ -10,6 +10,8 @@ import {
   computePropertySaleProceeds,
   formatEUR,
 } from '../utils/projectionUtils'
+import InfoTooltip from './InfoTooltip'
+import CalculationBreakdown from './CalculationBreakdown'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -629,14 +631,48 @@ function SummaryCards({ data }) {
     <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
       {/* Net Worth at Year 20 */}
       <div className="card">
-        <h4 className="text-xs text-slate-400 uppercase tracking-wide mb-2">Net Worth (Year 20)</h4>
+        <div className="flex items-center gap-2 mb-2">
+          <h4 className="text-xs text-slate-400 uppercase tracking-wide">Net Worth (Year 20)</h4>
+          <InfoTooltip
+            content={
+              <div>
+                <p className="font-semibold mb-1.5">Net Worth = Assets - Liabilities</p>
+                <p className="text-slate-300 mb-2">Your total equity after 20 years.</p>
+                <p className="text-xs text-slate-400">Includes property value appreciation minus remaining loan balances.</p>
+              </div>
+            }
+          />
+        </div>
         <div className="space-y-2">
           <div className="flex justify-between items-center">
-            <span className="text-sm text-slate-300">Keep All</span>
+            <div className="flex items-center gap-1.5">
+              <span className="text-sm text-slate-300">Keep All</span>
+              <InfoTooltip
+                size="sm"
+                content={
+                  <div>
+                    <p className="font-semibold mb-1">Keep All Properties</p>
+                    <p className="text-slate-300 mb-2">If you keep all properties and continue renting them.</p>
+                    <p className="text-xs text-slate-400">Includes property appreciation, loan paydown, and rental cash flow.</p>
+                  </div>
+                }
+              />
+            </div>
             <span className="text-lg font-bold text-emerald-400">{formatEUR(baselineEnd)}</span>
           </div>
           <div className="flex justify-between items-center">
-            <span className="text-sm text-slate-300">Custom</span>
+            <div className="flex items-center gap-1.5">
+              <span className="text-sm text-slate-300">Custom</span>
+              <InfoTooltip
+                size="sm"
+                content={
+                  <div>
+                    <p className="font-semibold mb-1">Custom Strategy</p>
+                    <p className="text-slate-300">Based on your per-property decisions (keep, sell, occupy).</p>
+                  </div>
+                }
+              />
+            </div>
             <span className="text-lg font-bold text-violet-400">{formatEUR(customEnd)}</span>
           </div>
           <div className="border-t border-slate-700 pt-2 flex justify-between items-center">
@@ -653,7 +689,24 @@ function SummaryCards({ data }) {
       
       {/* Total Cash Flow */}
       <div className="card">
-        <h4 className="text-xs text-slate-400 uppercase tracking-wide mb-2">Cumulative Cash Flow</h4>
+        <div className="flex items-center gap-2 mb-2">
+          <h4 className="text-xs text-slate-400 uppercase tracking-wide">Cumulative Cash Flow</h4>
+          <InfoTooltip
+            content={
+              <div>
+                <p className="font-semibold mb-1.5">Total Cash Generated</p>
+                <p className="text-slate-300 mb-2">Sum of all annual cash flows over 20 years.</p>
+                <p className="text-xs text-slate-400 mb-2">Includes:</p>
+                <ul className="list-disc list-inside space-y-0.5 text-xs text-slate-400">
+                  <li>Rental income (indexed, after vacancy)</li>
+                  <li>Operating expenses (maintenance, insurance, taxes)</li>
+                  <li>Loan payments (principal + interest)</li>
+                  <li>Planned investment costs</li>
+                </ul>
+              </div>
+            }
+          />
+        </div>
         <div className="space-y-2">
           <div className="flex justify-between items-center">
             <span className="text-sm text-slate-300">Keep All</span>
@@ -674,7 +727,17 @@ function SummaryCards({ data }) {
       
       {/* Recommendation */}
       <div className={`card ${customBetter ? 'bg-violet-900/20 border-violet-700' : 'bg-emerald-900/20 border-emerald-700'}`}>
-        <h4 className="text-xs text-slate-400 uppercase tracking-wide mb-2">Recommendation</h4>
+        <div className="flex items-center gap-2 mb-2">
+          <h4 className="text-xs text-slate-400 uppercase tracking-wide">Recommendation</h4>
+          <InfoTooltip
+            content={
+              <div>
+                <p className="font-semibold mb-1.5">Which Strategy is Better?</p>
+                <p className="text-slate-300">Based on net worth at year 20. The strategy with higher net worth is recommended.</p>
+              </div>
+            }
+          />
+        </div>
         <div className="flex items-start gap-3">
           <span className={customBetter ? 'text-violet-400' : 'text-emerald-400'}>
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -899,6 +962,15 @@ export default function ScenarioPlanner({ properties }) {
       
       {/* Summary cards */}
       <SummaryCards data={comparisonData} />
+      
+      {/* Calculation breakdown */}
+      {comparisonData.length > 0 && (
+        <CalculationBreakdown 
+          baselineData={comparisonData[comparisonData.length - 1].baseline}
+          customData={comparisonData[comparisonData.length - 1].custom}
+          type="comparison"
+        />
+      )}
       
       {/* Detailed comparison table */}
       <ComparisonTable data={comparisonData} />

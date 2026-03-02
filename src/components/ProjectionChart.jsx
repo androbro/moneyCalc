@@ -8,6 +8,7 @@ import {
 } from 'recharts'
 import { buildProjection, formatEUR } from '../utils/projectionUtils'
 import InfoPopover from './InfoPopover'
+import CalculationBreakdown from './CalculationBreakdown'
 
 // ─── Investment projection math (mirrors MoneyFlow.jsx) ──────────────────────
 
@@ -716,6 +717,14 @@ export default function ProjectionChart({ properties, profile }) {
 
       {/* ── Chart 3: Equity Growth (always shown) ── */}
       <EquityGrowthChart data={displayData} />
+
+      {/* ── Calculation Breakdown ── */}
+      {displayData.length > 0 && (
+        <CalculationBreakdown 
+          baselineData={displayData[displayData.length - 1]}
+          type="keep-all"
+        />
+      )}
 
       {/* ── Tables ── */}
       <PropertyBreakdown properties={properties} />
