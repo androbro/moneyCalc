@@ -3,8 +3,15 @@
 -- Creates the share_tokens table that powers public read-only
 -- portfolio sharing links with per-group permission toggles.
 --
+-- Safe to re-run: drops and recreates the table and functions.
 -- Run this in the Supabase SQL Editor.
 -- ============================================================
+
+-- ── 0. Clean slate (idempotent) ───────────────────────────────────────────────
+
+drop function if exists get_shared_portfolio(text) cascade;
+drop function if exists resolve_share_token(text) cascade;
+drop table if exists share_tokens cascade;
 
 -- ── 1. Create share_tokens table ─────────────────────────────────────────────
 
@@ -122,7 +129,7 @@ begin
             to_jsonb(l) ||
             jsonb_build_object(
               'amortization_schedule', (
-                select coalesce(jsonb_agg(a order by a.month), '[]'::jsonb)
+                select coalesce(jsonb_agg(a order by a.period), '[]'::jsonb)
                 from amortization_schedules a
                 where a.loan_id = l.id
               )
@@ -132,7 +139,7 @@ begin
           where l.property_id = p.id
         ),
         'planned_investments', (
-          select coalesce(jsonb_agg(pi order by pi.target_year), '[]'::jsonb)
+          select coalesce(jsonb_agg(pi order by pi.planned_date), '[]'::jsonb)
           from planned_investments pi
           where pi.property_id = p.id
         )
