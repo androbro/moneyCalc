@@ -258,9 +258,177 @@ function TaxConfigPanel({ config, onChange }) {
   )
 }
 
+// ─── Net Yield Reality Check Card ─────────────────────────────────────────────
+
+function NetYieldRealityCard({ properties, decisions, taxConfig }) {
+  const keptProperties = properties.filter(p => 
+    (!decisions[p.id] || decisions[p.id]?.action === 'keep') && 
+    p.status === 'rented'
+  )
+  
+  if (keptProperties.length === 0) return null
+  
+  return (
+    <div className="card">
+      <h3 className="section-title mb-4">Net Yield Reality Check</h3>
+      <p className="text-xs text-slate-400 mb-4">
+        True net yield after ALL costs (vacancy, maintenance, insurance, property tax, mortgage, taxes)
+      </p>
+      
+      <div className="space-y-4">
+        {keptProperties.map(property => {
+          // Calculate gross annual rent
+          const monthlyRent = property.startRentalIncome || property.monthlyRentalIncome || 0
+          const grossAnnualRent = monthlyRent * 12
+          const vacancyRate = property.vacancyRate ?? 0.05
+          const effectiveRent = grossAnnualRent * (1 - vacancyRate)
+          
+          // Apply rental income tax
+          let netRent = effectiveRent
+          if (taxConfig.useWithholding) {
+            const withholdingRate = taxConfig.rentalWithholding ?? 0.30
+            netRent = effectiveRent * (1 - withholdingRate)
+          }
+          
+          // Calculate total annual costs
+          const maintenance = property.annualMaintenanceCost || 0
+          const insurance = property.annualInsuranceCost || 0
+          const propertyTax = property.annualPropertyTax || 0
+          const monthlyExpenses = (property.monthlyExpenses || 0) * 12
+          
+          // Calculate annual mortgage payments
+          let annualMortgage = 0
+          for (const loan of property.loans || []) {
+            annualMortgage += (loan.monthlyPayment || 0) * 12
+          }
+          
+          const totalCosts = maintenance + insurance + propertyTax + monthlyExpenses + annualMortgage
+          const netIncome = netRent - totalCosts
+          
+          // Calculate yields based on property value
+          const propertyValue = property.currentValue || 1
+          const grossYield = (grossAnnualRent / propertyValue) * 100
+          const netYield = (netIncome / propertyValue) * 100
+          
+          // Color coding for net yield
+          const yieldColor = netYield < 2 ? 'text-red-400' : 
+                           netYield < 4 ? 'text-orange-400' : 
+                           netYield < 5 ? 'text-yellow-400' : 
+                           'text-emerald-400'
+          
+          return (
+            <div key={property.id} className="bg-slate-700/30 rounded-lg p-4 space-y-3">
+              <div className="flex items-center justify-between mb-2">
+                <h4 className="font-semibold text-white text-sm">{property.name}</h4>
+                <div className="text-right">
+                  <p className="text-xs text-slate-400">Net Yield</p>
+                  <p className={`text-lg font-bold ${yieldColor}`}>
+                    {netYield.toFixed(2)}%
+                  </p>
+                </div>
+              </div>
+              
+              {/* Income breakdown */}
+              <div className="space-y-1.5 text-xs">
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Gross annual rent</span>
+                  <span className="text-emerald-400 font-medium">{formatEUR(grossAnnualRent)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Vacancy ({(vacancyRate * 100).toFixed(0)}%)</span>
+                  <span className="text-orange-400 font-medium">-{formatEUR(grossAnnualRent * vacancyRate)}</span>
+                </div>
+                {taxConfig.useWithholding && (
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Withholding tax (30%)</span>
+                    <span className="text-orange-400 font-medium">-{formatEUR(effectiveRent * 0.30)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between font-medium pt-1 border-t border-slate-600">
+                  <span className="text-slate-300">Net rental income</span>
+                  <span className="text-emerald-400">{formatEUR(netRent)}</span>
+                </div>
+              </div>
+              
+              {/* Costs breakdown */}
+              <div className="space-y-1.5 text-xs">
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Maintenance</span>
+                  <span className="text-red-400 font-medium">-{formatEUR(maintenance)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Insurance</span>
+                  <span className="text-red-400 font-medium">-{formatEUR(insurance)}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span className="text-slate-400">Property tax</span>
+                  <span className="text-red-400 font-medium">-{formatEUR(propertyTax)}</span>
+                </div>
+                {monthlyExpenses > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Other expenses (syndic, etc.)</span>
+                    <span className="text-red-400 font-medium">-{formatEUR(monthlyExpenses)}</span>
+                  </div>
+                )}
+                {annualMortgage > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Mortgage payments</span>
+                    <span className="text-red-400 font-medium">-{formatEUR(annualMortgage)}</span>
+                  </div>
+                )}
+                <div className="flex justify-between font-medium pt-1 border-t border-slate-600">
+                  <span className="text-slate-300">Total costs</span>
+                  <span className="text-red-400">{formatEUR(totalCosts)}</span>
+                </div>
+              </div>
+              
+              {/* Final summary */}
+              <div className="bg-slate-800/50 rounded-lg p-3 space-y-2">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm font-semibold text-slate-200">Net Annual Income</span>
+                  <span className={`text-lg font-bold ${netIncome >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                    {formatEUR(netIncome)}
+                  </span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-slate-400">Gross yield</span>
+                  <span className="text-slate-300">{grossYield.toFixed(2)}%</span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-slate-400">Net yield (after all costs)</span>
+                  <span className={`font-semibold ${yieldColor}`}>{netYield.toFixed(2)}%</span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-slate-400">Monthly net cash flow</span>
+                  <span className={`font-medium ${netIncome >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                    {formatEUR(netIncome / 12)}/mo
+                  </span>
+                </div>
+              </div>
+              
+              {/* Warning if net yield is low */}
+              {netYield < 3 && (
+                <div className="bg-amber-900/20 border border-amber-700/50 rounded-lg p-2 flex items-start gap-2">
+                  <svg className="w-4 h-4 text-amber-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                  </svg>
+                  <p className="text-xs text-amber-200">
+                    <strong>Low yield warning:</strong> After all costs, this property yields {netYield.toFixed(2)}%. 
+                    Consider if selling and investing elsewhere might generate better returns.
+                  </p>
+                </div>
+              )}
+            </div>
+          )
+        })}
+      </div>
+    </div>
+  )
+}
+
 // ─── Sale Breakdown Card ──────────────────────────────────────────────────────
 
-function SaleBreakdownCard({ properties, decisions, taxConfig }) {
+function SaleBreakdownCard({ properties, decisions, taxConfig, onDecisionChange }) {
   const soldProperties = properties.filter(p => decisions[p.id]?.action === 'sell')
   
   if (soldProperties.length === 0) return null
@@ -272,9 +440,12 @@ function SaleBreakdownCard({ properties, decisions, taxConfig }) {
         {soldProperties.map(property => {
           const decision = decisions[property.id]
           const saleYear = decision.saleYear || 0
+          const willBuyAnother = decision.willBuyAnother ?? false
+          
+          // If buying another property, mortgage can be ported (no prepayment penalty)
           const proceeds = computePropertySaleProceeds(property, saleYear, taxConfig, {
             brokeragePct: 0.03,
-            prepaymentPct: 0.01
+            prepaymentPct: willBuyAnother ? 0 : 0.01  // No penalty if porting mortgage
           })
           
           return (
@@ -282,6 +453,26 @@ function SaleBreakdownCard({ properties, decisions, taxConfig }) {
               <div className="flex items-center justify-between mb-3">
                 <h4 className="font-semibold text-white text-sm">{property.name}</h4>
                 <span className="text-xs text-slate-400">Year {saleYear}</span>
+              </div>
+              
+              {/* Mortgage portability toggle */}
+              <div className="bg-blue-900/20 border border-blue-700/50 rounded-lg p-3 mb-3">
+                <label className="flex items-start gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={willBuyAnother}
+                    onChange={(e) => onDecisionChange(property.id, { ...decision, willBuyAnother: e.target.checked })}
+                    className="mt-0.5"
+                  />
+                  <div>
+                    <span className="text-sm font-medium text-blue-200">
+                      I will buy another property (mortgage portability)
+                    </span>
+                    <p className="text-xs text-blue-300 mt-1">
+                      In Belgium, you can transfer (port) your existing mortgage to a new property, keeping your current interest rate on the remaining balance. This avoids the prepayment penalty and can save significantly on interest.
+                    </p>
+                  </div>
+                </label>
               </div>
               
               <div className="space-y-1.5 text-sm">
@@ -297,10 +488,18 @@ function SaleBreakdownCard({ properties, decisions, taxConfig }) {
                   <span className="text-slate-400">Brokerage (3%)</span>
                   <span className="text-orange-400 font-medium">-{formatEUR(proceeds.brokerageFee)}</span>
                 </div>
-                <div className="flex justify-between">
-                  <span className="text-slate-400">Prepayment penalty (1%)</span>
-                  <span className="text-orange-400 font-medium">-{formatEUR(proceeds.prepaymentPenalty)}</span>
-                </div>
+                {!willBuyAnother && proceeds.prepaymentPenalty > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-slate-400">Prepayment penalty (1%)</span>
+                    <span className="text-orange-400 font-medium">-{formatEUR(proceeds.prepaymentPenalty)}</span>
+                  </div>
+                )}
+                {willBuyAnother && proceeds.loanBalance > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-emerald-400">Prepayment penalty avoided (porting)</span>
+                    <span className="text-emerald-400 font-medium">+{formatEUR(Math.round(proceeds.loanBalance * 0.01))}</span>
+                  </div>
+                )}
                 {proceeds.capitalGainsTax > 0 && (
                   <div className="flex justify-between">
                     <span className="text-slate-400">Capital gains tax (16.5%)</span>
@@ -314,8 +513,25 @@ function SaleBreakdownCard({ properties, decisions, taxConfig }) {
                 <span className="text-lg font-bold text-emerald-400">{formatEUR(proceeds.netProceeds)}</span>
               </div>
               
+              {/* Show mortgage portability benefits */}
+              {willBuyAnother && proceeds.loanBalance > 0 && (
+                <div className="bg-emerald-900/20 border border-emerald-700/50 rounded-lg p-3 space-y-2">
+                  <p className="text-xs font-semibold text-emerald-300">Mortgage Portability Benefits</p>
+                  <div className="space-y-1 text-xs text-emerald-200">
+                    <p>• No prepayment penalty: <strong>+{formatEUR(Math.round(proceeds.loanBalance * 0.01))}</strong></p>
+                    <p>• You can port <strong>{formatEUR(proceeds.loanBalance)}</strong> to your new property</p>
+                    <p className="text-emerald-300 mt-2 pt-2 border-t border-emerald-700/50">
+                      On a new property, only borrow the <em>additional</em> amount needed at current rates. Your existing mortgage balance keeps its (possibly lower) interest rate.
+                    </p>
+                  </div>
+                </div>
+              )}
+              
               <div className="text-xs text-slate-500">
-                Invested in {INVESTMENT_TYPES[decision.investmentType]?.label} at {((decision.investmentRate || 0.07) * 100).toFixed(1)}% annual return
+                {willBuyAnother 
+                  ? `Mortgage ported to new property. Additional funds invested in ${INVESTMENT_TYPES[decision.investmentType]?.label} at ${((decision.investmentRate || 0.07) * 100).toFixed(1)}%`
+                  : `Invested in ${INVESTMENT_TYPES[decision.investmentType]?.label} at ${((decision.investmentRate || 0.07) * 100).toFixed(1)}% annual return`
+                }
               </div>
             </div>
           )
@@ -588,8 +804,18 @@ export default function ScenarioPlanner({ properties }) {
       {/* Tax configuration */}
       <TaxConfigPanel config={taxConfig} onChange={setTaxConfig} />
       
+      {/* Net yield reality check */}
+      <NetYieldRealityCard properties={properties} decisions={decisions} taxConfig={taxConfig} />
+      
       {/* Sale breakdown */}
-      <SaleBreakdownCard properties={properties} decisions={decisions} taxConfig={taxConfig} />
+      <SaleBreakdownCard 
+        properties={properties} 
+        decisions={decisions} 
+        taxConfig={taxConfig}
+        onDecisionChange={(propertyId, newDecision) => 
+          setDecisions({ ...decisions, [propertyId]: newDecision })
+        }
+      />
       
       {/* Crossover insight */}
       {crossover ? (
