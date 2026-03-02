@@ -5,60 +5,7 @@ import {
 } from 'recharts'
 import RevolutTradeImporter from './RevolutTradeImporter'
 import { bulkQuote, getChart, getNews, invalidateCache } from '../services/yahooFinance'
-
-// ─── Position calculation ─────────────────────────────────────────────────────
-
-function computePositions(trades) {
-  const holdings = {}
-  let totalCashInvested = 0
-  let totalDividends = 0
-  let totalRealised = 0
-
-  const sorted = [...trades].sort((a, b) => new Date(a.tradedAt) - new Date(b.tradedAt))
-
-  for (const t of sorted) {
-    const amtEur = t.totalAmount / t.fxRate
-
-    if (t.type === 'CASH TOP-UP') { totalCashInvested += amtEur; continue }
-    if (t.type === 'DIVIDEND')    { totalDividends    += amtEur; continue }
-    if (!t.ticker) continue
-
-    if (!holdings[t.ticker]) holdings[t.ticker] = { shares: 0, costBasis: 0 }
-
-    if (t.type.startsWith('BUY')) {
-      holdings[t.ticker].shares    += t.quantity ?? 0
-      holdings[t.ticker].costBasis += amtEur
-    } else if (t.type.startsWith('SELL')) {
-      const pos = holdings[t.ticker]
-      if (pos.shares > 0) {
-        const avgCost    = pos.costBasis / pos.shares
-        const sold       = t.quantity ?? 0
-        totalRealised   += amtEur - avgCost * sold
-        pos.costBasis   -= avgCost * sold
-        pos.shares      -= sold
-        if (pos.shares < 1e-10) { pos.shares = 0; pos.costBasis = 0 }
-      }
-    }
-  }
-
-  const positions = Object.entries(holdings)
-    .filter(([, v]) => v.shares > 1e-10)
-    .map(([ticker, { shares, costBasis }]) => ({
-      ticker,
-      shares,
-      avgCostEur:   shares > 0 ? costBasis / shares : 0,
-      totalCostEur: costBasis,
-    }))
-    .sort((a, b) => b.totalCostEur - a.totalCostEur)
-
-  return {
-    positions,
-    totalCashInvested,
-    totalInvestedEur: positions.reduce((s, p) => s + p.totalCostEur, 0),
-    totalDividends,
-    totalRealised,
-  }
-}
+import { computePositions } from '../calculations/trading/tradingUtils'
 
 /**
  * Build a daily portfolio value timeseries from trade history + live prices.
@@ -905,7 +852,7 @@ function AllocationBar({ positions, marketData }) {
 
 const PAGE_SIZE = 30
 
-export default function TradingAccount({ trades, onImport, onClear, importing }) {
+export default function TradingAccount({ trades, onImport, onClear, importing, onPortfolioValue }) {
   const [showImporter,      setShowImporter]      = useState(false)
   const [showClearConfirm,  setShowClearConfirm]  = useState(false)
   const [selectedTicker,    setSelectedTicker]    = useState(null)
@@ -973,6 +920,11 @@ export default function TradingAccount({ trades, onImport, onClear, importing })
       return sum + (price != null ? pos.shares * price : pos.totalCostEur)
     }, 0)
   }, [positions, marketData])
+
+  // Notify parent of live portfolio value whenever it changes
+  useEffect(() => {
+    if (onPortfolioValue) onPortfolioValue(totalCurrentValue)
+  }, [totalCurrentValue, onPortfolioValue])
 
   // Portfolio history
   const portfolioHistory = useMemo(

@@ -438,8 +438,8 @@ function EmptyState({ onAdd }) {
 
 // ─── Main component ───────────────────────────────────────────────────────────
 
-export default function Dashboard({ properties, profile, onAddProperty, onEditProperty, onDeleteProperty }) {
-  const s = computeSummary(properties, profile)
+export default function Dashboard({ properties, profile, onAddProperty, onEditProperty, onDeleteProperty, tradingPortfolioValue = 0 }) {
+  const s = computeSummary(properties, profile, { tradingPortfolioValue })
 
   const ltv        = s.totalPortfolioValue > 0 ? (s.totalDebt / s.totalPortfolioValue) * 100 : null
   const grossYield = s.totalPortfolioValue > 0 ? (s.annualNetCashFlow / s.totalPortfolioValue) * 100 : null
@@ -486,6 +486,12 @@ export default function Dashboard({ properties, profile, onAddProperty, onEditPr
                 <div className="text-center">
                   <p className="text-xs text-slate-400 mb-0.5">Cash on hand</p>
                   <p className="font-bold tabular-nums text-brand-300">{formatEUR(s.personalCash)}</p>
+                </div>
+              )}
+              {s.personalTradingValue > 0 && (
+                <div className="text-center">
+                  <p className="text-xs text-slate-400 mb-0.5">Investment portfolio</p>
+                  <p className="font-bold tabular-nums text-violet-400">{formatEUR(s.personalTradingValue)}</p>
                 </div>
               )}
             </div>

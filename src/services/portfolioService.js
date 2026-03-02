@@ -502,10 +502,33 @@ function dbToHousehold(row) {
 
 export function defaultHousehold() {
   return {
-    members: [],
+    members: [{ id: 'member-me', name: 'Me', netIncome: 0, investmentIncome: 0, cash: 0, isMe: true }],
     householdExpenses: 0,
     personalSavingsRate: 0.10,
   }
+}
+
+/**
+ * Guarantee the household profile always has at least one member marked isMe.
+ * Called after loading from DB so downstream code never has to check for empty members.
+ */
+function ensureOwnerMember(profile) {
+  const members = profile.members ?? []
+  // If no members at all, bootstrap with a default owner
+  if (members.length === 0) {
+    return {
+      ...profile,
+      members: [{ id: 'member-me', name: 'Me', netIncome: 0, investmentIncome: 0, cash: 0, isMe: true }],
+    }
+  }
+  // If no member is flagged isMe, promote the first member
+  if (!members.some((m) => m.isMe)) {
+    return {
+      ...profile,
+      members: members.map((m, i) => i === 0 ? { ...m, isMe: true } : m),
+    }
+  }
+  return profile
 }
 
 /** Fetch the household profile row for the current user. */
@@ -517,9 +540,10 @@ export async function getHouseholdProfile() {
     .from('household_profile')
     .select('*')
     .eq('id', profileId)
+
     .maybeSingle()
   check(error, 'getHouseholdProfile')
-  return data ? dbToHousehold(data) : defaultHousehold()
+  return ensureOwnerMember(data ? dbToHousehold(data) : defaultHousehold())
 }
 
 /** Upsert the household profile for the current user. */
@@ -708,7 +732,7 @@ export async function getSharedPortfolio(token) {
   })
 
   const household = data.household
-    ? dbToHousehold(data.household)
+    ? ensureOwnerMember(dbToHousehold(data.household))
     : defaultHousehold()
 
   return {

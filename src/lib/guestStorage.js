@@ -143,8 +143,22 @@ export async function deletePlannedInvestment(id) {
 
 // ─── Household profile API ────────────────────────────────────────────────────
 
+function ensureOwnerMember(profile) {
+  const members = profile.members ?? []
+  if (members.length === 0) {
+    return {
+      ...profile,
+      members: [{ id: 'member-me', name: 'Me', netIncome: 0, investmentIncome: 0, cash: 0, isMe: true }],
+    }
+  }
+  if (!members.some((m) => m.isMe)) {
+    return { ...profile, members: members.map((m, i) => i === 0 ? { ...m, isMe: true } : m) }
+  }
+  return profile
+}
+
 export async function getHouseholdProfile() {
-  return read(HOUSEHOLD_KEY, getMockHousehold())
+  return ensureOwnerMember(read(HOUSEHOLD_KEY, getMockHousehold()))
 }
 
 export async function saveHouseholdProfile(profile) {

@@ -18,9 +18,11 @@ import { isRentalActiveOn, getOwnershipShare } from '../utils/propertyUtils.js'
  * 
  * @param {Array} properties - Array of property objects
  * @param {Object} profile - Household profile (optional)
+ * @param {Object} options - Extra options
+ * @param {number} [options.tradingPortfolioValue] - Current market value of trading/investment portfolio
  * @returns {Object} Summary with all KPIs
  */
-export function computeSummary(properties, profile = null) {
+export function computeSummary(properties, profile = null, { tradingPortfolioValue = 0 } = {}) {
   let totalAssets = 0
   let totalLiabilities = 0
   let personalAssets = 0   // my share of property values
@@ -71,7 +73,7 @@ export function computeSummary(properties, profile = null) {
   const equity = totalAssets - totalLiabilities
   const personalRealEstateNetWorth = personalAssets - personalDebt
 
-  // Personal cash & investments from household profile
+  // Personal cash & manual investment positions from household profile
   let personalCash = 0
   let personalInvestmentValue = 0
   
@@ -79,13 +81,16 @@ export function computeSummary(properties, profile = null) {
     const me = profile.members.find((m) => m.isMe) ?? profile.members[0]
     if (me) {
       personalCash = me.cash || 0
-      // Simple 1-year proxy: monthly × 12
+      // Simple 1-year proxy: monthly × 12 (for manually-entered positions)
       personalInvestmentValue = (me.investmentPositions || [])
         .reduce((s, p) => s + (p.monthlyAmount || 0) * 12, 0)
     }
   }
 
-  const personalNetWorth = personalRealEstateNetWorth + personalCash
+  // Trading portfolio value (live market value passed in from TradingAccount calculations)
+  const personalTradingValue = tradingPortfolioValue || 0
+
+  const personalNetWorth = personalRealEstateNetWorth + personalCash + personalTradingValue
   const annualNetCF = annualRentalIncome - annualOpex - annualInterest
   const roe = equity > 0 ? (annualNetCF / equity) * 100 : 0
 
@@ -101,6 +106,7 @@ export function computeSummary(properties, profile = null) {
     personalRealEstateNetWorth,
     personalCash,
     personalInvestmentValue,
+    personalTradingValue,
     personalNetWorth,
     
     // Cash flow

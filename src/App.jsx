@@ -52,6 +52,7 @@ import {
 	defaultHousehold,
 } from "./services/portfolioService";
 import { Analytics } from "@vercel/analytics/react";
+import { computePositions } from "./calculations/trading/tradingUtils";
 
 // ─── Loading screen ───────────────────────────────────────────────────────────
 
@@ -216,6 +217,9 @@ export default function App() {
 	// Trading account
 	const [trades, setTrades] = useState([]);
 	const [tradingImporting, setTradingImporting] = useState(false);
+	// Live portfolio value — updated by TradingAccount when market data arrives.
+	// Falls back to cost basis when market data is not yet loaded.
+	const [tradingPortfolioValue, setTradingPortfolioValue] = useState(0);
 
 	// Simulator state (lifted so AiChatOverlay can see it)
 	const [simState, setSimState] = useState(null);
@@ -275,6 +279,9 @@ export default function App() {
 			setProperties(portfolio.properties);
 			setHouseholdProfile(profile);
 			setTrades(tradeRows);
+			// Seed trading value with cost basis until live prices arrive
+			const { positions } = computePositions(tradeRows);
+			setTradingPortfolioValue(positions.reduce((s, p) => s + p.totalCostEur, 0));
 		} catch (err) {
 			setFatalError(err.message);
 		} finally {
@@ -494,16 +501,17 @@ export default function App() {
 				onResetDemo={handleResetDemo}
 				onShare={() => setShowShareModal(true)}
 			>
-				{/* ── Dashboard ── */}
-				{activeTab === "dashboard" && (
-					<Dashboard
-						properties={properties}
-						profile={householdProfile}
-						onAddProperty={handleAddProperty}
-						onEditProperty={handleEditProperty}
-						onDeleteProperty={handleDeleteProperty}
-					/>
-				)}
+			{/* ── Dashboard ── */}
+			{activeTab === "dashboard" && (
+				<Dashboard
+					properties={properties}
+					profile={householdProfile}
+					onAddProperty={handleAddProperty}
+					onEditProperty={handleEditProperty}
+					onDeleteProperty={handleDeleteProperty}
+					tradingPortfolioValue={tradingPortfolioValue}
+				/>
+			)}
 
 				{/* ── Property detail view ── */}
 				{activeTab === "properties" && detailProperty && !showForm && (
@@ -653,27 +661,31 @@ export default function App() {
 								Back to Cash-Flow Aggregator
 							</span>
 						</div>
-						<HouseholdForm
-							profile={householdProfile}
-							onSave={handleSaveHousehold}
-							saving={saving}
-						/>
-					</div>
-				)}
+					<HouseholdForm
+						profile={householdProfile}
+						onSave={handleSaveHousehold}
+						saving={saving}
+						trades={trades}
+						tradingPortfolioValue={tradingPortfolioValue}
+					/>
+				</div>
+			)}
 
-				{/* ── Household Profile (standalone nav item) ── */}
-				{activeTab === "household" && (
-					<div className="relative">
-						{saving && (
-							<div className="absolute inset-0 z-10 bg-slate-900/60 rounded-2xl flex items-center justify-center">
-								<div className="w-8 h-8 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
-							</div>
-						)}
-						<HouseholdForm
-							profile={householdProfile}
-							onSave={handleSaveHousehold}
-							saving={saving}
-						/>
+			{/* ── Household Profile (standalone nav item) ── */}
+			{activeTab === "household" && (
+				<div className="relative">
+					{saving && (
+						<div className="absolute inset-0 z-10 bg-slate-900/60 rounded-2xl flex items-center justify-center">
+							<div className="w-8 h-8 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
+						</div>
+					)}
+					<HouseholdForm
+						profile={householdProfile}
+						onSave={handleSaveHousehold}
+						saving={saving}
+						trades={trades}
+						tradingPortfolioValue={tradingPortfolioValue}
+					/>
 					</div>
 				)}
 
@@ -696,15 +708,16 @@ export default function App() {
 					/>
 				)}
 
-				{/* ── Trading Account ── */}
-				{activeTab === "trading" && (
-					<TradingAccount
-						trades={trades}
-						onImport={handleImportTrades}
-						onClear={handleClearTrades}
-						importing={tradingImporting}
-					/>
-				)}
+			{/* ── Trading Account ── */}
+			{activeTab === "trading" && (
+				<TradingAccount
+					trades={trades}
+					onImport={handleImportTrades}
+					onClear={handleClearTrades}
+					importing={tradingImporting}
+					onPortfolioValue={setTradingPortfolioValue}
+				/>
+			)}
 			</Layout>
 
 			{/* Toast */}
