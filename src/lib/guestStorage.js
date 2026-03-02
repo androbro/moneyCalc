@@ -18,6 +18,7 @@ import { getMockPortfolio, getMockHousehold, getMockSimulatorProfile } from './m
 const PORTFOLIO_KEY  = 'mc_guest_portfolio'
 const HOUSEHOLD_KEY  = 'mc_guest_household'
 const SIMULATOR_KEY  = 'mc_guest_simulator'
+const TRADES_KEY     = 'mc_guest_trades'
 
 // ─── Raw helpers ──────────────────────────────────────────────────────────────
 
@@ -159,4 +160,30 @@ export async function getSimulatorProfile() {
 
 export async function saveSimulatorProfile(state) {
   write(SIMULATOR_KEY, state)
+}
+
+// ─── Revolut trading account API (mirrors portfolioService.js) ─────────────────
+
+export async function getTrades() {
+  return read(TRADES_KEY, [])
+}
+
+export async function importTrades(trades) {
+  if (!trades?.length) return 0
+  const existing = read(TRADES_KEY, [])
+
+  // Deduplicate by the same key used in the Supabase unique constraint
+  const key = (t) => `${t.tradedAt}|${t.ticker ?? ''}|${t.type}|${t.totalAmount}|${t.currency}`
+  const existingKeys = new Set(existing.map(key))
+
+  const newTrades = trades
+    .filter((t) => !existingKeys.has(key(t)))
+    .map((t) => ({ ...t, id: t.id || uuidv4() }))
+
+  write(TRADES_KEY, [...newTrades, ...existing])
+  return newTrades.length
+}
+
+export async function clearTrades() {
+  write(TRADES_KEY, [])
 }

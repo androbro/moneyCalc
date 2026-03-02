@@ -10,6 +10,7 @@ import CashFlowAggregator from "./components/CashFlowAggregator";
 import PropertySimulator from "./components/PropertySimulator";
 import MoneyFlow from "./components/MoneyFlow";
 import PropertyDetail from "./components/PropertyDetail";
+import TradingAccount from "./components/TradingAccount";
 import AiChatOverlay from "./components/AiChatOverlay";
 import ShareModal from "./components/ShareModal";
 import { useAuth } from "./lib/AuthContext";
@@ -28,6 +29,9 @@ import {
 	saveHouseholdProfile as guestSaveHouseholdProfile,
 	getSimulatorProfile as guestGetSimulatorProfile,
 	saveSimulatorProfile as guestSaveSimulatorProfile,
+	getTrades as guestGetTrades,
+	importTrades as guestImportTrades,
+	clearTrades as guestClearTrades,
 } from "./lib/guestStorage";
 import {
 	getPortfolio,
@@ -41,6 +45,9 @@ import {
 	saveHouseholdProfile,
 	getSimulatorProfile,
 	saveSimulatorProfile,
+	getTrades,
+	importTrades,
+	clearTrades,
 	claimOwnerlessData,
 	defaultHousehold,
 } from "./services/portfolioService";
@@ -206,6 +213,10 @@ export default function App() {
 	const [householdProfile, setHouseholdProfile] = useState(defaultHousehold());
 	const [showHouseholdForm, setShowHouseholdForm] = useState(false);
 
+	// Trading account
+	const [trades, setTrades] = useState([]);
+	const [tradingImporting, setTradingImporting] = useState(false);
+
 	// Simulator state (lifted so AiChatOverlay can see it)
 	const [simState, setSimState] = useState(null);
 
@@ -228,6 +239,9 @@ export default function App() {
 				deletePlannedInvestment,
 				getHouseholdProfile,
 				saveHouseholdProfile,
+				getTrades,
+				importTrades,
+				clearTrades,
 		  }
 		: {
 				getPortfolio: guestGetPortfolio,
@@ -239,6 +253,9 @@ export default function App() {
 				deletePlannedInvestment: guestDeletePlannedInvestment,
 				getHouseholdProfile: guestGetHouseholdProfile,
 				saveHouseholdProfile: guestSaveHouseholdProfile,
+				getTrades: guestGetTrades,
+				importTrades: guestImportTrades,
+				clearTrades: guestClearTrades,
 		  };
 
 	// ── Load portfolio + household profile ──
@@ -250,12 +267,14 @@ export default function App() {
 				// Seed guest localStorage if empty, then load from it
 				seedGuestStorage();
 			}
-			const [portfolio, profile] = await Promise.all([
+			const [portfolio, profile, tradeRows] = await Promise.all([
 				db.getPortfolio(),
 				db.getHouseholdProfile(),
+				db.getTrades(),
 			]);
 			setProperties(portfolio.properties);
 			setHouseholdProfile(profile);
+			setTrades(tradeRows);
 		} catch (err) {
 			setFatalError(err.message);
 		} finally {
@@ -407,6 +426,36 @@ export default function App() {
 			setToast({ message: err.message, type: "error" });
 		} finally {
 			setSaving(false);
+		}
+	};
+
+	// ── Trading account handlers ──
+	const handleImportTrades = async (parsed) => {
+		setTradingImporting(true);
+		try {
+			const inserted = await db.importTrades(parsed);
+			const updated = await db.getTrades();
+			setTrades(updated);
+			setToast({
+				message: inserted === 0
+					? "No new rows — all rows already imported"
+					: `${inserted} trade${inserted !== 1 ? "s" : ""} imported`,
+				type: "success",
+			});
+		} catch (err) {
+			setToast({ message: err.message, type: "error" });
+		} finally {
+			setTradingImporting(false);
+		}
+	};
+
+	const handleClearTrades = async () => {
+		try {
+			await db.clearTrades();
+			setTrades([]);
+			setToast({ message: "All trade data cleared", type: "success" });
+		} catch (err) {
+			setToast({ message: err.message, type: "error" });
 		}
 	};
 
@@ -644,6 +693,16 @@ export default function App() {
 						saveSimulatorProfile={
 							isLoggedIn ? saveSimulatorProfile : guestSaveSimulatorProfile
 						}
+					/>
+				)}
+
+				{/* ── Trading Account ── */}
+				{activeTab === "trading" && (
+					<TradingAccount
+						trades={trades}
+						onImport={handleImportTrades}
+						onClear={handleClearTrades}
+						importing={tradingImporting}
 					/>
 				)}
 			</Layout>

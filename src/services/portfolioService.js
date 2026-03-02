@@ -718,6 +718,104 @@ export async function getSharedPortfolio(token) {
   }
 }
 
+// ─── Revolut trading account ──────────────────────────────────────────────────
+
+/**
+ * Shape of a single trade row (camelCase in JS):
+ * {
+ *   id           – uuid
+ *   tradedAt     – ISO timestamp string
+ *   ticker       – e.g. "EXI2" | null for CASH TOP-UP
+ *   type         – "CASH TOP-UP" | "BUY - MARKET" | "BUY - LIMIT" |
+ *                  "SELL - MARKET" | "SELL - LIMIT" | "DIVIDEND"
+ *   quantity     – number | null
+ *   pricePerShare – number | null
+ *   totalAmount  – number (always positive)
+ *   currency     – "EUR" | "USD" | …
+ *   fxRate       – number (1 when currency === EUR)
+ * }
+ */
+
+function dbToTrade(row) {
+  return {
+    id:            row.id,
+    tradedAt:      row.traded_at,
+    ticker:        row.ticker ?? null,
+    type:          row.type,
+    quantity:      row.quantity != null ? Number(row.quantity) : null,
+    pricePerShare: row.price_per_share != null ? Number(row.price_per_share) : null,
+    totalAmount:   Number(row.total_amount ?? 0),
+    currency:      row.currency ?? 'EUR',
+    fxRate:        Number(row.fx_rate ?? 1),
+  }
+}
+
+function tradeToDb(t, userId) {
+  const row = {
+    traded_at:       t.tradedAt,
+    ticker:          t.ticker ?? null,
+    type:            t.type,
+    quantity:        t.quantity ?? null,
+    price_per_share: t.pricePerShare ?? null,
+    total_amount:    t.totalAmount,
+    currency:        t.currency ?? 'EUR',
+    fx_rate:         t.fxRate ?? 1,
+  }
+  if (userId) row.user_id = userId
+  return row
+}
+
+/** Fetch all trades for the current user, newest first. */
+export async function getTrades() {
+  const { data, error } = await supabase
+    .from('revolut_trades')
+    .select('*')
+    .order('traded_at', { ascending: false })
+  check(error, 'getTrades')
+  return (data ?? []).map(dbToTrade)
+}
+
+/**
+ * Upsert a batch of parsed trade rows.
+ * Duplicate rows (same user_id + traded_at + ticker + type + total_amount + currency)
+ * are silently ignored thanks to the ON CONFLICT DO NOTHING clause.
+ *
+ * Returns the number of rows actually inserted.
+ */
+export async function importTrades(trades) {
+  if (!trades?.length) return 0
+  const userId = await getCurrentUserId()
+
+  const rows = trades.map((t) => tradeToDb(t, userId))
+
+  // Chunk to stay under Supabase's row limit per request
+  const CHUNK = 400
+  let inserted = 0
+  for (let i = 0; i < rows.length; i += CHUNK) {
+    const chunk = rows.slice(i, i + CHUNK)
+    const { error, count } = await supabase
+      .from('revolut_trades')
+      .upsert(chunk, {
+        onConflict: 'user_id,traded_at,ticker,type,total_amount,currency',
+        ignoreDuplicates: true,
+        count: 'exact',
+      })
+    check(error, 'importTrades')
+    inserted += count ?? 0
+  }
+  return inserted
+}
+
+/** Delete all revolut trades for the current user. */
+export async function clearTrades() {
+  const userId = await getCurrentUserId()
+  const { error } = await supabase
+    .from('revolut_trades')
+    .delete()
+    .eq('user_id', userId)
+  check(error, 'clearTrades')
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function defaultMeta() {
