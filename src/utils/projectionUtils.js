@@ -670,3 +670,260 @@ export function formatEUR(value) {
 export function formatPct(value) {
   return `${value >= 0 ? '+' : ''}${value.toFixed(1)}%`
 }
+
+// ─── Property Scenario Comparison (New) ───────────────────────────────────────
+
+/**
+ * Calculate net proceeds for a specific property sale with Belgian tax rules
+ * 
+ * @param {Object} property - Property object
+ * @param {Number} saleYear - Year of sale (0 = now)
+ * @param {Object} taxConfig - { capitalGainsRate: 0.165 }
+ * @param {Object} costConfig - { brokeragePct: 0.03, prepaymentPct: 0.01 }
+ * @returns {Object} - Detailed breakdown of sale proceeds
+ */
+export function computePropertySaleProceeds(property, saleYear, taxConfig = {}, costConfig = {}) {
+  const today = new Date()
+  const saleDate = new Date(today.getFullYear() + saleYear, today.getMonth(), today.getDate())
+  const saleDateISO = saleDate.toISOString()
+  
+  const brokeragePct = costConfig.brokeragePct ?? 0.03
+  const prepaymentPct = costConfig.prepaymentPct ?? 0.01
+  
+  // Calculate appreciated value
+  const saleValue = property.currentValue * Math.pow(1 + (property.appreciationRate || 0.02), saleYear)
+  
+  // Calculate remaining loan balance
+  let totalLoanBalance = 0
+  for (const loan of property.loans || []) {
+    totalLoanBalance += getRemainingBalance(loan, saleDateISO)
+  }
+  
+  // Transaction costs
+  const brokerageFee = saleValue * brokeragePct
+  const prepaymentPenalty = totalLoanBalance * prepaymentPct
+  
+  // Belgian capital gains tax: 16.5% if sold within 5 years of purchase
+  let capitalGainsTax = 0
+  const purchaseDate = new Date(property.purchaseDate)
+  const yearsSincePurchase = saleYear + (today.getFullYear() - purchaseDate.getFullYear())
+  
+  if (yearsSincePurchase < 5 && taxConfig.capitalGainsApplies !== false) {
+    const capitalGain = Math.max(0, saleValue - property.purchasePrice)
+    capitalGainsTax = capitalGain * (taxConfig.capitalGainsRate ?? 0.165)
+  }
+  
+  const netProceeds = saleValue - totalLoanBalance - brokerageFee - prepaymentPenalty - capitalGainsTax
+  
+  return {
+    grossValue: Math.round(saleValue),
+    loanBalance: Math.round(totalLoanBalance),
+    brokerageFee: Math.round(brokerageFee),
+    prepaymentPenalty: Math.round(prepaymentPenalty),
+    capitalGainsTax: Math.round(capitalGainsTax),
+    netProceeds: Math.round(netProceeds),
+    yearsSincePurchase,
+  }
+}
+
+/**
+ * Calculate after-tax rental income (Belgian tax rules)
+ * 
+ * @param {Number} grossRent - Annual gross rental income
+ * @param {Object} taxConfig - { rentalWithholding: 0.30, useWithholding: true }
+ * @returns {Number} - Net rental income after tax
+ */
+export function calculateRentalIncomeTax(grossRent, taxConfig = {}) {
+  if (!taxConfig.useWithholding) {
+    // User declares in personal income tax - we don't apply withholding here
+    // (would need their marginal rate, which varies widely)
+    return grossRent
+  }
+  
+  const withholdingRate = taxConfig.rentalWithholding ?? 0.30
+  return grossRent * (1 - withholdingRate)
+}
+
+/**
+ * Calculate Belgian ETF taxation (0% capital gains, 30% on dividends)
+ * 
+ * @param {Number} currentValue - Current ETF value
+ * @param {Number} principal - Original investment
+ * @param {Number} dividendPct - Percentage of returns from dividends (0-1)
+ * @returns {Number} - Annual tax owed on dividends
+ */
+export function calculateETFTax(currentValue, principal, dividendPct = 0) {
+  // Belgian ETF tax: 0% on capital gains, 30% on dividends
+  // For accumulating ETFs (dividendPct = 0), tax = 0
+  const totalGain = Math.max(0, currentValue - principal)
+  const dividendPortion = totalGain * dividendPct
+  return Math.round(dividendPortion * 0.30)
+}
+
+/**
+ * Build property-by-property scenario comparison
+ * 
+ * Compares:
+ * - Baseline: Keep all properties as-is (current rental strategy)
+ * - Custom: Per-property decisions (keep/sell/occupy) with investment options
+ * 
+ * @param {Array} properties - All properties in portfolio
+ * @param {Object} scenarioConfig - {
+ *   decisions: { 
+ *     [propertyId]: { 
+ *       action: 'keep'|'sell'|'occupy',
+ *       saleYear: 0,
+ *       investmentType: 'etf'|'bonds'|'savings'|'custom',
+ *       investmentRate: 0.07
+ *     }
+ *   },
+ *   taxConfig: {
+ *     useWithholding: true,
+ *     rentalWithholding: 0.30,
+ *     capitalGainsApplies: true,
+ *     capitalGainsRate: 0.165,
+ *     etfDividendPct: 0
+ *   }
+ * }
+ * @returns {Array} - 20-year projection with baseline and custom scenarios
+ */
+export function buildPropertyScenarioComparison(properties, scenarioConfig) {
+  const { decisions = {}, taxConfig = {} } = scenarioConfig
+  
+  // Build baseline: all properties kept as-is
+  const baseline = buildProjection(properties)
+  
+  // Track investments from sold properties
+  const investments = {} // { propertyId: { principal, saleYear, rate, dividendPct } }
+  
+  // Build custom scenario year by year
+  const customPoints = []
+  let cumulativeCF = 0
+  
+  for (let year = 0; year <= 20; year++) {
+    const today = new Date()
+    const yearStart = new Date(today.getFullYear() + year, today.getMonth(), today.getDate())
+    const yearEnd = new Date(today.getFullYear() + year + 1, today.getMonth(), today.getDate())
+    const targetDate = yearStart
+    
+    let totalPropertyValue = 0
+    let totalLoanBalance = 0
+    let totalAnnualIncome = 0
+    let totalAnnualCosts = 0
+    let investmentValue = 0
+    let investmentTaxThisYear = 0
+    
+    // Process each property
+    for (const property of properties) {
+      const decision = decisions[property.id] || { action: 'keep' }
+      const saleYear = decision.saleYear ?? 0
+      
+      // Check if property has been sold in a previous year
+      if (decision.action === 'sell' && year >= saleYear) {
+        // Property sold - add to investments if not already tracked
+        if (!investments[property.id]) {
+          const saleProceeds = computePropertySaleProceeds(property, saleYear, taxConfig, {
+            brokeragePct: 0.03,
+            prepaymentPct: 0.01
+          })
+          
+          investments[property.id] = {
+            principal: saleProceeds.netProceeds,
+            saleYear,
+            rate: decision.investmentRate ?? 0.07,
+            dividendPct: taxConfig.etfDividendPct ?? 0
+          }
+        }
+        
+        // Track investment growth
+        const inv = investments[property.id]
+        const yearsInvested = year - inv.saleYear
+        const currentInvValue = inv.principal * Math.pow(1 + inv.rate, yearsInvested)
+        investmentValue += currentInvValue
+        
+        // Calculate ETF tax for this year
+        if (yearsInvested > 0) {
+          investmentTaxThisYear += calculateETFTax(currentInvValue, inv.principal, inv.dividendPct)
+        }
+        
+        // No property value or costs for sold properties
+        continue
+      }
+      
+      // Property kept - calculate as normal
+      const appRate = property.appreciationRate || 0.02
+      const appreciated = property.currentValue * Math.pow(1 + appRate, year)
+      totalPropertyValue += appreciated
+      
+      // Loan balance
+      for (const loan of property.loans || []) {
+        totalLoanBalance += getRemainingBalance(loan, targetDate.toISOString())
+      }
+      
+      // Rental income (with tax if configured)
+      if (decision.action === 'keep' && property.status === 'rented') {
+        const baseRent = (property.startRentalIncome || property.monthlyRentalIncome || 0) * 12
+        const indexRate = property.indexationRate ?? 0.02
+        const vacancyRate = property.vacancyRate ?? 0.05
+        const grossRent = baseRent * Math.pow(1 + indexRate, year)
+        const effectiveRent = grossRent * (1 - vacancyRate)
+        
+        // Apply rental income tax
+        const netRent = calculateRentalIncomeTax(effectiveRent, taxConfig)
+        totalAnnualIncome += netRent
+      }
+      
+      // Operating costs
+      const inflRate = property.inflationRate ?? 0.02
+      const maintenance = (property.annualMaintenanceCost || 0) * Math.pow(1 + inflRate, year)
+      const insurance = (property.annualInsuranceCost || 0) * Math.pow(1 + inflRate, year)
+      const legacyMonthly = (property.monthlyExpenses || 0) * 12 * Math.pow(1 + inflRate, year)
+      const propertyTax = property.annualPropertyTax || 0
+      totalAnnualCosts += maintenance + insurance + legacyMonthly + propertyTax
+      
+      // Loan payments
+      for (const loan of property.loans || []) {
+        totalAnnualCosts += getAnnualLoanPayment(loan, year)
+      }
+    }
+    
+    // Add investment tax to costs
+    totalAnnualCosts += investmentTaxThisYear
+    
+    const annualCashFlow = Math.round(totalAnnualIncome - totalAnnualCosts)
+    cumulativeCF += annualCashFlow
+    
+    const netWorth = Math.round(totalPropertyValue + investmentValue - totalLoanBalance)
+    const prevNetWorth = customPoints.length > 0 ? customPoints[customPoints.length - 1].netWorth : netWorth
+    const equityGain = year === 0 ? 0 : netWorth - prevNetWorth
+    
+    customPoints.push({
+      year,
+      label: year === 0 ? 'Today' : `+${year}y`,
+      propertyValue: Math.round(totalPropertyValue),
+      investmentValue: Math.round(investmentValue),
+      loanBalance: Math.round(totalLoanBalance),
+      netWorth,
+      equityGain,
+      annualCashFlow,
+      cumulativeCF: Math.round(cumulativeCF),
+      totalReturn: Math.round(netWorth + cumulativeCF),
+      investmentTax: Math.round(investmentTaxThisYear),
+    })
+  }
+  
+  // Combine baseline and custom into comparison format
+  return baseline.map((basePoint, idx) => ({
+    year: basePoint.year,
+    label: basePoint.label,
+    baselineNetWorth: basePoint.netWorth,
+    baselineCF: basePoint.cumulativeCF,
+    customNetWorth: customPoints[idx].netWorth,
+    customCF: customPoints[idx].cumulativeCF,
+    delta: customPoints[idx].netWorth - basePoint.netWorth,
+    deltaCF: customPoints[idx].cumulativeCF - basePoint.cumulativeCF,
+    // Include detailed breakdown for tooltip
+    baseline: basePoint,
+    custom: customPoints[idx],
+  }))
+}
