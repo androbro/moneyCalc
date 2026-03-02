@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 
 const NAV_ITEMS = [
   { id: 'dashboard',   label: 'Dashboard',        icon: ChartIcon,      group: 'portfolio' },
@@ -93,15 +93,6 @@ function SimulatorIcon() {
   )
 }
 
-function AiIcon() {
-  return (
-    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-        d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-    </svg>
-  )
-}
-
 function MenuIcon() {
   return (
     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -118,7 +109,105 @@ function CloseIcon() {
   )
 }
 
-export default function Layout({ activeTab, onTabChange, children, isOwner, onOpenAuth, showAuthControls }) {
+// ─── User menu (avatar + dropdown) ───────────────────────────────────────────
+
+function UserMenu({ user, onSignOut, onResetDemo }) {
+  const [open, setOpen] = useState(false)
+  const ref = useRef(null)
+
+  // Close on click outside
+  useEffect(() => {
+    const handler = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false)
+    }
+    document.addEventListener('mousedown', handler)
+    return () => document.removeEventListener('mousedown', handler)
+  }, [])
+
+  if (!user) {
+    // Guest mode footer
+    return (
+      <div className="px-3 py-3 border-t border-slate-800 space-y-2">
+        <div className="flex items-center gap-2.5 px-3 py-2">
+          <div className="w-7 h-7 rounded-full bg-slate-700 flex items-center justify-center shrink-0">
+            <svg className="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+            </svg>
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-xs font-medium text-slate-400">Guest mode</p>
+            <p className="text-[10px] text-slate-600 truncate">Demo data only</p>
+          </div>
+        </div>
+        <button
+          onClick={onResetDemo}
+          className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-slate-500
+                     hover:text-slate-300 hover:bg-slate-800 transition-colors"
+        >
+          <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+          </svg>
+          Reset demo data
+        </button>
+      </div>
+    )
+  }
+
+  // Authenticated user footer
+  const email = user.email ?? ''
+  const initials = email.slice(0, 2).toUpperCase()
+  const shortEmail = email.length > 22 ? email.slice(0, 20) + '…' : email
+
+  return (
+    <div ref={ref} className="px-3 py-3 border-t border-slate-800 relative">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg
+                   hover:bg-slate-800 transition-colors"
+      >
+        <div className="w-7 h-7 rounded-full bg-brand-600 flex items-center justify-center shrink-0 text-xs font-bold text-white">
+          {initials}
+        </div>
+        <div className="flex-1 min-w-0 text-left">
+          <p className="text-xs font-medium text-slate-200 truncate">{shortEmail}</p>
+          <p className="text-[10px] text-slate-500">Signed in</p>
+        </div>
+        <svg
+          className={`w-3.5 h-3.5 text-slate-500 shrink-0 transition-transform ${open ? 'rotate-180' : ''}`}
+          fill="none" stroke="currentColor" viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+        </svg>
+      </button>
+
+      {open && (
+        <div className="absolute bottom-full left-3 right-3 mb-1 bg-slate-800 border border-slate-700
+                        rounded-xl shadow-xl overflow-hidden z-50">
+          <div className="px-3 py-2.5 border-b border-slate-700">
+            <p className="text-xs text-slate-400 truncate">{email}</p>
+          </div>
+          <button
+            onClick={() => { setOpen(false); onSignOut() }}
+            className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-slate-300
+                       hover:text-white hover:bg-slate-700 transition-colors"
+          >
+            <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+            </svg>
+            Sign out
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── Layout ───────────────────────────────────────────────────────────────────
+
+export default function Layout({ activeTab, onTabChange, children, isLoggedIn, user, onSignOut, onResetDemo }) {
   const [mobileOpen, setMobileOpen] = useState(false)
 
   const handleNav = (id) => {
@@ -130,7 +219,14 @@ export default function Layout({ activeTab, onTabChange, children, isOwner, onOp
     <div className="min-h-screen flex bg-slate-950">
       {/* ── Desktop sidebar ── */}
       <aside className="hidden md:flex md:w-56 lg:w-64 flex-col bg-slate-900 border-r border-slate-800 fixed inset-y-0 left-0 z-20">
-        <SidebarContent active={activeTab} onNav={handleNav} isOwner={isOwner} onOpenAuth={onOpenAuth} showAuthControls={showAuthControls} />
+        <SidebarContent
+          active={activeTab}
+          onNav={handleNav}
+          isLoggedIn={isLoggedIn}
+          user={user}
+          onSignOut={onSignOut}
+          onResetDemo={onResetDemo}
+        />
       </aside>
 
       {/* ── Mobile overlay ── */}
@@ -153,7 +249,14 @@ export default function Layout({ activeTab, onTabChange, children, isOwner, onOp
         >
           <CloseIcon />
         </button>
-        <SidebarContent active={activeTab} onNav={handleNav} isOwner={isOwner} onOpenAuth={onOpenAuth} showAuthControls={showAuthControls} />
+        <SidebarContent
+          active={activeTab}
+          onNav={handleNav}
+          isLoggedIn={isLoggedIn}
+          user={user}
+          onSignOut={onSignOut}
+          onResetDemo={onResetDemo}
+        />
       </aside>
 
       {/* ── Main content ── */}
@@ -167,19 +270,20 @@ export default function Layout({ activeTab, onTabChange, children, isOwner, onOp
             <MenuIcon />
           </button>
           <span className="font-semibold text-white flex-1">MoneyCalc</span>
-          {/* Mobile auth button — only on prod */}
-          {showAuthControls && (
+          {/* Mobile: sign in link or user avatar */}
+          {isLoggedIn ? (
             <button
-              onClick={onOpenAuth}
-              className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-medium
-                          transition-colors border
-                          ${isOwner
-                            ? 'border-emerald-700/40 text-emerald-400 bg-emerald-900/20 hover:bg-emerald-900/40'
-                            : 'border-slate-700 text-slate-400 hover:text-slate-200 hover:bg-slate-800'}`}
-              title={isOwner ? 'Owner mode — click to manage' : 'Guest mode — click to log in'}
+              onClick={onSignOut}
+              className="text-xs text-slate-400 hover:text-slate-200 transition-colors px-2 py-1"
             >
-              {isOwner ? <UnlockIconSm /> : <LockIconSm />}
-              {isOwner ? 'Owner' : 'Guest'}
+              Sign out
+            </button>
+          ) : (
+            <button
+              onClick={() => { window.history.pushState(null, '', '/login'); window.dispatchEvent(new PopStateEvent('popstate')) }}
+              className="text-xs text-brand-400 hover:text-brand-300 font-medium transition-colors px-2 py-1"
+            >
+              Sign in
             </button>
           )}
         </header>
@@ -197,7 +301,7 @@ const NAV_GROUPS = [
   { id: 'strategy',  label: 'Strategy & AI' },
 ]
 
-function SidebarContent({ active, onNav, isOwner, onOpenAuth, showAuthControls }) {
+function SidebarContent({ active, onNav, isLoggedIn, user, onSignOut, onResetDemo }) {
   return (
     <div className="flex flex-col h-full">
       {/* Logo */}
@@ -217,6 +321,23 @@ function SidebarContent({ active, onNav, isOwner, onOpenAuth, showAuthControls }
 
       {/* Nav */}
       <nav className="flex-1 px-3 py-4 space-y-4 overflow-y-auto">
+        {/* Guest mode banner */}
+        {!isLoggedIn && (
+          <div className="mx-1 mb-2 rounded-lg bg-slate-800/80 border border-slate-700/50 px-3 py-2.5 space-y-1.5">
+            <p className="text-xs font-medium text-slate-300">Demo mode</p>
+            <p className="text-[11px] text-slate-500 leading-relaxed">
+              You're browsing with sample data.{' '}
+              <button
+                onClick={() => { window.history.pushState(null, '', '/login'); window.dispatchEvent(new PopStateEvent('popstate')) }}
+                className="text-brand-400 hover:text-brand-300 font-medium bg-transparent border-0 cursor-pointer underline-offset-2"
+              >
+                Sign in
+              </button>{' '}
+              to access your portfolio.
+            </p>
+          </div>
+        )}
+
         {NAV_GROUPS.map((group) => {
           const items = NAV_ITEMS.filter((i) => i.group === group.id)
           return (
@@ -245,50 +366,8 @@ function SidebarContent({ active, onNav, isOwner, onOpenAuth, showAuthControls }
         })}
       </nav>
 
-      {/* Footer — auth status + lock button (prod only) */}
-      {showAuthControls ? (
-        <div className="px-3 py-3 border-t border-slate-800 space-y-2">
-          <button
-            onClick={onOpenAuth}
-            className={`w-full flex items-center gap-2.5 px-3 py-2.5 rounded-lg text-sm
-                        font-medium transition-colors border
-                        ${isOwner
-                          ? 'border-emerald-700/40 text-emerald-300 bg-emerald-900/10 hover:bg-emerald-900/20'
-                          : 'border-slate-700/60 text-slate-400 hover:text-slate-200 hover:bg-slate-800'}`}
-          >
-            {isOwner ? <UnlockIconSm /> : <LockIconSm />}
-            <span>{isOwner ? 'Owner mode' : 'Guest mode'}</span>
-            <span className="ml-auto text-[10px] text-slate-500">
-              {isOwner ? 'click to manage' : 'click to log in'}
-            </span>
-          </button>
-          <p className="text-xs text-slate-600 px-1">
-            {isOwner ? 'Writes go to Supabase' : 'Writes stay in local storage'}
-          </p>
-        </div>
-      ) : (
-        <div className="px-5 py-4 border-t border-slate-800">
-          <p className="text-xs text-slate-600">Backed by Supabase</p>
-        </div>
-      )}
+      {/* Footer — user menu */}
+      <UserMenu user={user} onSignOut={onSignOut} onResetDemo={onResetDemo} />
     </div>
-  )
-}
-
-function LockIconSm() {
-  return (
-    <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-        d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-    </svg>
-  )
-}
-
-function UnlockIconSm() {
-  return (
-    <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-        d="M8 11V7a4 4 0 118 0m-4 8v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2z" />
-    </svg>
   )
 }

@@ -11,10 +11,11 @@ import PropertySimulator from "./components/PropertySimulator";
 import MoneyFlow from "./components/MoneyFlow";
 import PropertyDetail from "./components/PropertyDetail";
 import AiChatOverlay from "./components/AiChatOverlay";
-import AuthOverlay from "./components/AuthOverlay";
-import { isOwner, isLocalhost, login, logout } from "./lib/auth";
+import { useAuth } from "./lib/AuthContext";
+import { supabase } from "./lib/supabase";
 import {
 	seedGuestStorage,
+	resetGuestStorage,
 	getPortfolio as guestGetPortfolio,
 	addProperty as guestAddProperty,
 	updateProperty as guestUpdateProperty,
@@ -39,6 +40,7 @@ import {
 	saveHouseholdProfile,
 	getSimulatorProfile,
 	saveSimulatorProfile,
+	claimOwnerlessData,
 	defaultHousehold,
 } from "./services/portfolioService";
 import { Analytics } from "@vercel/analytics/react";
@@ -117,9 +119,75 @@ function Toast({ message, type = "error", onDismiss }) {
 	);
 }
 
+// ─── Claim-data migration banner ──────────────────────────────────────────────
+
+function MigrationBanner({ onClaim, onDismiss }) {
+	const [claiming, setClaiming] = useState(false);
+	const [done, setDone] = useState(false);
+
+	const handleClaim = async () => {
+		setClaiming(true);
+		try {
+			const result = await onClaim();
+			setDone(true);
+			setTimeout(onDismiss, 3000);
+		} catch {
+			setClaiming(false);
+		}
+	};
+
+	return (
+		<div className="fixed top-0 inset-x-0 z-40 flex justify-center px-4 pt-3 pointer-events-none">
+			<div className="pointer-events-auto max-w-xl w-full bg-amber-900/95 border border-amber-600/60 rounded-2xl shadow-2xl px-5 py-4 flex items-start gap-4">
+				<div className="w-9 h-9 shrink-0 rounded-xl bg-amber-700/50 flex items-center justify-center mt-0.5">
+					<svg className="w-4 h-4 text-amber-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+							d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" />
+					</svg>
+				</div>
+				<div className="flex-1 min-w-0">
+					<p className="font-semibold text-amber-100 text-sm">
+						{done ? "Data claimed successfully!" : "Unclaimed data found"}
+					</p>
+					<p className="text-amber-300/80 text-xs mt-0.5 leading-relaxed">
+						{done
+							? "All your existing properties and profile are now linked to your account."
+							: "There is existing portfolio data in the database not yet linked to your account. Claim it now to make it private to you."}
+					</p>
+				</div>
+				{!done && (
+					<div className="flex items-center gap-2 shrink-0">
+						<button
+							onClick={handleClaim}
+							disabled={claiming}
+							className="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-900
+                             text-xs font-semibold transition-colors disabled:opacity-60"
+						>
+							{claiming ? "Claiming…" : "Claim data"}
+						</button>
+						<button
+							onClick={onDismiss}
+							className="text-amber-400/60 hover:text-amber-300 transition-colors"
+							title="Dismiss"
+						>
+							<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+								<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+							</svg>
+						</button>
+					</div>
+				)}
+			</div>
+		</div>
+	);
+}
+
 // ─── Main App ─────────────────────────────────────────────────────────────────
 
 export default function App() {
+	const { session, user, loading: authLoading, signOut } = useAuth();
+
+	const isLoggedIn = Boolean(session);
+
 	const [properties, setProperties] = useState([]);
 	const [loading, setLoading] = useState(true);
 	const [fatalError, setFatalError] = useState(null);
@@ -133,19 +201,19 @@ export default function App() {
 	const [editingInvestment, setEditingInvestment] = useState(null);
 	const [showInvestmentForm, setShowInvestmentForm] = useState(false);
 
-	// ── Phase 8: household profile ──
+	// Household profile
 	const [householdProfile, setHouseholdProfile] = useState(defaultHousehold());
 	const [showHouseholdForm, setShowHouseholdForm] = useState(false);
 
-	// ── Phase 9: simulator state (lifted so AiChatOverlay can see it) ──
+	// Simulator state (lifted so AiChatOverlay can see it)
 	const [simState, setSimState] = useState(null);
 
-	// ── Auth ──
-	const [ownerAuthed, setOwnerAuthed] = useState(() => isOwner());
-	const [showAuthOverlay, setShowAuthOverlay] = useState(false);
+	// Migration banner — show once after first login if unclaimed data exists
+	const [showMigrationBanner, setShowMigrationBanner] = useState(false);
+	const [migrationChecked, setMigrationChecked] = useState(false);
 
 	// Pick the right data-layer functions based on auth state
-	const db = ownerAuthed
+	const db = isLoggedIn
 		? {
 				getPortfolio,
 				addProperty,
@@ -156,7 +224,7 @@ export default function App() {
 				deletePlannedInvestment,
 				getHouseholdProfile,
 				saveHouseholdProfile,
-			}
+		  }
 		: {
 				getPortfolio: guestGetPortfolio,
 				addProperty: guestAddProperty,
@@ -167,13 +235,17 @@ export default function App() {
 				deletePlannedInvestment: guestDeletePlannedInvestment,
 				getHouseholdProfile: guestGetHouseholdProfile,
 				saveHouseholdProfile: guestSaveHouseholdProfile,
-			};
+		  };
 
-	// ── Load portfolio + household profile (from Supabase or guest localStorage) ──
+	// ── Load portfolio + household profile ──
 	const load = useCallback(async () => {
 		setLoading(true);
 		setFatalError(null);
 		try {
+			if (!isLoggedIn) {
+				// Seed guest localStorage if empty, then load from it
+				seedGuestStorage();
+			}
 			const [portfolio, profile] = await Promise.all([
 				db.getPortfolio(),
 				db.getHouseholdProfile(),
@@ -185,69 +257,49 @@ export default function App() {
 		} finally {
 			setLoading(false);
 		}
-	}, [ownerAuthed]); // eslint-disable-line react-hooks/exhaustive-deps
+	}, [isLoggedIn]); // eslint-disable-line react-hooks/exhaustive-deps
 
 	useEffect(() => {
-		// For guests: always fetch a fresh Supabase snapshot on every page load
-		// so they see the owner's latest data (including investment positions etc.)
-		// For owners: just load from Supabase directly.
-		if (!ownerAuthed) {
-			Promise.all([
-				getPortfolio(),
-				getHouseholdProfile(),
-				getSimulatorProfile(),
-			])
-				.then(([portfolio, household, simulator]) => {
-					seedGuestStorage(portfolio, household, simulator);
-					load();
-				})
-				.catch(() => load()); // if Supabase unreachable, load empty guest state
-		} else {
-			load();
+		if (!authLoading) load();
+	}, [authLoading, load]);
+
+	// ── Check for unclaimed data after sign-in ──
+	useEffect(() => {
+		if (!isLoggedIn || migrationChecked) return;
+		setMigrationChecked(true);
+
+		checkForOwnerlessData().then((hasOwnerless) => {
+			if (hasOwnerless) setShowMigrationBanner(true);
+		});
+	// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, [isLoggedIn]);
+
+	const handleClaim = async () => {
+		try {
+			const result = await claimOwnerlessData();
+			setToast({ message: `Data claimed — ${result.properties} properties linked to your account`, type: "success" });
+			setShowMigrationBanner(false);
+			// Reload so the newly-claimed data appears
+			await load();
+		} catch (err) {
+			setToast({ message: `Failed to claim data: ${err.message}`, type: "error" });
+			throw err;
 		}
-	}, [load]); // eslint-disable-line react-hooks/exhaustive-deps
+	};
 
 	// ── Auth handlers ──
-	const handleLogin = async (password) => {
-		const ok = await login(password);
-		if (ok) {
-			setOwnerAuthed(true);
-			// reload from Supabase now that we're owner
-			setToast({
-				message: "Logged in as owner — data reloaded from Supabase",
-				type: "success",
-			});
-		}
-		return ok;
+	const handleSignOut = async () => {
+		await signOut();
+		// After sign-out, seed fresh guest data
+		resetGuestStorage();
+		setToast({ message: "Signed out — showing demo data", type: "success" });
 	};
 
-	const handleLogout = () => {
-		logout();
-		setOwnerAuthed(false);
-		setShowAuthOverlay(false);
-		setToast({ message: "Switched to guest mode", type: "success" });
-	};
-
-	// ── Reset guest data to owner's Supabase snapshot ──
-	const handleReset = async () => {
-		try {
-			const [portfolio, household, simulator] = await Promise.all([
-				getPortfolio(),
-				getHouseholdProfile(),
-				getSimulatorProfile(),
-			]);
-			seedGuestStorage(portfolio, household, simulator);
-			// reload guest view
-			const [gPortfolio, gProfile] = await Promise.all([
-				guestGetPortfolio(),
-				guestGetHouseholdProfile(),
-			]);
-			setProperties(gPortfolio.properties);
-			setHouseholdProfile(gProfile);
-			setToast({ message: "Data reset to owner's snapshot", type: "success" });
-		} catch (err) {
-			setToast({ message: `Reset failed: ${err.message}`, type: "error" });
-		}
+	// ── Reset guest demo data ──
+	const handleResetDemo = () => {
+		resetGuestStorage();
+		load();
+		setToast({ message: "Demo data reset to default", type: "success" });
 	};
 
 	// ── Shared save wrapper ──
@@ -297,7 +349,6 @@ export default function App() {
 		);
 		setShowForm(false);
 		setEditingProperty(null);
-		// Stay on properties tab after saving; if we were editing from detail view, go back there
 		setActiveTab("properties");
 	};
 
@@ -356,12 +407,22 @@ export default function App() {
 	};
 
 	// ── Render guards ──
+	if (authLoading) return <LoadingScreen />;
 	if (loading) return <LoadingScreen />;
 	if (fatalError) return <ErrorScreen message={fatalError} onRetry={load} />;
 
 	return (
 		<>
 			<Analytics />
+
+			{/* Migration banner */}
+			{showMigrationBanner && (
+				<MigrationBanner
+					onClaim={handleClaim}
+					onDismiss={() => setShowMigrationBanner(false)}
+				/>
+			)}
+
 			<Layout
 				activeTab={activeTab}
 				onTabChange={(tab) => {
@@ -369,9 +430,10 @@ export default function App() {
 					setDetailProperty(null);
 					setShowForm(false);
 				}}
-				isOwner={ownerAuthed}
-				onOpenAuth={() => setShowAuthOverlay(true)}
-				showAuthControls={!isLocalhost()}
+				isLoggedIn={isLoggedIn}
+				user={user}
+				onSignOut={handleSignOut}
+				onResetDemo={handleResetDemo}
 			>
 				{/* ── Dashboard ── */}
 				{activeTab === "dashboard" && (
@@ -567,10 +629,10 @@ export default function App() {
 						properties={properties}
 						onSimChange={setSimState}
 						getSimulatorProfile={
-							ownerAuthed ? getSimulatorProfile : guestGetSimulatorProfile
+							isLoggedIn ? getSimulatorProfile : guestGetSimulatorProfile
 						}
 						saveSimulatorProfile={
-							ownerAuthed ? saveSimulatorProfile : guestSaveSimulatorProfile
+							isLoggedIn ? saveSimulatorProfile : guestSaveSimulatorProfile
 						}
 					/>
 				)}
@@ -585,34 +647,35 @@ export default function App() {
 				/>
 			)}
 
-			{/* AI Chat overlay — always mounted so it floats above all pages */}
+			{/* AI Chat overlay — only for logged-in users (needs Gemini key) */}
 			<AiChatOverlay
 				properties={properties}
 				profile={householdProfile}
 				activeTab={activeTab}
 				simState={simState}
-				isOwner={ownerAuthed}
+				isOwner={isLoggedIn}
 			/>
-
-			{/* Auth overlay — only on non-localhost deployments */}
-			{!isLocalhost() && (
-				<AuthOverlay
-					open={showAuthOverlay}
-					onClose={() => setShowAuthOverlay(false)}
-					onLogin={handleLogin}
-					onLogout={handleLogout}
-					isOwner={ownerAuthed}
-					onReset={handleReset}
-				/>
-			)}
 		</>
 	);
+}
+
+// ─── Ownerless data check ─────────────────────────────────────────────────────
+
+async function checkForOwnerlessData() {
+	try {
+		const { count } = await supabase
+			.from('properties')
+			.select('id', { count: 'exact', head: true })
+			.is('user_id', null)
+		return (count ?? 0) > 0
+	} catch {
+		return false
+	}
 }
 
 // ─── Investments page ─────────────────────────────────────────────────────────
 
 function InvestmentsPage({ properties, onAdd, onEdit, onDelete }) {
-	// Flatten all investments with their property name attached
 	const allInvestments = properties
 		.flatMap((p) =>
 			(p.plannedInvestments || []).map((inv) => ({
@@ -704,7 +767,6 @@ function InvestmentsPage({ properties, onAdd, onEdit, onDelete }) {
 								key={inv.id}
 								className="card flex flex-col sm:flex-row sm:items-center gap-4"
 							>
-								{/* Date badge */}
 								<div
 									className={`shrink-0 rounded-xl px-3 py-2 text-center min-w-[72px]
                                   ${isPast ? "bg-slate-700/50" : "bg-amber-900/30 border border-amber-700/40"}`}
@@ -726,7 +788,6 @@ function InvestmentsPage({ properties, onAdd, onEdit, onDelete }) {
 									</p>
 								</div>
 
-								{/* Details */}
 								<div className="flex-1 min-w-0">
 									<p className="font-semibold text-white truncate">
 										{inv.description || "Unnamed investment"}
@@ -736,7 +797,6 @@ function InvestmentsPage({ properties, onAdd, onEdit, onDelete }) {
 									</p>
 								</div>
 
-								{/* Financials */}
 								<div className="flex gap-6 shrink-0 text-right">
 									<div>
 										<p className="text-xs text-slate-500">Cost</p>
@@ -761,7 +821,6 @@ function InvestmentsPage({ properties, onAdd, onEdit, onDelete }) {
 									</div>
 								</div>
 
-								{/* Actions */}
 								<div className="flex gap-2 shrink-0">
 									<button
 										onClick={() => onEdit(inv)}

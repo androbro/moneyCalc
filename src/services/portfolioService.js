@@ -15,6 +15,14 @@
 
 import { supabase } from '../lib/supabase'
 
+// ─── Auth helper ──────────────────────────────────────────────────────────────
+
+/** Returns the current user's UID, or null if not authenticated. */
+async function getCurrentUserId() {
+  const { data: { user } } = await supabase.auth.getUser()
+  return user?.id ?? null
+}
+
 // ─── Field mappers ────────────────────────────────────────────────────────────
 
 function dbToProperty(row) {
@@ -52,12 +60,13 @@ function dbToProperty(row) {
     annualInsuranceCost:   Number(row.annual_insurance_cost ?? 0),
     annualPropertyTax:     Number(row.annual_property_tax ?? 0),
     inflationRate:         Number(row.inflation_rate ?? 0.02),
+    vacancyRate:           Number(row.vacancy_rate ?? 0),
     loans: [],
   }
 }
 
-function propertyToDb(p) {
-  return {
+function propertyToDb(p, userId) {
+  const row = {
     name:                    p.name,
     address:                 p.address ?? '',
     purchase_price:          p.purchasePrice ?? 0,
@@ -88,7 +97,11 @@ function propertyToDb(p) {
     annual_insurance_cost:   p.annualInsuranceCost ?? 0,
     annual_property_tax:     p.annualPropertyTax ?? 0,
     inflation_rate:          p.inflationRate ?? 0.02,
+    vacancy_rate:            p.vacancyRate ?? 0,
   }
+  // Include user_id when provided (required for INSERT to pass RLS)
+  if (userId) row.user_id = userId
+  return row
 }
 
 function dbToLoan(row, schedule = []) {
@@ -227,10 +240,12 @@ export async function getPortfolio() {
 // ─── Property CRUD ────────────────────────────────────────────────────────────
 
 export async function addProperty(portfolio, property) {
-  // 1. Insert property
+  const userId = await getCurrentUserId()
+
+  // 1. Insert property (user_id required for RLS INSERT policy)
   const { data: propData, error: propErr } = await supabase
     .from('properties')
-    .insert(propertyToDb(property))
+    .insert(propertyToDb(property, userId))
     .select()
     .single()
   check(propErr, 'addProperty')
@@ -246,7 +261,7 @@ export async function addProperty(portfolio, property) {
 }
 
 export async function updateProperty(portfolio, property) {
-  // 1. Update property row
+  // 1. Update property row (user_id not changed on update — RLS handles authorization)
   const { error: propErr } = await supabase
     .from('properties')
     .update(propertyToDb(property))
@@ -426,45 +441,14 @@ export async function deletePlannedInvestment(id) {
 
 const PROFILE_ID = 'default'
 
-function dbToHousehold(row) {
-  // Migrate legacy flat fields into a members array if no members stored yet
-  let members = Array.isArray(row.members) ? row.members : []
-  if (members.length === 0) {
-    // Build from old flat columns so existing data isn't lost
-    const me = {
-      id: 'member-me',
-      name: 'Me',
-      netIncome:        Number(row.my_net_income ?? 0),
-      investmentIncome: Number(row.my_investment_income ?? 0),
-      cash:             0,
-    }
-    const partner = {
-      id: 'member-partner',
-      name: 'Partner',
-      netIncome:        Number(row.partner_net_income ?? 0),
-      investmentIncome: 0,
-      cash:             Number(row.partner_cash ?? 0),
-    }
-    // Only include if they have any data
-    if (me.netIncome || me.investmentIncome) members.push(me)
-    if (partner.netIncome || partner.cash) members.push(partner)
-  }
-
-  return {
-    members,
-    householdExpenses:   Number(row.household_expenses ?? 0),
-    personalSavingsRate: Number(row.personal_savings_rate ?? 0.10),
-  }
-}
-
-function householdToDb(h) {
+function householdToDb(h, userId) {
   // Also mirror totals back into legacy columns so old queries still work
   const totalNetIncome        = (h.members || []).reduce((s, m) => s + (m.netIncome || 0), 0)
   const totalInvestmentIncome = (h.members || []).reduce((s, m) => s + (m.investmentIncome || 0), 0)
   const totalCash             = (h.members || []).reduce((s, m) => s + (m.cash || 0), 0)
 
-  return {
-    id:                           PROFILE_ID,
+  const row = {
+    id:                           userId || PROFILE_ID,
     members:                      h.members ?? [],
     // Legacy mirrors
     my_net_income:                totalNetIncome,
@@ -474,6 +458,45 @@ function householdToDb(h) {
     // Shared fields
     household_expenses:    h.householdExpenses ?? 0,
     personal_savings_rate: h.personalSavingsRate ?? 0.10,
+  }
+  if (userId) row.user_id = userId
+  return row
+}
+
+function dbToHousehold(row) {
+  // Prefer the structured members JSONB column if present
+  if (Array.isArray(row.members) && row.members.length > 0) {
+    return {
+      members:             row.members,
+      householdExpenses:   Number(row.household_expenses ?? 0),
+      personalSavingsRate: Number(row.personal_savings_rate ?? 0.10),
+    }
+  }
+
+  // Fall back to legacy flat columns
+  const members = []
+  const me = {
+    id: 'member-me',
+    name: 'Me',
+    netIncome:        Number(row.my_net_income ?? 0),
+    investmentIncome: Number(row.my_investment_income ?? 0),
+    cash:             0,
+  }
+  const partner = {
+    id: 'member-partner',
+    name: 'Partner',
+    netIncome:        Number(row.partner_net_income ?? 0),
+    investmentIncome: 0,
+    cash:             Number(row.partner_cash ?? 0),
+  }
+  // Only include if they have any data
+  if (me.netIncome || me.investmentIncome) members.push(me)
+  if (partner.netIncome || partner.cash) members.push(partner)
+
+  return {
+    members,
+    householdExpenses:   Number(row.household_expenses ?? 0),
+    personalSavingsRate: Number(row.personal_savings_rate ?? 0.10),
   }
 }
 
@@ -485,22 +508,27 @@ export function defaultHousehold() {
   }
 }
 
-/** Fetch the single household profile row (creates default if missing). */
+/** Fetch the household profile row for the current user. */
 export async function getHouseholdProfile() {
+  const userId = await getCurrentUserId()
+  const profileId = userId || PROFILE_ID
+
   const { data, error } = await supabase
     .from('household_profile')
     .select('*')
-    .eq('id', PROFILE_ID)
+    .eq('id', profileId)
     .maybeSingle()
   check(error, 'getHouseholdProfile')
   return data ? dbToHousehold(data) : defaultHousehold()
 }
 
-/** Upsert the household profile (always writes to the single 'default' row). */
+/** Upsert the household profile for the current user. */
 export async function saveHouseholdProfile(profile) {
+  const userId = await getCurrentUserId()
+
   const { error } = await supabase
     .from('household_profile')
-    .upsert(householdToDb(profile), { onConflict: 'id' })
+    .upsert(householdToDb(profile, userId), { onConflict: 'id' })
   check(error, 'saveHouseholdProfile')
   return getHouseholdProfile()
 }
@@ -510,29 +538,53 @@ export async function saveHouseholdProfile(profile) {
 const SIMULATOR_ID = 'default'
 
 /**
- * Load the simulator state blob.
- * Returns {} if no row exists yet (the migration seeds a row with state={},
- * but this guards against older deployments).
+ * Load the simulator state blob for the current user.
  */
 export async function getSimulatorProfile() {
+  const userId = await getCurrentUserId()
+  const simId = userId || SIMULATOR_ID
+
   const { data, error } = await supabase
     .from('simulator_profile')
     .select('state')
-    .eq('id', SIMULATOR_ID)
+    .eq('id', simId)
     .maybeSingle()
   check(error, 'getSimulatorProfile')
   return data?.state ?? {}
 }
 
 /**
- * Persist the full simulator state as a JSONB blob.
- * Uses upsert so it works whether the seed row exists or not.
+ * Persist the full simulator state for the current user.
  */
 export async function saveSimulatorProfile(state) {
+  const userId = await getCurrentUserId()
+  const simId = userId || SIMULATOR_ID
+
+  const row = { id: simId, state }
+  if (userId) row.user_id = userId
+
   const { error } = await supabase
     .from('simulator_profile')
-    .upsert({ id: SIMULATOR_ID, state }, { onConflict: 'id' })
+    .upsert(row, { onConflict: 'id' })
   check(error, 'saveSimulatorProfile')
+}
+
+// ─── Data migration: claim ownerless rows ─────────────────────────────────────
+
+/**
+ * Calls the `claim_ownerless_data` Postgres function to assign all rows
+ * where user_id IS NULL to the currently signed-in user.
+ *
+ * This is the one-time migration step for the original owner.
+ * Returns { properties, household_profile, simulator_profile } row counts.
+ */
+export async function claimOwnerlessData() {
+  const userId = await getCurrentUserId()
+  if (!userId) throw new Error('Must be signed in to claim data')
+
+  const { data, error } = await supabase.rpc('claim_ownerless_data', { p_user_id: userId })
+  check(error, 'claimOwnerlessData')
+  return data
 }
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────

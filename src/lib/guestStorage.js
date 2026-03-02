@@ -5,28 +5,19 @@
  * portfolioService.js. Used for unauthenticated (guest) visitors so they
  * can fully interact with the app without touching Supabase.
  *
- * Seeding behaviour:
- *   - On every page load (including refreshes), guests always get a fresh
- *     snapshot from Supabase. This means they always see your latest data
- *     without you having to do anything.
- *   - Within the same page session, their edits land in localStorage so
- *     in-page navigation between tabs doesn't lose their changes.
- *   - The "Reset" button re-seeds from Supabase at any time.
- *
- * Note: We intentionally do NOT cache the "seeded" state in sessionStorage.
- * sessionStorage survives page refreshes (per the Web spec), which would
- * prevent guests from seeing updates you make on localhost. Instead, we
- * always fetch a fresh snapshot from Supabase on every page load.
+ * Guests start with a pre-built mock dataset (see mockData.js).
+ * Their edits stay in localStorage for the duration of the session but
+ * never reach the real database.
  */
 
 import { v4 as uuidv4 } from 'uuid'
-import { defaultHousehold } from '../services/portfolioService'
+import { getMockPortfolio, getMockHousehold, getMockSimulatorProfile } from './mockData'
 
 // ─── Storage keys ─────────────────────────────────────────────────────────────
 
-const PORTFOLIO_KEY   = 'mc_guest_portfolio'
-const HOUSEHOLD_KEY   = 'mc_guest_household'
-const SIMULATOR_KEY   = 'mc_guest_simulator'
+const PORTFOLIO_KEY  = 'mc_guest_portfolio'
+const HOUSEHOLD_KEY  = 'mc_guest_household'
+const SIMULATOR_KEY  = 'mc_guest_simulator'
 
 // ─── Raw helpers ──────────────────────────────────────────────────────────────
 
@@ -48,26 +39,39 @@ function write(key, value) {
 // ─── Seeding ──────────────────────────────────────────────────────────────────
 
 /**
- * Populate guest localStorage with a snapshot of the owner's Supabase data.
- * Called on every page load so guests always see the latest data.
+ * Seed guest localStorage with the static mock dataset.
+ * Called once on first load if the guest has no prior session data.
  */
-export function seedGuestStorage(portfolio, household, simulator) {
-  write(PORTFOLIO_KEY, portfolio)
-  write(HOUSEHOLD_KEY, household)
-  write(SIMULATOR_KEY, simulator || {})
+export function seedGuestStorage() {
+  if (!localStorage.getItem(PORTFOLIO_KEY)) {
+    write(PORTFOLIO_KEY, getMockPortfolio())
+  }
+  if (!localStorage.getItem(HOUSEHOLD_KEY)) {
+    write(HOUSEHOLD_KEY, getMockHousehold())
+  }
+  if (!localStorage.getItem(SIMULATOR_KEY)) {
+    write(SIMULATOR_KEY, getMockSimulatorProfile())
+  }
 }
 
-/** Wipe all guest data. */
+/** Wipe all guest data and re-seed from mock data. */
 export function clearGuestStorage() {
   ;[PORTFOLIO_KEY, HOUSEHOLD_KEY, SIMULATOR_KEY].forEach((k) => {
     try { localStorage.removeItem(k) } catch { /* ignore */ }
   })
 }
 
+/** Reset guest storage to the fresh mock dataset. */
+export function resetGuestStorage() {
+  write(PORTFOLIO_KEY, getMockPortfolio())
+  write(HOUSEHOLD_KEY, getMockHousehold())
+  write(SIMULATOR_KEY, getMockSimulatorProfile())
+}
+
 // ─── Portfolio API (mirrors portfolioService.js) ──────────────────────────────
 
 function readPortfolio() {
-  return read(PORTFOLIO_KEY, { properties: [] })
+  return read(PORTFOLIO_KEY, getMockPortfolio())
 }
 
 function writePortfolio(portfolio) {
@@ -139,7 +143,7 @@ export async function deletePlannedInvestment(id) {
 // ─── Household profile API ────────────────────────────────────────────────────
 
 export async function getHouseholdProfile() {
-  return read(HOUSEHOLD_KEY, defaultHousehold())
+  return read(HOUSEHOLD_KEY, getMockHousehold())
 }
 
 export async function saveHouseholdProfile(profile) {
