@@ -15,17 +15,19 @@
  * - Dividends: 30% withholding tax
  * 
  * For accumulating ETFs (reinvest dividends), dividendPct = 0 → no tax
- * For distributing ETFs, dividendPct = actual dividend yield
+ * For distributing ETFs, dividendPct = annual dividend yield (e.g. 0.02 for 2% yield)
  * 
- * @param {number} currentValue - Current ETF value
- * @param {number} principal - Original investment amount
- * @param {number} dividendPct - Percentage of returns from dividends (0-1)
+ * Annual dividend income = currentValue × dividendPct
+ * Tax = annualDividend × 30%
+ * 
+ * @param {number} currentValue - Current ETF portfolio value
+ * @param {number} principal - Original investment amount (unused, kept for API compatibility)
+ * @param {number} dividendPct - Annual dividend yield as a fraction (0-1)
  * @returns {number} Annual tax owed on dividends
  */
 export function calculateETFTax(currentValue, principal, dividendPct = 0) {
-  const totalGain = Math.max(0, currentValue - principal)
-  const dividendPortion = totalGain * dividendPct
-  return Math.round(dividendPortion * 0.30)
+  const annualDividend = currentValue * dividendPct
+  return Math.round(annualDividend * 0.30)
 }
 
 /**

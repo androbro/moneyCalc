@@ -9,6 +9,7 @@ import { getRemainingBalance, getAnnualLoanPayment } from '../loans/index.js'
 import { calculateRentalIncomeTax, calculateETFTax } from '../taxes/index.js'
 import { computePropertySaleProceeds } from './saleProceeds.js'
 import { addYears } from '../utils/dateUtils.js'
+import { isRentalActiveOn } from '../utils/propertyUtils.js'
 
 /**
  * Build property-by-property scenario comparison
@@ -102,7 +103,8 @@ export function buildPropertyScenarioComparison(properties, scenarioConfig) {
       }
 
       // Rental income (with tax if configured)
-      if (decision.action === 'keep' && property.status === 'rented') {
+      // Use isRentalActiveOn to respect rentalStartDate/rentalEndDate, matching baseline behaviour
+      if (decision.action === 'keep' && isRentalActiveOn(property, yearStart)) {
         const baseRent = (property.startRentalIncome || property.monthlyRentalIncome || 0) * 12
         const indexRate = property.indexationRate ?? 0.02
         const vacancyRate = property.vacancyRate ?? 0.05

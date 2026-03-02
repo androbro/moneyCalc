@@ -9,6 +9,7 @@ import {
   buildPropertyScenarioComparison,
   computePropertySaleProceeds,
   formatEUR,
+  getRemainingBalance,
 } from '../utils/projectionUtils'
 import InfoTooltip from './InfoTooltip'
 import CalculationBreakdown from './CalculationBreakdown'
@@ -52,9 +53,11 @@ const INVESTMENT_TYPES = {
 // ─── Property Card Component ──────────────────────────────────────────────────
 
 function PropertyCard({ property, decision, onDecisionChange }) {
-  const equity = property.currentValue - (property.loans || []).reduce(
-    (sum, loan) => sum + (loan.originalAmount || 0), 0
+  const todayISO = new Date().toISOString()
+  const currentLoanBalance = (property.loans || []).reduce(
+    (sum, loan) => sum + getRemainingBalance(loan, todayISO), 0
   )
+  const equity = property.currentValue - currentLoanBalance
   
   const action = decision.action || 'keep'
   const investmentType = decision.investmentType || 'etf'
