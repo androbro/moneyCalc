@@ -613,7 +613,7 @@ export default function App() {
 
 				{/* ── Projection ── */}
 				{activeTab === "projection" && (
-					<ProjectionChart properties={properties} profile={householdProfile} />
+					<ProjectionChart properties={properties} profile={householdProfile} trades={trades} tradingPortfolioValue={tradingPortfolioValue} />
 				)}
 
 				{/* ── Scenarios ── */}

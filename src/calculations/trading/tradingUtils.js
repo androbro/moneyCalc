@@ -79,3 +79,54 @@ export function computePortfolioValue(positions, marketData) {
     return sum + (price != null ? pos.shares * price : pos.totalCostEur)
   }, 0)
 }
+
+/**
+ * Build a 20-year trading portfolio projection from trade history.
+ *
+ * @param {Array}  trades          – raw trade rows (same shape as computePositions input)
+ * @param {number} currentValue    – current portfolio value in EUR (live or cost-basis fallback)
+ * @param {number} years           – projection horizon (default 20)
+ * @param {number} annualReturn    – assumed annual return rate (default 0.07 = 7%)
+ *
+ * Returns an array of { year, tradingProjection } objects (year 0 … years).
+ *
+ * Formula per year Y:
+ *   lumpSumFV   = currentValue × (1 + annualReturn)^Y
+ *   annuityFV   = monthlyAvg × ((1 + r/12)^(Y×12) − 1) / (r/12)   where r = annualReturn
+ *   tradingProjection = lumpSumFV + annuityFV
+ *
+ * Average monthly buy is computed from BUY trades:
+ *   – group BUY rows by calendar month
+ *   – sum EUR amounts per month
+ *   – divide by the number of distinct months observed
+ */
+export function buildTradingProjection(trades = [], currentValue = 0, years = 20, annualReturn = 0.07) {
+  // Compute average monthly buy amount from trade history
+  const monthlyBuys = {}
+  for (const t of trades) {
+    if (!t.type?.startsWith('BUY')) continue
+    const d = new Date(t.tradedAt)
+    if (isNaN(d.getTime())) continue
+    const key = `${d.getFullYear()}-${d.getMonth()}`
+    const amtEur = (t.totalAmount ?? 0) / (t.fxRate ?? 1)
+    monthlyBuys[key] = (monthlyBuys[key] ?? 0) + amtEur
+  }
+
+  const monthKeys   = Object.keys(monthlyBuys)
+  const monthlyAvg  = monthKeys.length > 0
+    ? Object.values(monthlyBuys).reduce((s, v) => s + v, 0) / monthKeys.length
+    : 0
+
+  const r = annualReturn / 12  // monthly rate
+
+  const result = []
+  for (let y = 0; y <= years; y++) {
+    const n = y * 12
+    const lumpSumFV = currentValue * Math.pow(1 + annualReturn, y)
+    const annuityFV = r === 0
+      ? monthlyAvg * n
+      : monthlyAvg * (Math.pow(1 + r, n) - 1) / r
+    result.push({ year: y, tradingProjection: Math.round(lumpSumFV + annuityFV) })
+  }
+  return result
+}

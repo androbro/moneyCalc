@@ -7,6 +7,7 @@ import {
   ReferenceLine,
 } from 'recharts'
 import { buildProjection, formatEUR } from '../utils/projectionUtils'
+import { buildTradingProjection } from '../calculations/trading/tradingUtils'
 import InfoPopover from './InfoPopover'
 import CalculationBreakdown from './CalculationBreakdown'
 
@@ -160,6 +161,19 @@ const INFO = {
       Assumes constant monthly contributions and fixed annual return. Dividends reinvested. Tax on gains not modelled.
     </>
   ),
+  tradingProjection: (
+    <>
+      <strong className="text-white block mb-1">Trading Portfolio (Revolut)</strong>
+      Projected future value of your Revolut trading account, assuming your current holdings compound forward plus your observed average monthly buy amount continues indefinitely.
+      <br /><br />
+      <code className="text-brand-300">
+        FV = currentValue × (1+rate)^Y<br />
+        &nbsp;&nbsp;&nbsp;+ monthlyAvg × ((1+r/12)^(Y×12) − 1) / (r/12)
+      </code>
+      <br /><br />
+      Monthly average is derived from your actual BUY trade history. Return rate is adjustable. Tax on gains not modelled.
+    </>
+  ),
   personalNetWorth: (
     <>
       <strong className="text-white block mb-1">Personal Net Worth</strong>
@@ -214,7 +228,7 @@ function CustomTooltip({ active, payload, label }) {
 
 // ─── Summary strip ────────────────────────────────────────────────────────────
 
-function SummaryStrip({ data, hasInvestments }) {
+function SummaryStrip({ data, hasInvestments, hasTradingProjection }) {
   const first = data[0]
   const last  = data[data.length - 1]
   const netWorthGain  = last.netWorth - first.netWorth
@@ -283,7 +297,25 @@ function SummaryStrip({ data, hasInvestments }) {
     )
   }
 
-  const cols = items.length <= 5 ? 'lg:grid-cols-5' : 'lg:grid-cols-7'
+  if (hasTradingProjection) {
+    const tradingGain = (last.tradingProjection ?? 0) - (first.tradingProjection ?? 0)
+    items.push({
+      label: 'Trading portfolio (20y)',
+      value: formatEUR(last.tradingProjection ?? 0),
+      color: 'text-indigo-400',
+      prefix: '',
+      info: INFO.tradingProjection,
+    })
+    items.push({
+      label: 'Trading growth (20y)',
+      value: formatEUR(tradingGain),
+      color: tradingGain >= 0 ? 'text-indigo-300' : 'text-red-400',
+      prefix: tradingGain >= 0 ? '+' : '',
+      info: INFO.tradingProjection,
+    })
+  }
+
+  const cols = items.length <= 5 ? 'lg:grid-cols-5' : items.length <= 7 ? 'lg:grid-cols-7' : 'lg:grid-cols-9'
 
   return (
     <div className={`grid grid-cols-2 ${cols} gap-3 mt-4`}>
@@ -356,7 +388,7 @@ function PropertyBreakdown({ properties }) {
 
 // ─── Annual cash flow table ───────────────────────────────────────────────────
 
-function CashFlowTable({ data, hasInvestments }) {
+function CashFlowTable({ data, hasInvestments, hasTradingProjection }) {
   const [expanded, setExpanded] = useState(false)
   const rows = expanded ? data : data.slice(0, 6)
 
@@ -387,6 +419,9 @@ function CashFlowTable({ data, hasInvestments }) {
             {hasInvestments && (
               <ThWithInfo info={INFO.personalNetWorth}>Personal NW</ThWithInfo>
             )}
+            {hasTradingProjection && (
+              <ThWithInfo info={INFO.tradingProjection}>Trading</ThWithInfo>
+            )}
           </tr>
         </thead>
         <tbody className="divide-y divide-slate-800">
@@ -413,6 +448,11 @@ function CashFlowTable({ data, hasInvestments }) {
               {hasInvestments && (
                 <td className="py-2 pl-2 text-right text-fuchsia-400 font-bold">
                   {formatEUR(row.personalNetWorth ?? 0)}
+                </td>
+              )}
+              {hasTradingProjection && (
+                <td className="py-2 px-2 text-right text-indigo-400 font-medium">
+                  {formatEUR(row.tradingProjection ?? 0)}
                 </td>
               )}
             </tr>
@@ -549,22 +589,28 @@ function getInvestmentMarkers(properties) {
   return byYear  // { "+3y": [inv, ...], ... }
 }
 
-export default function ProjectionChart({ properties, profile }) {
+export default function ProjectionChart({ properties, profile, trades = [], tradingPortfolioValue = 0 }) {
   const [inflationAdjusted, setInflationAdjusted] = useState(false)
-  
+  const [stockReturnRate, setStockReturnRate] = useState(0.07)
+
   if (!properties || properties.length === 0) return <EmptyState />
 
   const data = buildProjection(properties)
   const investmentMarkers = getInvestmentMarkers(properties)
 
-  // Build investment projection and merge into chart data
+  // Build investment projection from household profile (manual positions)
   const invData = buildInvProjection(profile)
   const hasInvestments = invData.some((d) => d.investmentPortfolio > 0)
 
-  // Merge: add investmentPortfolio and personalNetWorth to each year point
+  // Build trading portfolio projection from Revolut trade history
+  const tradingData = buildTradingProjection(trades, tradingPortfolioValue, 20, stockReturnRate)
+  const hasTradingProjection = tradingPortfolioValue > 0 || tradingData.some((d) => d.tradingProjection > 0)
+
+  // Merge: add investmentPortfolio, tradingProjection, and personalNetWorth to each year point
   // personalNetWorth = my share of real estate equity + investment portfolio
   const mergedData = data.map((pt, i) => {
-    const inv = invData[i]?.investmentPortfolio ?? 0
+    const inv     = invData[i]?.investmentPortfolio ?? 0
+    const trading = tradingData[i]?.tradingProjection ?? 0
     // My share of real estate equity
     let myEquity = pt.netWorth  // fallback: assume 100% ownership
     if (properties.length > 0) {
@@ -583,7 +629,7 @@ export default function ProjectionChart({ properties, profile }) {
         myEquity = Math.round(pt.netWorth * myShareFraction)
       }
     }
-    return { ...pt, investmentPortfolio: inv, personalNetWorth: myEquity + inv }
+    return { ...pt, investmentPortfolio: inv, tradingProjection: trading, personalNetWorth: myEquity + inv }
   })
 
   // Apply inflation adjustment if toggle is enabled
@@ -604,6 +650,7 @@ export default function ProjectionChart({ properties, profile }) {
           plannedInvestCost: Math.round(pt.plannedInvestCost / inflationFactor),
           totalReturn: Math.round(pt.totalReturn / inflationFactor),
           investmentPortfolio: Math.round(pt.investmentPortfolio / inflationFactor),
+          tradingProjection: Math.round(pt.tradingProjection / inflationFactor),
           personalNetWorth: Math.round(pt.personalNetWorth / inflationFactor),
         }
       })
@@ -620,37 +667,63 @@ export default function ProjectionChart({ properties, profile }) {
             Click any <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-slate-600 text-[10px] font-bold text-slate-300 mx-0.5">?</span> for a detailed explanation.
           </p>
         </div>
-        
-        {/* Inflation Toggle */}
-        <div className="flex items-center gap-3 bg-slate-800/50 px-4 py-2.5 rounded-lg border border-slate-700/50">
-          <label htmlFor="inflation-toggle" className="flex items-center gap-2 cursor-pointer">
-            <span className="text-sm text-slate-300 font-medium">Adjust for Inflation</span>
-            <InfoPopover>
-              <strong className="text-white block mb-1">Inflation Adjustment</strong>
-              When enabled, all future values are adjusted to today's purchasing power using a 2% annual inflation rate.
-              <br /><br />
-              This shows you the <strong>real value</strong> of your money, accounting for how inflation reduces purchasing power over time.
-              <br /><br />
-              <code className="text-brand-300">Real Value = Nominal Value ÷ (1.02)^year</code>
-              <br /><br />
-              Example: €100,000 in 20 years = €67,297 in today's money.
-            </InfoPopover>
-          </label>
-          <button
-            id="inflation-toggle"
-            role="switch"
-            aria-checked={inflationAdjusted}
-            onClick={() => setInflationAdjusted(!inflationAdjusted)}
-            className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 focus:ring-offset-slate-900 ${
-              inflationAdjusted ? 'bg-brand-500' : 'bg-slate-600'
-            }`}
-          >
-            <span
-              className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                inflationAdjusted ? 'translate-x-6' : 'translate-x-1'
+
+        <div className="flex flex-wrap items-center gap-3">
+          {/* Stock return rate selector (shown only when trading data is present) */}
+          {hasTradingProjection && (
+            <div className="flex items-center gap-2 bg-slate-800/50 px-4 py-2.5 rounded-lg border border-slate-700/50">
+              <label htmlFor="stock-return-rate" className="text-sm text-slate-300 font-medium whitespace-nowrap flex items-center gap-1">
+                Trading return rate
+                <InfoPopover>{INFO.tradingProjection}</InfoPopover>
+              </label>
+              <select
+                id="stock-return-rate"
+                value={stockReturnRate}
+                onChange={(e) => setStockReturnRate(Number(e.target.value))}
+                className="bg-slate-700 border border-slate-600 text-white text-sm rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              >
+                <option value={0.04}>4% (conservative)</option>
+                <option value={0.05}>5%</option>
+                <option value={0.06}>6%</option>
+                <option value={0.07}>7% (default)</option>
+                <option value={0.08}>8%</option>
+                <option value={0.09}>9%</option>
+                <option value={0.10}>10% (optimistic)</option>
+              </select>
+            </div>
+          )}
+
+          {/* Inflation Toggle */}
+          <div className="flex items-center gap-3 bg-slate-800/50 px-4 py-2.5 rounded-lg border border-slate-700/50">
+            <label htmlFor="inflation-toggle" className="flex items-center gap-2 cursor-pointer">
+              <span className="text-sm text-slate-300 font-medium">Adjust for Inflation</span>
+              <InfoPopover>
+                <strong className="text-white block mb-1">Inflation Adjustment</strong>
+                When enabled, all future values are adjusted to today's purchasing power using a 2% annual inflation rate.
+                <br /><br />
+                This shows you the <strong>real value</strong> of your money, accounting for how inflation reduces purchasing power over time.
+                <br /><br />
+                <code className="text-brand-300">Real Value = Nominal Value ÷ (1.02)^year</code>
+                <br /><br />
+                Example: €100,000 in 20 years = €67,297 in today's money.
+              </InfoPopover>
+            </label>
+            <button
+              id="inflation-toggle"
+              role="switch"
+              aria-checked={inflationAdjusted}
+              onClick={() => setInflationAdjusted(!inflationAdjusted)}
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 focus:ring-offset-slate-900 ${
+                inflationAdjusted ? 'bg-brand-500' : 'bg-slate-600'
               }`}
-            />
-          </button>
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                  inflationAdjusted ? 'translate-x-6' : 'translate-x-1'
+                }`}
+              />
+            </button>
+          </div>
         </div>
       </div>
 
@@ -660,7 +733,7 @@ export default function ProjectionChart({ properties, profile }) {
           <div>
             <h2 className="font-semibold text-slate-100">Portfolio Value vs. Debt</h2>
             <p className="text-xs text-slate-400 mt-0.5">
-              Each bar = total wealth stack: debt (red) → real estate equity (green){hasInvestments ? ' → investments (purple)' : ''}.
+              Each bar = total wealth stack: debt (red) → real estate equity (green){hasInvestments ? ' → manual investments (purple)' : ''}{hasTradingProjection ? ' → trading portfolio (indigo)' : ''}.
               Dashed line = total return including cash flow.
             </p>
           </div>
@@ -669,6 +742,9 @@ export default function ProjectionChart({ properties, profile }) {
             { label: 'Loan Balance',         color: '#ef4444', info: INFO.loanBalance },
             ...(hasInvestments ? [
               { label: 'Investment Portfolio', color: '#a78bfa', info: INFO.investmentPortfolio },
+            ] : []),
+            ...(hasTradingProjection ? [
+              { label: 'Trading Portfolio', color: '#6366f1', info: INFO.tradingProjection },
             ] : []),
             { label: 'Total Return',         color: '#f59e0b', info: INFO.totalReturn },
           ]} />
@@ -680,11 +756,14 @@ export default function ProjectionChart({ properties, profile }) {
             <XAxis dataKey="label" tick={{ fill: '#94a3b8', fontSize: 11 }} axisLine={{ stroke: '#1e293b' }} tickLine={false} />
             <YAxis tickFormatter={formatYAxis} tick={{ fill: '#94a3b8', fontSize: 10 }} axisLine={false} tickLine={false} width={68} />
             <Tooltip content={<CustomTooltip />} />
-            {/* Stacked bars: loan (red) → real estate equity (green) → investments (purple) */}
+            {/* Stacked bars: loan (red) → real estate equity (green) → investments (purple) → trading (indigo) */}
             <Bar dataKey="loanBalance"        name="Loan Balance"         stackId="value" fill="#ef4444" fillOpacity={0.85} radius={[0,0,0,0]} />
-            <Bar dataKey="netWorth"           name="Equity (Net Worth)"   stackId="value" fill="#10b981" fillOpacity={0.85} radius={hasInvestments ? [0,0,0,0] : [4,4,0,0]} />
+            <Bar dataKey="netWorth"           name="Equity (Net Worth)"   stackId="value" fill="#10b981" fillOpacity={0.85} radius={(hasInvestments || hasTradingProjection) ? [0,0,0,0] : [4,4,0,0]} />
             {hasInvestments && (
-              <Bar dataKey="investmentPortfolio" name="Investment Portfolio" stackId="value" fill="#a78bfa" fillOpacity={0.85} radius={[4,4,0,0]} />
+              <Bar dataKey="investmentPortfolio" name="Investment Portfolio" stackId="value" fill="#a78bfa" fillOpacity={0.85} radius={hasTradingProjection ? [0,0,0,0] : [4,4,0,0]} />
+            )}
+            {hasTradingProjection && (
+              <Bar dataKey="tradingProjection" name="Trading Portfolio" stackId="value" fill="#6366f1" fillOpacity={0.85} radius={[4,4,0,0]} />
             )}
             {/* Total Return line overlaid */}
             <Line type="monotone" dataKey="totalReturn" name="Total Return" stroke="#f59e0b" strokeWidth={2} dot={false} activeDot={{ r: 5, fill: '#f59e0b' }} strokeDasharray="5 3" />
@@ -707,7 +786,7 @@ export default function ProjectionChart({ properties, profile }) {
           </ComposedChart>
         </ResponsiveContainer>
 
-        <SummaryStrip data={displayData} hasInvestments={hasInvestments} />
+        <SummaryStrip data={displayData} hasInvestments={hasInvestments} hasTradingProjection={hasTradingProjection} />
       </div>
 
       {/* ── Chart 2: Cash Flow (only when portfolio has rented properties) ── */}
@@ -728,7 +807,7 @@ export default function ProjectionChart({ properties, profile }) {
 
       {/* ── Tables ── */}
       <PropertyBreakdown properties={properties} />
-      <CashFlowTable data={displayData} hasInvestments={hasInvestments} />
+      <CashFlowTable data={displayData} hasInvestments={hasInvestments} hasTradingProjection={hasTradingProjection} />
     </div>
   )
 }

@@ -137,7 +137,7 @@ export default function SharedPortfolioPage({ token }) {
 
         {/* Projection */}
         {activeTab === 'projection' && (
-          <ProjectionChart properties={properties} profile={household} />
+          <ProjectionChart properties={properties} profile={household} trades={[]} tradingPortfolioValue={0} />
         )}
 
         {/* Cash flow */}
