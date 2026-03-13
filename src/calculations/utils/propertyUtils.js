@@ -8,32 +8,51 @@
  * Check if rental income is active for a property on a specific date
  * 
  * Considers:
- * - Property status (must be 'rented')
- * - Rental start date (if set, must be on or before target date)
- * - Rental end date (if set, must be on or after target date)
+ * - Rental intent (rented status, legacy isRented, intendedRental, or rentalStartDate)
+ * - Rental start/end dates
+ * - Owner-occupied transition into rental mode
+ * - Planned status exclusion
  * 
  * @param {Object} property - Property object with status, rentalStartDate, rentalEndDate
  * @param {Date} date - Target date (defaults to today)
  * @returns {boolean} True if rental is active
  */
 export function isRentalActiveOn(property, date = new Date()) {
-  if (property.status && property.status !== 'rented') {
+  const targetDate = new Date(date)
+  const hasRentalIntent =
+    property.status === 'rented' ||
+    property.isRented === true ||
+    property.intendedRental === true ||
+    Boolean(property.rentalStartDate)
+
+  // No rental intent at all -> never active.
+  if (!hasRentalIntent) {
     return false
   }
-  
-  // Legacy: if no status field, fall back to isRented boolean
-  if (!property.status && property.isRented === false) {
+
+  // Planned/simulated properties are not active rentals until owned.
+  // Ownership timing is handled elsewhere; this prevents accidental "always rented".
+  if (property.status === 'planned') {
     return false
   }
-  
-  if (property.rentalStartDate && new Date(property.rentalStartDate) > date) {
+
+  if (property.rentalStartDate && new Date(property.rentalStartDate) > targetDate) {
     return false
   }
-  
-  if (property.rentalEndDate && new Date(property.rentalEndDate) < date) {
+
+  if (property.rentalEndDate && new Date(property.rentalEndDate) < targetDate) {
     return false
   }
-  
+
+  // Owner-occupied properties can transition into rented mode when a rental start date is set.
+  // Without a rental start date, owner-occupied means no rental income.
+  if (property.status === 'owner_occupied') {
+    if (!property.rentalStartDate) return false
+    if (property.residenceEndDate && new Date(property.residenceEndDate) >= targetDate) {
+      return false
+    }
+  }
+
   return true
 }
 
