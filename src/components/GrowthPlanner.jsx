@@ -1377,6 +1377,7 @@ export default function GrowthPlanner({ properties, profile, initialPlan, onSave
   const [expandedIdx, setExpandedIdx] = useState(0)
   const [expandedLoanCard, setExpandedLoanCard] = useState(null)
   const [horizonYears, setHorizonYears] = useState(initialSnapshot.horizonYears)
+  const [horizonYearsInput, setHorizonYearsInput] = useState(String(initialSnapshot.horizonYears))
   const [maxLTV, setMaxLTV] = useState(initialSnapshot.maxLTV)
   const [showAutoModal, setShowAutoModal] = useState(false)
   const [loanRecommendModal, setLoanRecommendModal] = useState(null) // index of acquisition
@@ -1385,6 +1386,7 @@ export default function GrowthPlanner({ properties, profile, initialPlan, onSave
   useEffect(() => {
     setAcquisitions(initialSnapshot.acquisitions)
     setHorizonYears(initialSnapshot.horizonYears)
+    setHorizonYearsInput(String(initialSnapshot.horizonYears))
     setMaxLTV(initialSnapshot.maxLTV)
     setExpandedIdx((idx) => {
       const lastIndex = Math.max(0, initialSnapshot.acquisitions.length - 1)
@@ -1468,6 +1470,17 @@ export default function GrowthPlanner({ properties, profile, initialPlan, onSave
       setAcquisitions(generated)
       setExpandedIdx(null)
     }
+  }
+
+  function commitHorizonInput(raw) {
+    const parsed = Number(raw)
+    if (!Number.isFinite(parsed)) {
+      setHorizonYearsInput(String(horizonYears))
+      return
+    }
+    const clamped = Math.min(40, Math.max(5, Math.round(parsed)))
+    setHorizonYears(clamped)
+    setHorizonYearsInput(String(clamped))
   }
 
   const { milestones, yearlyData, summary } = roadmap
@@ -1585,8 +1598,22 @@ export default function GrowthPlanner({ properties, profile, initialPlan, onSave
                 min="5"
                 max="40"
                 step="1"
-                value={horizonYears}
-                onChange={(e) => setHorizonYears(Math.max(5, num(e.target.value)))}
+                value={horizonYearsInput}
+                onChange={(e) => {
+                  const raw = e.target.value
+                  setHorizonYearsInput(raw)
+                  if (raw === '') return
+                  const parsed = Number(raw)
+                  if (Number.isFinite(parsed) && parsed > 0) setHorizonYears(Math.round(parsed))
+                }}
+                onBlur={(e) => {
+                  const raw = e.target.value.trim()
+                  if (raw === '') {
+                    setHorizonYearsInput(String(horizonYears))
+                    return
+                  }
+                  commitHorizonInput(raw)
+                }}
                 className="input w-full"
               />
             </Field>
