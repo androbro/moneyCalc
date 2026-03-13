@@ -105,6 +105,12 @@ function monthsToText(months) {
   return parts.join(' ')
 }
 
+function monthYearFromNow(monthsFromNow) {
+  const d = new Date()
+  d.setMonth(d.getMonth() + monthsFromNow)
+  return d.toLocaleDateString('en-GB', { month: 'short', year: 'numeric' })
+}
+
 const COLOR_MAP = {
   brand:   { border: 'border-brand-500/50',   badge: 'bg-brand-900/40 text-brand-300',   dot: '#3b82f6' },
   amber:   { border: 'border-amber-500/50',   badge: 'bg-amber-900/40 text-amber-300',   dot: '#f59e0b' },
@@ -608,7 +614,7 @@ function LoanTypePill({ loanTypeId }) {
   )
 }
 
-function AcquisitionConfigCard({ acquisition, index, isExpanded, onToggle, onChange, onRemove, onOpenLoanModal }) {
+function AcquisitionConfigCard({ acquisition, index, milestone, isExpanded, onToggle, onChange, onRemove, onOpenLoanModal }) {
   const isBullet =
     acquisition.loanType === 'bullet_loan' ||
     acquisition.loanType === 'ipt_bullet' ||
@@ -619,6 +625,9 @@ function AcquisitionConfigCard({ acquisition, index, isExpanded, onToggle, onCha
   const monthlyPayment = isBullet
     ? calcBulletMonthlyPayment(loanAmount, acquisition.loanRate)
     : calcMonthlyPayment(loanAmount, acquisition.loanRate, termMonths)
+  const milestoneLabel = milestone
+    ? `+${milestone.year}y (${monthYearFromNow(milestone.monthIndex)})`
+    : 'Not within horizon'
 
   function update(key, value) {
     const updated = { ...acquisition, [key]: value }
@@ -647,7 +656,9 @@ function AcquisitionConfigCard({ acquisition, index, isExpanded, onToggle, onCha
           </span>
           <div className="min-w-0">
             <p className="font-semibold text-white text-sm truncate">{acquisition.label || 'Unnamed'}</p>
-            <p className="text-xs text-slate-400">{fmt(acquisition.targetPrice)}</p>
+            <p className="text-xs text-slate-400">
+              {fmt(acquisition.targetPrice)} · <span className={milestone ? 'text-amber-400' : 'text-slate-500'}>{milestoneLabel}</span>
+            </p>
           </div>
         </div>
         <div className="flex items-center gap-2 shrink-0">
@@ -837,7 +848,7 @@ function AcquisitionConfigCard({ acquisition, index, isExpanded, onToggle, onCha
 
 function SnowballTooltip({ active, payload, label, milestones }) {
   if (!active || !payload?.length) return null
-  const milestone = milestones.find((m) => `+${m.year}y` === label || (label === 'Today' && m.year === 0))
+  const matchingMilestones = milestones.filter((m) => `+${m.year}y` === label || (label === 'Today' && m.year === 0))
   return (
     <div className="bg-slate-800 border border-slate-600 rounded-xl p-3 shadow-xl text-xs min-w-[200px]">
       <p className="font-semibold text-white mb-2 text-sm">{label}</p>
@@ -852,11 +863,24 @@ function SnowballTooltip({ active, payload, label, milestones }) {
           </span>
         </div>
       ))}
-      {milestone && (
+      {matchingMilestones.length > 0 && (
         <div className="mt-2 pt-2 border-t border-slate-600">
-          <p className="text-amber-400 font-semibold">🏠 {milestone.label}</p>
-          <p className="text-slate-400">Own funds: {fmt(milestone.cashUsed)}</p>
-          <p className="text-slate-400">New loan: {fmt(milestone.newLoanAmount)}</p>
+          {matchingMilestones.length === 1 ? (
+            <>
+              <p className="text-amber-400 font-semibold">🏠 {matchingMilestones[0].label}</p>
+              <p className="text-slate-400">Own funds: {fmt(matchingMilestones[0].cashUsed)}</p>
+              <p className="text-slate-400">New loan: {fmt(matchingMilestones[0].newLoanAmount)}</p>
+            </>
+          ) : (
+            <>
+              <p className="text-amber-400 font-semibold">🏠 {matchingMilestones.length} acquisitions this year</p>
+              {matchingMilestones.map((m, idx) => (
+                <p key={`${m.monthIndex}_${idx}`} className="text-slate-400 truncate">
+                  #{idx + 1}: {m.label} ({monthYearFromNow(m.monthIndex)})
+                </p>
+              ))}
+            </>
+          )}
         </div>
       )}
     </div>
@@ -869,6 +893,9 @@ function SnowballChart({ yearlyData, milestones, historicalData, properties }) {
   const combinedData = [...historicalData, ...yearlyData]
   const validLabels = new Set(combinedData.map((d) => d.label))
   const tickInterval = Math.max(1, Math.floor(combinedData.length / 10))
+  const xTicks = combinedData
+    .map((d) => d.label)
+    .filter((lbl, idx, arr) => idx % tickInterval === 0 || idx === arr.length - 1)
 
   const currentYear = new Date().getFullYear()
 
@@ -903,7 +930,7 @@ function SnowballChart({ yearlyData, milestones, historicalData, properties }) {
       <ResponsiveContainer width="100%" height={300}>
         <ComposedChart data={combinedData} margin={{ top: 10, right: 60, left: 0, bottom: 0 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
-          <XAxis dataKey="label" tick={AXIS_TICK} interval={tickInterval} />
+          <XAxis dataKey="label" tick={AXIS_TICK} interval={0} ticks={xTicks} />
           <YAxis yAxisId="left" tickFormatter={kFmt} tick={AXIS_TICK} width={60} />
           <YAxis yAxisId="cf" orientation="right" tickFormatter={(v) => `€${Math.round(v)}`} tick={AXIS_TICK} width={60} />
           <Tooltip content={<SnowballTooltip milestones={milestones} />} />
@@ -974,21 +1001,28 @@ function SnowballChart({ yearlyData, milestones, historicalData, properties }) {
               />
             )
           })}
-          {/* Simulation milestones — amber lines, always labelled with acquisition number */}
+          {/* Simulation milestones — group same-year acquisitions into one labelled marker */}
           {(() => {
-            const seen = new Set()
-            return milestones.map((m, idx) => {
+            const groups = new Map()
+            milestones.forEach((m, idx) => {
               const xLabel = m.year === 0 ? 'Today' : `+${m.year}y`
-              if (!validLabels.has(xLabel) || seen.has(xLabel)) return null
-              seen.add(xLabel)
+              if (!groups.has(xLabel)) groups.set(xLabel, [])
+              groups.get(xLabel).push({ milestone: m, index: idx + 1 })
+            })
+
+            return Array.from(groups.entries()).map(([xLabel, items]) => {
+              if (!validLabels.has(xLabel)) return null
+              const firstIdx = items[0].index
+              const lastIdx = items[items.length - 1].index
+              const markerLabel = items.length === 1 ? `#${firstIdx}` : `#${firstIdx}-${lastIdx}`
               return (
                 <ReferenceLine
-                  key={m.monthIndex}
+                  key={`milestone_${xLabel}_${firstIdx}_${lastIdx}`}
                   yAxisId="left"
                   x={xLabel}
                   stroke="#f59e0b"
                   strokeDasharray="4 2"
-                  label={{ value: `#${idx + 1}`, position: 'insideTopRight', fill: '#fbbf24', fontSize: 10, fontWeight: 'bold' }}
+                  label={{ value: markerLabel, position: 'insideTopRight', fill: '#fbbf24', fontSize: 10, fontWeight: 'bold' }}
                 />
               )
             })
@@ -1013,10 +1047,8 @@ function MilestoneCard({ milestone, index }) {
         <span className="text-xs text-slate-500">Acquisition {index + 1}</span>
         <span className="text-xs font-semibold text-amber-400">
           {(() => {
-            if (milestone.monthIndex === 0) return 'Now'
-            const yr = milestone.month === 12 ? milestone.year + 1 : milestone.year
-            const mo = milestone.month === 12 ? 0 : milestone.month
-            return mo <= 1 ? `Year ${yr}` : `Year ${yr}, Mo ${mo}`
+            if (milestone.monthIndex === 0) return `Now (${monthYearFromNow(0)})`
+            return `+${milestone.year}y (${monthYearFromNow(milestone.monthIndex)})`
           })()}
         </span>
       </div>
@@ -1459,6 +1491,9 @@ export default function GrowthPlanner({ properties, profile, initialPlan, onSave
           <div className="card text-center">
             <p className="text-xs text-slate-400">First acquisition ready</p>
             <p className="text-base font-bold text-amber-400">{monthsToText(summary.readyInMonths)}</p>
+            {summary.readyInMonths !== null && (
+              <p className="text-xs text-slate-500">{monthYearFromNow(summary.readyInMonths)}</p>
+            )}
           </div>
           <div className="card text-center">
             <p className="text-xs text-slate-400">Properties in {horizonYears}y</p>
@@ -1530,6 +1565,7 @@ export default function GrowthPlanner({ properties, profile, initialPlan, onSave
               key={acq.id || idx}
               acquisition={acq}
               index={idx}
+              milestone={milestones[idx]}
               isExpanded={expandedIdx === idx}
               onToggle={() => setExpandedIdx(expandedIdx === idx ? -1 : idx)}
               onChange={(updated) => updateAcquisition(idx, updated)}
