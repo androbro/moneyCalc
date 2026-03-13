@@ -153,7 +153,9 @@ function buildPortfolioSnapshot(simProps, accumulatedCash, monthIdx = 0) {
     const effectiveRent = indexedRent * (1 - vacancyRate)
     const inflRate = p.inflationRate ?? 0.02
     const indexedOpex = (p.simMonthlyExpenses || 0) * Math.pow(1 + inflRate, monthIdx / 12)
-    return s + effectiveRent - indexedOpex
+    // Subtract loan payments for this rental property — true after-mortgage cash flow
+    const loanPayments = (p.simLoans || []).reduce((ls, l) => ls + (l.simMonthlyPayment || 0), 0)
+    return s + effectiveRent - indexedOpex - loanPayments
   }, 0)
   return {
     portfolioValue: Math.round(portfolioValue),

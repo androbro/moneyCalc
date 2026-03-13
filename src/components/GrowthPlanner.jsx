@@ -672,7 +672,7 @@ function AcquisitionConfigCard({ acquisition, index, isExpanded, onToggle, onCha
           </div>
           {acquisition.isPrimaryResidence && (
             <p className="text-xs text-amber-400/80 -mt-2">
-              Primary residence: 90% LTV, ~4% acquisition costs (verlaagd tarief)
+              Primary residence: 90% LTV, ~4% acquisition costs (verlaagd tarief) · <span className="text-slate-500">loan excluded from CF chart</span>
             </p>
           )}
 
@@ -1056,12 +1056,13 @@ function ExistingPropertyCard({ property }) {
   const purchaseYear = property.purchaseDate
     ? new Date(property.purchaseDate).getFullYear()
     : '?'
+  const isRented = property.status === 'rented' || property.isRented === true || (property.startRentalIncome || 0) > 0
   const statusLabel = isPlanned ? 'Planned' :
     property.status === 'rented' ? 'Rented out' :
     property.status === 'owner_occupied' ? 'Owner-occupied' :
     property.isRented ? 'Rented' : 'Owned'
-  const statusColor = isPlanned ? 'text-amber-400' : 'text-brand-400'
-  const borderColor = isPlanned ? 'border-amber-500/50' : 'border-brand-500/50'
+  const statusColor = isPlanned ? 'text-amber-400' : isRented ? 'text-brand-400' : 'text-slate-400'
+  const borderColor = isPlanned ? 'border-amber-500/50' : isRented ? 'border-brand-500/50' : 'border-slate-600/50'
 
   return (
     <div className={`card space-y-3 border-l-4 ${borderColor}`}>
@@ -1069,7 +1070,12 @@ function ExistingPropertyCard({ property }) {
         <span className="text-xs text-slate-500">
           {isPlanned ? `Planned ${purchaseYear}` : `Purchased ${purchaseYear}`}
         </span>
-        <span className={`text-xs font-semibold ${statusColor}`}>{statusLabel}</span>
+        <div className="flex items-center gap-2">
+          <span className={`text-xs font-semibold ${statusColor}`}>{statusLabel}</span>
+          {!isRented && debt > 0 && (
+            <span className="text-xs text-slate-600 bg-slate-800 px-1.5 py-0.5 rounded">loan excluded from CF</span>
+          )}
+        </div>
       </div>
       <p className="font-semibold text-white text-sm leading-tight">
         {property.name || property.address || 'Property'}
