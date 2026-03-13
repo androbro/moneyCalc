@@ -170,6 +170,333 @@ function PctInput({ value, onChange, step = '0.1', min = 0, max = 100 }) {
   )
 }
 
+// ─── Interest rate prediction ─────────────────────────────────────────────────
+
+/**
+ * Predict Belgian mortgage rate for a given number of months from today.
+ * Model: exponential decay from current rate (3.5%) towards long-run average (3.0%).
+ * Half-life: 7 years. Based on ECB rate cycle history.
+ */
+function predictInterestRate(monthsFromNow) {
+  const currentRate = 0.035
+  const longRunRate = 0.030
+  const halfLifeYears = 7
+  const years = monthsFromNow / 12
+  const decayFactor = Math.exp(-Math.LN2 * years / halfLifeYears)
+  return Math.round((longRunRate + (currentRate - longRunRate) * decayFactor) * 10000) / 10000
+}
+
+/**
+ * Auto-generate all achievable investment acquisitions within the horizon.
+ * Uses a two-pass approach:
+ * 1. Run simulation with base price queue to find trigger months
+ * 2. Re-price each acquisition at the indexed price for its trigger year
+ */
+function generateAutoAcquisitions(properties, profile, roadmapConfig, template) {
+  const {
+    basePriceToday = 300000,
+    priceAppreciationRate = 0.03,
+    myShare = 1.0,
+    strategy = 'balanced',   // 'cashflow' = bullet loans, 'balanced' = standard mortgage
+    monthlyYield = 0.004,    // monthly rent as fraction of purchase price
+    monthlyExpenses = 300,
+  } = template
+
+  const MAX_QUEUE = 25
+
+  // Pass 1: run simulation with base prices to find trigger months
+  const templateQueue = Array.from({ length: MAX_QUEUE }, (_, i) => ({
+    label: `Investment Property ${i + 1}`,
+    targetPrice: basePriceToday,
+    myShare,
+    isPrimaryResidence: false,
+    monthlyRent: Math.round(basePriceToday * monthlyYield),
+    monthlyExpenses,
+    appreciationRate: 0.02,
+    loanType: strategy === 'cashflow' ? 'bullet_loan' : 'hypothecaire_lening',
+    loanRate: 0.035,
+    loanTermYears: 20,
+    acquisitionCostRate: 0.14,
+  }))
+
+  const pass1 = simulateGrowthRoadmap(properties, profile, {
+    ...roadmapConfig,
+    plannedAcquisitions: templateQueue,
+  })
+
+  if (!pass1.milestones.length) return []
+
+  // Pass 2: build price-indexed acquisitions based on actual trigger months
+  return pass1.milestones.map((m, i) => {
+    const yearsFromNow = m.monthIndex / 12
+    const indexedPrice = Math.round(basePriceToday * Math.pow(1 + priceAppreciationRate, yearsFromNow) / 5000) * 5000
+    const predictedRate = predictInterestRate(m.monthIndex)
+    const loanType = strategy === 'cashflow' ? 'bullet_loan' : 'hypothecaire_lening'
+
+    return {
+      id: `auto_${Date.now()}_${i}`,
+      label: `Investment Property ${i + 1}`,
+      targetPrice: indexedPrice,
+      myShare,
+      isPrimaryResidence: false,
+      monthlyRent: Math.round(indexedPrice * monthlyYield),
+      monthlyExpenses: Math.round(monthlyExpenses * Math.pow(1.02, yearsFromNow)),
+      appreciationRate: 0.02,
+      loanType,
+      loanRate: predictedRate,
+      loanTermYears: 20,
+      acquisitionCostRate: 0.14,
+    }
+  })
+}
+
+// ─── Loan type recommendation modal ───────────────────────────────────────────
+
+const PASSIVE_INCOME_RECOMMENDATION = {
+  employed: 'bullet_loan',
+  self_employed: 'ipt_bullet',
+}
+
+const LOAN_RECOMMENDATION_NOTES = {
+  hypothecaire_lening: { score: 3, verdict: 'Good — builds equity steadily, lowest rate. Best for primary residence.' },
+  hypothecair_mandaat: { score: 2, verdict: 'OK — saves upfront costs but higher rate. Good for bridge/short-term.' },
+  belofte_van_hypotheek: { score: 1, verdict: 'Avoid — weakest security, highest rate, rarely accepted.' },
+  bullet_loan: { score: 5, verdict: '⭐ Best for passive income (employed) — lowest monthly payment = maximum cash flow. Need exit plan at maturity.' },
+  ipt_bullet: { score: 5, verdict: '⭐ Best for self-employed — company pension (IPT) repays balloon. Tax-efficient and strong cash flow.' },
+  liquidatiereserve_bullet: { score: 4, verdict: 'Great for company owners — liquidation reserve at 5% tax repays balloon. Efficient exit strategy.' },
+  persoonlijke_lening: { score: 1, verdict: 'Last resort only — high rate (5–8%), max €75k. Avoid for investment properties.' },
+}
+
+function LoanTypeRecommendationModal({ currentType, onSelect, onClose }) {
+  const sorted = [...BELGIAN_LOAN_TYPES].sort(
+    (a, b) => (LOAN_RECOMMENDATION_NOTES[b.id]?.score || 0) - (LOAN_RECOMMENDATION_NOTES[a.id]?.score || 0)
+  )
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[85vh] overflow-y-auto">
+        <div className="sticky top-0 bg-slate-900 border-b border-slate-700/50 px-5 py-4 flex items-start justify-between z-10">
+          <div>
+            <h2 className="text-base font-bold text-white">Choose Your Loan Type</h2>
+            <p className="text-xs text-slate-400 mt-0.5">
+              Ranked for <span className="text-emerald-400 font-medium">passive income &amp; early retirement</span>. Bullet loans maximize monthly cash flow — the key to snowballing quickly.
+            </p>
+          </div>
+          <button onClick={onClose} className="text-slate-400 hover:text-white ml-4 text-xl leading-none">×</button>
+        </div>
+        <div className="p-4 space-y-3">
+          {sorted.map((lt) => {
+            const note = LOAN_RECOMMENDATION_NOTES[lt.id]
+            const isSelected = currentType === lt.id
+            const isTop = note?.score === 5
+            return (
+              <div
+                key={lt.id}
+                className={`rounded-xl border p-3 cursor-pointer transition-all ${
+                  isSelected
+                    ? 'border-brand-500 bg-brand-900/20'
+                    : isTop
+                    ? 'border-emerald-500/40 bg-emerald-900/10 hover:border-emerald-500/70'
+                    : 'border-slate-700/50 hover:border-slate-500'
+                }`}
+                onClick={() => { onSelect(lt.id); onClose() }}
+              >
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-semibold text-white text-sm">{lt.nameEN}</span>
+                      <span className={`text-xs px-2 py-0.5 rounded-full ${getBadgeClass(lt.color)}`}>{lt.rateLabel}</span>
+                      {isTop && <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-900/50 text-emerald-300 font-medium">Best for passive income</span>}
+                    </div>
+                    <p className="text-xs text-slate-400 mt-1">{note?.verdict}</p>
+                    <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-0.5">
+                      {lt.prosEN.slice(0, 2).map((p, i) => (
+                        <p key={i} className="text-xs text-emerald-400/80">✓ {p}</p>
+                      ))}
+                      {lt.consEN.slice(0, 2).map((c, i) => (
+                        <p key={i} className="text-xs text-red-400/70">✗ {c}</p>
+                      ))}
+                    </div>
+                    {lt.monthlyPaymentStyle === 'interest_only' && (
+                      <p className="text-xs text-cyan-400 mt-1.5">
+                        Interest-only payment → monthly payment ~4–5× lower than annuity → maximum cash flow snowball
+                      </p>
+                    )}
+                    <p className="text-xs text-amber-400/70 mt-1">{lt.taxNote2025}</p>
+                  </div>
+                  <div className="shrink-0 text-right">
+                    <div className="flex gap-0.5 justify-end">
+                      {Array.from({ length: 5 }).map((_, i) => (
+                        <span key={i} className={`w-2 h-2 rounded-full ${i < note?.score ? 'bg-emerald-400' : 'bg-slate-700'}`} />
+                      ))}
+                    </div>
+                    <p className="text-xs text-slate-500 mt-1">{lt.typicalTermYears}yr typical</p>
+                  </div>
+                </div>
+              </div>
+            )
+          })}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Auto-generate modal ──────────────────────────────────────────────────────
+
+function AutoGenerateModal({ onGenerate, onClose, profile }) {
+  const [basePriceToday, setBasePriceToday] = useState(300000)
+  const [priceAppreciation, setPriceAppreciation] = useState(3)
+  const [myShare, setMyShare] = useState(100)
+  const [strategy, setStrategy] = useState('balanced')
+  const [monthlyYield, setMonthlyYield] = useState(0.4)
+
+  const currentYear = new Date().getFullYear()
+  const exampleYears = [5, 10, 15]
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl max-w-md w-full">
+        <div className="border-b border-slate-700/50 px-5 py-4 flex items-start justify-between">
+          <div>
+            <h2 className="text-base font-bold text-white">Auto-Generate Acquisitions</h2>
+            <p className="text-xs text-slate-400 mt-0.5">Fills your plan with every achievable acquisition over 25 years.</p>
+          </div>
+          <button onClick={onClose} className="text-slate-400 hover:text-white ml-4 text-xl leading-none">×</button>
+        </div>
+        <div className="p-5 space-y-4">
+          {/* Base price */}
+          <div className="space-y-1">
+            <label className="block text-xs font-medium text-slate-400">
+              Base property price <span className="text-slate-500">(today, {currentYear})</span>
+            </label>
+            <div className="relative">
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-sm">€</span>
+              <input
+                type="number"
+                min="50000"
+                step="5000"
+                value={basePriceToday}
+                onChange={(e) => setBasePriceToday(num(e.target.value))}
+                className="input pl-7 w-full"
+              />
+            </div>
+          </div>
+
+          {/* Price appreciation */}
+          <div className="space-y-1">
+            <label className="block text-xs font-medium text-slate-400">Annual property price increase</label>
+            <div className="relative">
+              <input
+                type="number"
+                min="0"
+                max="10"
+                step="0.5"
+                value={priceAppreciation}
+                onChange={(e) => setPriceAppreciation(num(e.target.value))}
+                className="input pr-7 w-full"
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 text-sm">%</span>
+            </div>
+            <div className="flex gap-2 text-xs text-slate-500 mt-1">
+              {exampleYears.map((y) => (
+                <span key={y} className="bg-slate-800 px-2 py-0.5 rounded">
+                  +{y}y: {fmt(Math.round(basePriceToday * Math.pow(1 + priceAppreciation / 100, y) / 5000) * 5000)}
+                </span>
+              ))}
+            </div>
+          </div>
+
+          {/* Monthly yield */}
+          <div className="space-y-1">
+            <label className="block text-xs font-medium text-slate-400">Monthly rent (% of purchase price)</label>
+            <div className="relative">
+              <input
+                type="number"
+                min="0.2"
+                max="1.5"
+                step="0.05"
+                value={monthlyYield}
+                onChange={(e) => setMonthlyYield(num(e.target.value))}
+                className="input pr-7 w-full"
+              />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 text-sm">%</span>
+            </div>
+            <p className="text-xs text-slate-500">
+              = {fmt(Math.round(basePriceToday * monthlyYield / 100))}/mo today · {fmt(Math.round(basePriceToday * Math.pow(1 + priceAppreciation / 100, 10) * monthlyYield / 100))}/mo in 10y
+            </p>
+          </div>
+
+          {/* My share */}
+          <div className="space-y-1">
+            <label className="block text-xs font-medium text-slate-400">My ownership share</label>
+            <div className="relative">
+              <input type="number" min="1" max="100" step="1" value={myShare}
+                onChange={(e) => setMyShare(num(e.target.value))}
+                className="input pr-7 w-full" />
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 text-sm">%</span>
+            </div>
+          </div>
+
+          {/* Strategy */}
+          <div className="space-y-2">
+            <label className="block text-xs font-medium text-slate-400">Loan strategy</label>
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                { id: 'balanced', label: 'Balanced', sub: 'Standard Mortgage · equity building', color: 'brand' },
+                { id: 'cashflow', label: 'Max Cash Flow', sub: 'Bullet Loan · interest-only · more passive income', color: 'emerald' },
+              ].map((s) => (
+                <button
+                  key={s.id}
+                  onClick={() => setStrategy(s.id)}
+                  className={`rounded-lg border p-2.5 text-left transition-all ${
+                    strategy === s.id
+                      ? s.id === 'cashflow' ? 'border-emerald-500 bg-emerald-900/20' : 'border-brand-500 bg-brand-900/20'
+                      : 'border-slate-700 hover:border-slate-500'
+                  }`}
+                >
+                  <p className={`text-xs font-semibold ${strategy === s.id ? (s.id === 'cashflow' ? 'text-emerald-400' : 'text-brand-400') : 'text-white'}`}>{s.label}</p>
+                  <p className="text-xs text-slate-500 mt-0.5">{s.sub}</p>
+                </button>
+              ))}
+            </div>
+            {strategy === 'cashflow' && (
+              <p className="text-xs text-emerald-400/80 bg-emerald-900/20 border border-emerald-500/20 rounded-lg p-2">
+                Bullet loans pay interest-only — monthly payments ~4× lower, freeing maximum cash to snowball faster. You repay the principal at loan maturity (typically via sale or refinance).
+              </p>
+            )}
+          </div>
+
+          {/* Interest rate note */}
+          <div className="rounded-lg bg-slate-800/50 p-3 text-xs text-slate-400 space-y-1">
+            <p className="font-medium text-slate-300">Interest rates: ECB forward curve</p>
+            <p>Today: 3.5% → converges to 3.0% over 7 years as ECB normalizes rates.</p>
+            <div className="flex gap-3 mt-1">
+              {[0, 36, 84, 180].map((mo) => (
+                <span key={mo} className="text-slate-300">
+                  +{mo === 0 ? 'now' : `${mo/12}y`}: {(predictInterestRate(mo) * 100).toFixed(2)}%
+                </span>
+              ))}
+            </div>
+          </div>
+
+          <button
+            onClick={() => {
+              onGenerate({ basePriceToday, priceAppreciationRate: priceAppreciation / 100, myShare: myShare / 100, strategy, monthlyYield: monthlyYield / 100 })
+              onClose()
+            }}
+            className="btn-primary w-full py-2.5 text-sm font-semibold"
+          >
+            ✨ Generate All Achievable Acquisitions
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── Default acquisition template ─────────────────────────────────────────────
 
 const DEFAULT_ACQUISITION = {
@@ -265,7 +592,7 @@ function LoanTypePill({ loanTypeId }) {
   )
 }
 
-function AcquisitionConfigCard({ acquisition, index, isExpanded, onToggle, onChange, onRemove }) {
+function AcquisitionConfigCard({ acquisition, index, isExpanded, onToggle, onChange, onRemove, onOpenLoanModal }) {
   const isBullet =
     acquisition.loanType === 'bullet_loan' ||
     acquisition.loanType === 'ipt_bullet' ||
@@ -395,7 +722,16 @@ function AcquisitionConfigCard({ acquisition, index, isExpanded, onToggle, onCha
           </div>
 
           {/* Loan type */}
-          <Field label="Loan Type">
+          <div className="space-y-1">
+            <div className="flex items-center justify-between">
+              <label className="block text-xs font-medium text-slate-400">Loan Type</label>
+              <button
+                onClick={() => onOpenLoanModal && onOpenLoanModal()}
+                className="text-xs text-brand-400 hover:text-brand-300 transition-colors"
+              >
+                Which type? →
+              </button>
+            </div>
             <select
               value={acquisition.loanType}
               onChange={(e) => update('loanType', e.target.value)}
@@ -407,7 +743,7 @@ function AcquisitionConfigCard({ acquisition, index, isExpanded, onToggle, onCha
                 </option>
               ))}
             </select>
-          </Field>
+          </div>
           {isBullet && (
             <p className="text-xs text-emerald-400/80 -mt-2">
               Interest-only: monthly payment ≈ {fmt(monthlyPayment)}/mo — capital repaid at maturity
@@ -604,7 +940,7 @@ function SnowballChart({ yearlyData, milestones, historicalData, properties }) {
                 x={lbl}
                 stroke="#3b82f6"
                 strokeDasharray="4 2"
-                label={{ value: `🏠 ${yr}`, position: 'top', fill: '#60a5fa', fontSize: 9 }}
+                label={{ value: `${yr}`, position: 'insideTopRight', fill: '#60a5fa', fontSize: 10, fontWeight: 'bold' }}
               />
             )
           })}
@@ -618,25 +954,29 @@ function SnowballChart({ yearlyData, milestones, historicalData, properties }) {
                 x={pm.label}
                 stroke="#a78bfa"
                 strokeDasharray="4 2"
-                label={{ value: `🏠 ${pm.name}`, position: 'top', fill: '#c4b5fd', fontSize: 9 }}
+                label={{ value: pm.name.slice(0, 8), position: 'insideTopRight', fill: '#c4b5fd', fontSize: 10, fontWeight: 'bold' }}
               />
             )
           })}
-          {/* Simulation milestones — amber lines */}
-          {milestones.map((m) => {
-            const xLabel = m.year === 0 ? 'Today' : `+${m.year}y`
-            if (!validLabels.has(xLabel)) return null
-            return (
-              <ReferenceLine
-                key={m.monthIndex}
-                yAxisId="left"
-                x={xLabel}
-                stroke="#f59e0b"
-                strokeDasharray="4 2"
-                label={{ value: `🏠 ${m.year === 0 ? 'Now' : `+${m.year}y`}`, position: 'top', fill: '#fbbf24', fontSize: 9 }}
-              />
-            )
-          })}
+          {/* Simulation milestones — amber lines, always labelled with acquisition number */}
+          {(() => {
+            const seen = new Set()
+            return milestones.map((m, idx) => {
+              const xLabel = m.year === 0 ? 'Today' : `+${m.year}y`
+              if (!validLabels.has(xLabel) || seen.has(xLabel)) return null
+              seen.add(xLabel)
+              return (
+                <ReferenceLine
+                  key={m.monthIndex}
+                  yAxisId="left"
+                  x={xLabel}
+                  stroke="#f59e0b"
+                  strokeDasharray="4 2"
+                  label={{ value: `#${idx + 1}`, position: 'insideTopRight', fill: '#fbbf24', fontSize: 10, fontWeight: 'bold' }}
+                />
+              )
+            })
+          })()}
         </ComposedChart>
       </ResponsiveContainer>
     </div>
@@ -651,14 +991,17 @@ function MilestoneCard({ milestone, index }) {
 
   return (
     <div
-      className={`card shrink-0 w-64 space-y-3 border-l-4 ${(COLOR_MAP[color] || COLOR_MAP.brand).border}`}
+      className={`card space-y-3 border-l-4 ${(COLOR_MAP[color] || COLOR_MAP.brand).border}`}
     >
       <div className="flex items-center justify-between">
         <span className="text-xs text-slate-500">Acquisition {index + 1}</span>
         <span className="text-xs font-semibold text-amber-400">
-          {milestone.year === 0
-            ? 'Now'
-            : `Year ${milestone.year}${milestone.month > 1 ? `, Mo ${milestone.month}` : ''}`}
+          {(() => {
+            if (milestone.monthIndex === 0) return 'Now'
+            const yr = milestone.month === 12 ? milestone.year + 1 : milestone.year
+            const mo = milestone.month === 12 ? 0 : milestone.month
+            return mo <= 1 ? `Year ${yr}` : `Year ${yr}, Mo ${mo}`
+          })()}
         </span>
       </div>
       <p className="font-semibold text-white text-sm leading-tight">{milestone.label}</p>
@@ -721,7 +1064,7 @@ function ExistingPropertyCard({ property }) {
   const borderColor = isPlanned ? 'border-amber-500/50' : 'border-brand-500/50'
 
   return (
-    <div className={`card shrink-0 w-64 space-y-3 border-l-4 ${borderColor}`}>
+    <div className={`card space-y-3 border-l-4 ${borderColor}`}>
       <div className="flex items-center justify-between">
         <span className="text-xs text-slate-500">
           {isPlanned ? `Planned ${purchaseYear}` : `Purchased ${purchaseYear}`}
@@ -755,35 +1098,6 @@ function ExistingPropertyCard({ property }) {
   )
 }
 
-function UnifiedTimeline({ properties, milestones }) {
-  const sortedExisting = [...properties].sort(
-    (a, b) => new Date(a.purchaseDate || 0) - new Date(b.purchaseDate || 0)
-  )
-  return (
-    <div>
-      <h3 className="text-sm font-semibold text-slate-300 mb-1">Property Timeline</h3>
-      <p className="text-xs text-slate-500 mb-3">
-        <span className="text-brand-400">Blue</span> = existing &nbsp;·&nbsp;
-        <span className="text-amber-400">Amber</span> = planned acquisition
-      </p>
-      <div className="flex gap-4 overflow-x-auto pb-2">
-        {sortedExisting.map((p) => (
-          <ExistingPropertyCard key={p.id} property={p} />
-        ))}
-        {milestones.map((m, idx) => (
-          <MilestoneCard key={m.monthIndex} milestone={m} index={idx} />
-        ))}
-        {milestones.length === 0 && (
-          <div className="card shrink-0 w-56 text-center py-6 text-slate-500 text-xs border border-dashed border-slate-700/50">
-            No planned acquisitions triggered yet.
-            <br />
-            Add one above to see it here.
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}
 
 // ─── Acceleration Advice ──────────────────────────────────────────────────────
 
@@ -1001,6 +1315,8 @@ export default function GrowthPlanner({ properties, profile }) {
   const [expandedLoanCard, setExpandedLoanCard] = useState(null)
   const [horizonYears, setHorizonYears] = useState(25)
   const [maxLTV, setMaxLTV] = useState(0.80)
+  const [showAutoModal, setShowAutoModal] = useState(false)
+  const [loanRecommendModal, setLoanRecommendModal] = useState(null) // index of acquisition
 
   // Exclude planned/simulated properties — they aren't owned yet and would skew the simulation
   const realProperties = useMemo(
@@ -1056,6 +1372,14 @@ export default function GrowthPlanner({ properties, profile }) {
     setExpandedIdx((e) => (e >= idx ? Math.max(0, e - 1) : e))
   }
 
+  function handleAutoGenerate(template) {
+    const generated = generateAutoAcquisitions(properties, profile, roadmapConfig, template)
+    if (generated.length > 0) {
+      setAcquisitions(generated)
+      setExpandedIdx(null)
+    }
+  }
+
   const { milestones, yearlyData, summary } = roadmap
 
   return (
@@ -1093,39 +1417,74 @@ export default function GrowthPlanner({ properties, profile }) {
         </div>
       )}
 
-      {/* Main two-panel grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-[360px_1fr] gap-5">
-        {/* LEFT: config */}
-        <div className="space-y-4">
-          <div className="flex items-center justify-between">
-            <h2 className="text-base font-semibold text-white">Planned Acquisitions</h2>
+      {/* Portfolio growth chart — full width */}
+      <div className="card">
+        <SnowballChart
+          yearlyData={yearlyData}
+          milestones={milestones}
+          historicalData={historicalData}
+          properties={properties}
+        />
+      </div>
+
+      {/* Unified property journey */}
+      <div className="space-y-3">
+        <div className="flex items-center justify-between">
+          <h2 className="text-base font-semibold text-white">Property Journey</h2>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setShowAutoModal(true)}
+              className="text-xs px-3 py-1.5 rounded-lg bg-emerald-900/30 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-900/50 transition-colors font-medium"
+            >
+              ✨ Auto-generate
+            </button>
             <button onClick={addAcquisition} className="btn-primary text-xs px-3 py-1.5 flex items-center gap-1.5">
               <PlusIcon />
               Add
             </button>
           </div>
+        </div>
 
-          {acquisitions.length === 0 ? (
-            <div className="card text-center py-8 text-slate-500 text-sm">
-              No planned acquisitions yet. Add one to see the snowball.
-            </div>
-          ) : (
-            acquisitions.map((acq, idx) => (
-              <AcquisitionConfigCard
-                key={acq.id || idx}
-                acquisition={acq}
-                index={idx}
-                isExpanded={expandedIdx === idx}
-                onToggle={() => setExpandedIdx(expandedIdx === idx ? -1 : idx)}
-                onChange={(updated) => updateAcquisition(idx, updated)}
-                onRemove={() => removeAcquisition(idx)}
-              />
-            ))
-          )}
+        {/* Existing properties (read-only) */}
+        {[...properties]
+          .sort((a, b) => new Date(a.purchaseDate || 0) - new Date(b.purchaseDate || 0))
+          .map((p) => (
+            <ExistingPropertyCard key={p.id} property={p} />
+          ))}
 
-          {/* Simulation settings */}
-          <div className="card space-y-3">
-            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Simulation Settings</p>
+        {/* Divider between existing and planned */}
+        {properties.length > 0 && (
+          <div className="flex items-center gap-3">
+            <div className="flex-1 h-px bg-slate-700" />
+            <span className="text-xs text-slate-500">planned acquisitions ↓</span>
+            <div className="flex-1 h-px bg-slate-700" />
+          </div>
+        )}
+
+        {/* Planned acquisition config cards */}
+        {acquisitions.length === 0 ? (
+          <div className="card text-center py-8 text-slate-500 text-sm">
+            No planned acquisitions yet. Add one to see the snowball.
+          </div>
+        ) : (
+          acquisitions.map((acq, idx) => (
+            <AcquisitionConfigCard
+              key={acq.id || idx}
+              acquisition={acq}
+              index={idx}
+              isExpanded={expandedIdx === idx}
+              onToggle={() => setExpandedIdx(expandedIdx === idx ? -1 : idx)}
+              onChange={(updated) => updateAcquisition(idx, updated)}
+              onRemove={() => removeAcquisition(idx)}
+              onOpenLoanModal={() => setLoanRecommendModal(idx)}
+            />
+          ))
+        )}
+
+        {/* Simulation settings */}
+        <div className="card space-y-3">
+          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Simulation Settings</p>
+          <div className="grid grid-cols-2 gap-3">
             <Field label="Horizon (years)">
               <input
                 type="number"
@@ -1137,24 +1496,10 @@ export default function GrowthPlanner({ properties, profile }) {
                 className="input w-full"
               />
             </Field>
-            <Field label="Max LTV for new loans" hint="Banks typically cap at 80% for investment">
+            <Field label="Max LTV" hint="Typically 80% for investment">
               <PctInput value={maxLTV} onChange={setMaxLTV} step="1" min={50} max={100} />
             </Field>
           </div>
-        </div>
-
-        {/* RIGHT: roadmap chart + milestones */}
-        <div className="space-y-4">
-          <div className="card">
-            <SnowballChart
-              yearlyData={yearlyData}
-              milestones={milestones}
-              historicalData={historicalData}
-              properties={properties}
-            />
-          </div>
-
-          <UnifiedTimeline properties={properties} milestones={milestones} />
         </div>
       </div>
 
@@ -1166,6 +1511,24 @@ export default function GrowthPlanner({ properties, profile }) {
         expandedCard={expandedLoanCard}
         onToggleCard={setExpandedLoanCard}
       />
+
+      {/* Auto-generate modal */}
+      {showAutoModal && (
+        <AutoGenerateModal
+          profile={profile}
+          onGenerate={handleAutoGenerate}
+          onClose={() => setShowAutoModal(false)}
+        />
+      )}
+
+      {/* Loan type recommendation modal */}
+      {loanRecommendModal !== null && acquisitions[loanRecommendModal] && (
+        <LoanTypeRecommendationModal
+          currentType={acquisitions[loanRecommendModal].loanType}
+          onSelect={(loanTypeId) => updateAcquisition(loanRecommendModal, { ...acquisitions[loanRecommendModal], loanType: loanTypeId, loanRate: BELGIAN_LOAN_TYPES.find((t) => t.id === loanTypeId)?.rateRange.min || 0.035 })}
+          onClose={() => setLoanRecommendModal(null)}
+        />
+      )}
     </div>
   )
 }

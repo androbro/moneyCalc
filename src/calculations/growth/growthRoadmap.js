@@ -134,7 +134,7 @@ function selectRecommendedLoanType(acq) {
 /**
  * Build a portfolio snapshot for milestone recording.
  */
-function buildPortfolioSnapshot(simProps, accumulatedCash) {
+function buildPortfolioSnapshot(simProps, accumulatedCash, monthIdx = 0) {
   const portfolioValue = simProps.reduce((s, p) => s + (p.simCurrentValue || 0), 0)
   const totalDebt = simProps.reduce(
     (s, p) =>
@@ -147,7 +147,13 @@ function buildPortfolioSnapshot(simProps, accumulatedCash) {
   )
   const rentalNetCF = simProps.reduce((s, p) => {
     if (!p.isRentedInSim) return s
-    return s + (p.simMonthlyRent || 0) - (p.simMonthlyExpenses || 0)
+    const indexRate = p.indexationRate ?? 0.02
+    const indexedRent = (p.simMonthlyRent || 0) * Math.pow(1 + indexRate, monthIdx / 12)
+    const vacancyRate = p.vacancyRate ?? 0.05
+    const effectiveRent = indexedRent * (1 - vacancyRate)
+    const inflRate = p.inflationRate ?? 0.02
+    const indexedOpex = (p.simMonthlyExpenses || 0) * Math.pow(1 + inflRate, monthIdx / 12)
+    return s + effectiveRent - indexedOpex
   }, 0)
   return {
     portfolioValue: Math.round(portfolioValue),
@@ -351,7 +357,7 @@ export function simulateGrowthRoadmap(properties, profile, config) {
         }
         simProps.push(newProp)
 
-        const snapshot = buildPortfolioSnapshot(simProps, accumulatedCash)
+        const snapshot = buildPortfolioSnapshot(simProps, accumulatedCash, monthIdx)
         const year = Math.floor(monthIdx / 12)
         const month = (monthIdx % 12) + 1
 
@@ -380,7 +386,7 @@ export function simulateGrowthRoadmap(properties, profile, config) {
     // 6. Capture yearly snapshot
     if (monthIdx % 12 === 0) {
       const year = monthIdx / 12
-      const snapshot = buildPortfolioSnapshot(simProps, accumulatedCash)
+      const snapshot = buildPortfolioSnapshot(simProps, accumulatedCash, monthIdx)
       yearlyData.push({
         year,
         label: year === 0 ? 'Today' : `+${year}y`,
