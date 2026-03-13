@@ -19,6 +19,7 @@ const PORTFOLIO_KEY  = 'mc_guest_portfolio'
 const HOUSEHOLD_KEY  = 'mc_guest_household'
 const SIMULATOR_KEY  = 'mc_guest_simulator'
 const TRADES_KEY     = 'mc_guest_trades'
+const GROWTH_KEY     = 'mc_guest_growth_planner'
 
 // ─── Raw helpers ──────────────────────────────────────────────────────────────
 
@@ -53,11 +54,14 @@ export function seedGuestStorage() {
   if (!localStorage.getItem(SIMULATOR_KEY)) {
     write(SIMULATOR_KEY, getMockSimulatorProfile())
   }
+  if (!localStorage.getItem(GROWTH_KEY)) {
+    write(GROWTH_KEY, {})
+  }
 }
 
 /** Wipe all guest data and re-seed from mock data. */
 export function clearGuestStorage() {
-  ;[PORTFOLIO_KEY, HOUSEHOLD_KEY, SIMULATOR_KEY].forEach((k) => {
+  ;[PORTFOLIO_KEY, HOUSEHOLD_KEY, SIMULATOR_KEY, GROWTH_KEY].forEach((k) => {
     try { localStorage.removeItem(k) } catch { /* ignore */ }
   })
 }
@@ -67,6 +71,7 @@ export function resetGuestStorage() {
   write(PORTFOLIO_KEY, getMockPortfolio())
   write(HOUSEHOLD_KEY, getMockHousehold())
   write(SIMULATOR_KEY, getMockSimulatorProfile())
+  write(GROWTH_KEY, {})
 }
 
 // ─── Portfolio API (mirrors portfolioService.js) ──────────────────────────────
@@ -174,6 +179,17 @@ export async function getSimulatorProfile() {
 
 export async function saveSimulatorProfile(state) {
   write(SIMULATOR_KEY, state)
+}
+
+// ─── Growth planner profile API ───────────────────────────────────────────────
+
+export async function getGrowthPlannerProfile() {
+  return read(GROWTH_KEY, {})
+}
+
+export async function saveGrowthPlannerProfile(state) {
+  write(GROWTH_KEY, state ?? {})
+  return state ?? {}
 }
 
 // ─── Revolut trading account API (mirrors portfolioService.js) ─────────────────

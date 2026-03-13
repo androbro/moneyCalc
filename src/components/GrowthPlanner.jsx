@@ -14,7 +14,7 @@
  *   profile     – household profile { members, householdExpenses }
  */
 
-import { useState, useMemo } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import {
   ComposedChart, Area, Line,
   XAxis, YAxis, CartesianGrid, Tooltip, Legend,
@@ -511,6 +511,22 @@ const DEFAULT_ACQUISITION = {
   loanRate: 0.035,
   loanTermYears: 20,
   acquisitionCostRate: 0.14,
+}
+
+function normalizeAcquisition(raw, index) {
+  return {
+    ...DEFAULT_ACQUISITION,
+    ...raw,
+    id: raw?.id || `acq_${index + 1}`,
+  }
+}
+
+function buildPlanSnapshot(acquisitions, horizonYears, maxLTV) {
+  return {
+    acquisitions: acquisitions.map((acq, idx) => normalizeAcquisition(acq, idx)),
+    horizonYears,
+    maxLTV,
+  }
 }
 
 // ─── Position Bar ─────────────────────────────────────────────────────────────
@@ -1313,16 +1329,52 @@ function PlusIcon() {
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export default function GrowthPlanner({ properties, profile }) {
-  const [acquisitions, setAcquisitions] = useState([
-    { ...DEFAULT_ACQUISITION, id: '1' },
-  ])
+export default function GrowthPlanner({ properties, profile, initialPlan, onSavePlan }) {
+  const initialSnapshot = useMemo(() => {
+    const incoming = Array.isArray(initialPlan?.acquisitions) && initialPlan.acquisitions.length > 0
+      ? initialPlan.acquisitions
+      : [{ ...DEFAULT_ACQUISITION, id: '1' }]
+    return buildPlanSnapshot(
+      incoming,
+      Number(initialPlan?.horizonYears ?? 25),
+      Number(initialPlan?.maxLTV ?? 0.8)
+    )
+  }, [initialPlan])
+
+  const [acquisitions, setAcquisitions] = useState(initialSnapshot.acquisitions)
   const [expandedIdx, setExpandedIdx] = useState(0)
   const [expandedLoanCard, setExpandedLoanCard] = useState(null)
-  const [horizonYears, setHorizonYears] = useState(25)
-  const [maxLTV, setMaxLTV] = useState(0.80)
+  const [horizonYears, setHorizonYears] = useState(initialSnapshot.horizonYears)
+  const [maxLTV, setMaxLTV] = useState(initialSnapshot.maxLTV)
   const [showAutoModal, setShowAutoModal] = useState(false)
   const [loanRecommendModal, setLoanRecommendModal] = useState(null) // index of acquisition
+  const lastPersistedRef = useRef(JSON.stringify(initialSnapshot))
+
+  useEffect(() => {
+    setAcquisitions(initialSnapshot.acquisitions)
+    setHorizonYears(initialSnapshot.horizonYears)
+    setMaxLTV(initialSnapshot.maxLTV)
+    setExpandedIdx((idx) => {
+      const lastIndex = Math.max(0, initialSnapshot.acquisitions.length - 1)
+      if (idx > lastIndex) return lastIndex
+      return idx
+    })
+    lastPersistedRef.current = JSON.stringify(initialSnapshot)
+  }, [initialSnapshot])
+
+  useEffect(() => {
+    if (!onSavePlan) return
+    const snapshot = buildPlanSnapshot(acquisitions, horizonYears, maxLTV)
+    const serialized = JSON.stringify(snapshot)
+    if (serialized === lastPersistedRef.current) return
+
+    const timer = setTimeout(() => {
+      onSavePlan(snapshot)
+      lastPersistedRef.current = serialized
+    }, 400)
+
+    return () => clearTimeout(timer)
+  }, [acquisitions, horizonYears, maxLTV, onSavePlan])
 
   // Exclude planned/simulated properties — they aren't owned yet and would skew the simulation
   const realProperties = useMemo(

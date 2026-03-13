@@ -12,6 +12,7 @@ import Dashboard from './Dashboard'
 import ProjectionChart from './ProjectionChart'
 import CashFlowAggregator from './CashFlowAggregator'
 import PropertyDetail from './PropertyDetail'
+import GrowthPlanner from './GrowthPlanner'
 
 // ── Tab definitions ────────────────────────────────────────────────────────────
 
@@ -21,6 +22,7 @@ const TABS = [
   { id: 'projection',  label: 'Projection',   permKey: 'financials' },
   { id: 'cashflow',    label: 'Cash Flow',    permKey: 'financials' },
   { id: 'investments', label: 'Investments',  permKey: 'financials' },
+  { id: 'growth',      label: 'Growth Planner', permKey: 'financials' },
   { id: 'household',   label: 'Household',    permKey: 'household'  },
 ]
 
@@ -47,7 +49,7 @@ export default function SharedPortfolioPage({ token }) {
   if (loading) return <LoadingScreen />
   if (notFound) return <NotFoundScreen />
 
-  const { permissions, properties, household } = data
+  const { permissions, properties, household, growthPlanner } = data
   const visibleTabs = TABS.filter(t => permissions[t.permKey])
 
   // Deduplicate tabs that share the same permKey (financials has 3)
@@ -153,6 +155,15 @@ export default function SharedPortfolioPage({ token }) {
         {/* Investments */}
         {activeTab === 'investments' && (
           <ReadOnlyInvestments properties={properties} />
+        )}
+
+        {/* Growth planner */}
+        {activeTab === 'growth' && (
+          <GrowthPlanner
+            properties={properties}
+            profile={household}
+            initialPlan={growthPlanner}
+          />
         )}
 
         {/* Household */}

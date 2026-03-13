@@ -30,7 +30,7 @@ const GROUPS = [
   {
     key: 'financials',
     label: 'Financials',
-    description: 'Cash flow, projection chart and planned investments',
+    description: 'Cash flow, projection chart, investments and growth planner',
   },
   {
     key: 'household',

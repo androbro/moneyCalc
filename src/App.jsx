@@ -29,6 +29,8 @@ import {
 	saveHouseholdProfile as guestSaveHouseholdProfile,
 	getSimulatorProfile as guestGetSimulatorProfile,
 	saveSimulatorProfile as guestSaveSimulatorProfile,
+	getGrowthPlannerProfile as guestGetGrowthPlannerProfile,
+	saveGrowthPlannerProfile as guestSaveGrowthPlannerProfile,
 	getTrades as guestGetTrades,
 	importTrades as guestImportTrades,
 	clearTrades as guestClearTrades,
@@ -45,6 +47,8 @@ import {
 	saveHouseholdProfile,
 	getSimulatorProfile,
 	saveSimulatorProfile,
+	getGrowthPlannerProfile,
+	saveGrowthPlannerProfile,
 	getTrades,
 	importTrades,
 	clearTrades,
@@ -224,6 +228,11 @@ export default function App() {
 
 	// Simulator state (lifted so AiChatOverlay can see it)
 	const [simState, setSimState] = useState(null);
+	const [growthPlannerProfile, setGrowthPlannerProfile] = useState({
+		acquisitions: [],
+		horizonYears: 25,
+		maxLTV: 0.8,
+	});
 
 	// Migration banner — show once after first login if unclaimed data exists
 	const [showMigrationBanner, setShowMigrationBanner] = useState(false);
@@ -247,6 +256,8 @@ export default function App() {
 				getTrades,
 				importTrades,
 				clearTrades,
+				getGrowthPlannerProfile,
+				saveGrowthPlannerProfile,
 		  }
 		: {
 				getPortfolio: guestGetPortfolio,
@@ -261,6 +272,8 @@ export default function App() {
 				getTrades: guestGetTrades,
 				importTrades: guestImportTrades,
 				clearTrades: guestClearTrades,
+				getGrowthPlannerProfile: guestGetGrowthPlannerProfile,
+				saveGrowthPlannerProfile: guestSaveGrowthPlannerProfile,
 		  };
 
 	// ── Load portfolio + household profile ──
@@ -272,14 +285,16 @@ export default function App() {
 				// Seed guest localStorage if empty, then load from it
 				seedGuestStorage();
 			}
-			const [portfolio, profile, tradeRows] = await Promise.all([
+			const [portfolio, profile, tradeRows, growthProfile] = await Promise.all([
 				db.getPortfolio(),
 				db.getHouseholdProfile(),
 				db.getTrades(),
+				db.getGrowthPlannerProfile(),
 			]);
 			setProperties(portfolio.properties);
 			setHouseholdProfile(profile);
 			setTrades(tradeRows);
+			setGrowthPlannerProfile(growthProfile);
 			// Seed trading value with cost basis until live prices arrive
 			const { positions } = computePositions(tradeRows);
 			setTradingPortfolioValue(positions.reduce((s, p) => s + p.totalCostEur, 0));
@@ -317,6 +332,21 @@ export default function App() {
 			throw err;
 		}
 	};
+
+	const handleSaveGrowthPlannerProfile = useCallback(
+		async (nextState) => {
+			try {
+				const saveFn = isLoggedIn
+					? saveGrowthPlannerProfile
+					: guestSaveGrowthPlannerProfile;
+				const saved = await saveFn(nextState);
+				setGrowthPlannerProfile(saved);
+			} catch (err) {
+				setToast({ message: err.message, type: "error" });
+			}
+		},
+		[isLoggedIn],
+	);
 
 	// ── Auth handlers ──
 	const handleSignOut = async () => {
@@ -711,7 +741,12 @@ export default function App() {
 
 			{/* ── Growth Planner ── */}
 			{activeTab === "growth" && (
-				<GrowthPlanner properties={properties} profile={householdProfile} />
+				<GrowthPlanner
+					properties={properties}
+					profile={householdProfile}
+					initialPlan={growthPlannerProfile}
+					onSavePlan={handleSaveGrowthPlannerProfile}
+				/>
 			)}
 
 			{/* ── Trading Account ── */}

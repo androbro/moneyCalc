@@ -560,6 +560,7 @@ export async function saveHouseholdProfile(profile) {
 // ─── Simulator profile ────────────────────────────────────────────────────────
 
 const SIMULATOR_ID = 'default'
+const GROWTH_PLANNER_ID = 'default'
 
 /**
  * Load the simulator state blob for the current user.
@@ -591,6 +592,53 @@ export async function saveSimulatorProfile(state) {
     .from('simulator_profile')
     .upsert(row, { onConflict: 'id' })
   check(error, 'saveSimulatorProfile')
+}
+
+// ─── Growth planner profile ───────────────────────────────────────────────────
+
+function dbToGrowthPlanner(row) {
+  return {
+    acquisitions: Array.isArray(row.acquisitions) ? row.acquisitions : [],
+    horizonYears: Number(row.horizon_years ?? 25),
+    maxLTV: Number(row.max_ltv ?? 0.8),
+  }
+}
+
+function growthPlannerToDb(state, userId, profileId) {
+  const row = {
+    id: profileId,
+    acquisitions: Array.isArray(state?.acquisitions) ? state.acquisitions : [],
+    horizon_years: state?.horizonYears ?? 25,
+    max_ltv: state?.maxLTV ?? 0.8,
+  }
+  if (userId) row.user_id = userId
+  return row
+}
+
+/** Load the growth planner state for the current user. */
+export async function getGrowthPlannerProfile() {
+  const userId = await getCurrentUserId()
+  const profileId = userId || GROWTH_PLANNER_ID
+
+  const { data, error } = await supabase
+    .from('growth_planner_profile')
+    .select('*')
+    .eq('id', profileId)
+    .maybeSingle()
+  check(error, 'getGrowthPlannerProfile')
+  return data ? dbToGrowthPlanner(data) : dbToGrowthPlanner({})
+}
+
+/** Persist growth planner state for the current user. */
+export async function saveGrowthPlannerProfile(state) {
+  const userId = await getCurrentUserId()
+  const profileId = userId || GROWTH_PLANNER_ID
+
+  const { error } = await supabase
+    .from('growth_planner_profile')
+    .upsert(growthPlannerToDb(state, userId, profileId), { onConflict: 'id' })
+  check(error, 'saveGrowthPlannerProfile')
+  return getGrowthPlannerProfile()
 }
 
 // ─── Data migration: claim ownerless rows ─────────────────────────────────────
@@ -739,6 +787,13 @@ export async function getSharedPortfolio(token) {
     permissions: data.permissions,
     properties,
     household,
+    growthPlanner: {
+      acquisitions: Array.isArray(data.growth_planner?.acquisitions)
+        ? data.growth_planner.acquisitions
+        : [],
+      horizonYears: Number(data.growth_planner?.horizon_years ?? 25),
+      maxLTV: Number(data.growth_planner?.max_ltv ?? 0.8),
+    },
   }
 }
 
