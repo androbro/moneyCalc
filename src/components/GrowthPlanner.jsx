@@ -1383,6 +1383,14 @@ export default function GrowthPlanner({ properties, profile, initialPlan, onSave
   const [loanRecommendModal, setLoanRecommendModal] = useState(null) // index of acquisition
   const lastPersistedRef = useRef(JSON.stringify(initialSnapshot))
 
+  function persistPlan(snapshot) {
+    if (!onSavePlan) return
+    const serialized = JSON.stringify(snapshot)
+    if (serialized === lastPersistedRef.current) return
+    onSavePlan(snapshot)
+    lastPersistedRef.current = serialized
+  }
+
   useEffect(() => {
     setAcquisitions(initialSnapshot.acquisitions)
     setHorizonYears(initialSnapshot.horizonYears)
@@ -1399,12 +1407,10 @@ export default function GrowthPlanner({ properties, profile, initialPlan, onSave
   useEffect(() => {
     if (!onSavePlan) return
     const snapshot = buildPlanSnapshot(acquisitions, horizonYears, maxLTV)
-    const serialized = JSON.stringify(snapshot)
-    if (serialized === lastPersistedRef.current) return
+    if (JSON.stringify(snapshot) === lastPersistedRef.current) return
 
     const timer = setTimeout(() => {
-      onSavePlan(snapshot)
-      lastPersistedRef.current = serialized
+      persistPlan(snapshot)
     }, 400)
 
     return () => clearTimeout(timer)
@@ -1481,6 +1487,7 @@ export default function GrowthPlanner({ properties, profile, initialPlan, onSave
     const clamped = Math.min(40, Math.max(5, Math.round(parsed)))
     setHorizonYears(clamped)
     setHorizonYearsInput(String(clamped))
+    persistPlan(buildPlanSnapshot(acquisitions, clamped, maxLTV))
   }
 
   const { milestones, yearlyData, summary } = roadmap
