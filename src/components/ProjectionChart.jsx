@@ -151,6 +151,16 @@ const INFO = {
       When this line rises above Net Worth, your rental income is adding meaningful real-world value on top of paper equity.
     </>
   ),
+  investmentMonthlyCF: (
+    <>
+      <strong className="text-white block mb-1">Investment Cash Flow (/mo)</strong>
+      Monthly portfolio cash flow from investment properties only, aligned with Growth Planner logic.
+      <br /><br />
+      Excludes owner-occupied private housing costs.
+      <br /><br />
+      <code className="text-brand-300">Rental income − opex − loan payments (rental-active properties only)</code>
+    </>
+  ),
   investmentPortfolio: (
     <>
       <strong className="text-white block mb-1">Investment Portfolio</strong>
@@ -234,7 +244,6 @@ function SummaryStrip({ data, hasInvestments, hasTradingProjection }) {
   const netWorthGain  = last.netWorth - first.netWorth
   const propGain      = last.propertyValue - first.propertyValue
   const loanReduction = first.loanBalance - last.loanBalance
-  const totalCF       = last.cumulativeCF
   const totalReturn   = last.totalReturn - first.totalReturn
 
   const items = [
@@ -258,13 +267,6 @@ function SummaryStrip({ data, hasInvestments, hasTradingProjection }) {
       color: netWorthGain >= 0 ? 'text-emerald-400' : 'text-red-400',
       prefix: netWorthGain >= 0 ? '+' : '',
       info: INFO.netWorthGain,
-    },
-    {
-      label: 'Cumulative cash flow',
-      value: formatEUR(totalCF),
-      color: totalCF >= 0 ? 'text-emerald-400' : 'text-red-400',
-      prefix: totalCF >= 0 ? '+' : '',
-      info: INFO.totalCF,
     },
     {
       label: 'Total return (20y)',
@@ -647,6 +649,8 @@ export default function ProjectionChart({ properties, profile, trades = [], trad
           annualCashFlow: Math.round(pt.annualCashFlow / inflationFactor),
           annualCosts: Math.round(pt.annualCosts / inflationFactor),
           cumulativeCF: Math.round(pt.cumulativeCF / inflationFactor),
+          investmentAnnualCashFlow: Math.round((pt.investmentAnnualCashFlow ?? 0) / inflationFactor),
+          investmentMonthlyCashFlow: Math.round((pt.investmentMonthlyCashFlow ?? 0) / inflationFactor),
           plannedInvestCost: Math.round(pt.plannedInvestCost / inflationFactor),
           totalReturn: Math.round(pt.totalReturn / inflationFactor),
           investmentPortfolio: Math.round(pt.investmentPortfolio / inflationFactor),
@@ -734,7 +738,7 @@ export default function ProjectionChart({ properties, profile, trades = [], trad
             <h2 className="font-semibold text-slate-100">Portfolio Value vs. Debt</h2>
             <p className="text-xs text-slate-400 mt-0.5">
               Each bar = total wealth stack: debt (red) → real estate equity (green){hasInvestments ? ' → manual investments (purple)' : ''}{hasTradingProjection ? ' → trading portfolio (indigo)' : ''}.
-              Dashed line = total return including cash flow.
+              Dashed amber line = total return. Blue line = investment cash flow per month (excl. owner-occupied properties).
             </p>
           </div>
           <ChartLegend items={[
@@ -747,6 +751,7 @@ export default function ProjectionChart({ properties, profile, trades = [], trad
               { label: 'Trading Portfolio', color: '#6366f1', info: INFO.tradingProjection },
             ] : []),
             { label: 'Total Return',         color: '#f59e0b', info: INFO.totalReturn },
+            { label: 'Investment CF / mo',   color: '#06b6d4', info: INFO.investmentMonthlyCF },
           ]} />
         </div>
 
@@ -754,19 +759,21 @@ export default function ProjectionChart({ properties, profile, trades = [], trad
           <ComposedChart data={displayData} margin={{ top: 10, right: 8, left: 0, bottom: 0 }} barCategoryGap="20%">
             <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
             <XAxis dataKey="label" tick={{ fill: '#94a3b8', fontSize: 11 }} axisLine={{ stroke: '#1e293b' }} tickLine={false} />
-            <YAxis tickFormatter={formatYAxis} tick={{ fill: '#94a3b8', fontSize: 10 }} axisLine={false} tickLine={false} width={68} />
+            <YAxis yAxisId="left" tickFormatter={formatYAxis} tick={{ fill: '#94a3b8', fontSize: 10 }} axisLine={false} tickLine={false} width={68} />
+            <YAxis yAxisId="right" orientation="right" tickFormatter={formatYAxis} tick={{ fill: '#94a3b8', fontSize: 10 }} axisLine={false} tickLine={false} width={68} />
             <Tooltip content={<CustomTooltip />} />
             {/* Stacked bars: loan (red) → real estate equity (green) → investments (purple) → trading (indigo) */}
-            <Bar dataKey="loanBalance"        name="Loan Balance"         stackId="value" fill="#ef4444" fillOpacity={0.85} radius={[0,0,0,0]} />
-            <Bar dataKey="netWorth"           name="Equity (Net Worth)"   stackId="value" fill="#10b981" fillOpacity={0.85} radius={(hasInvestments || hasTradingProjection) ? [0,0,0,0] : [4,4,0,0]} />
+            <Bar yAxisId="left" dataKey="loanBalance"        name="Loan Balance"         stackId="value" fill="#ef4444" fillOpacity={0.85} radius={[0,0,0,0]} />
+            <Bar yAxisId="left" dataKey="netWorth"           name="Equity (Net Worth)"   stackId="value" fill="#10b981" fillOpacity={0.85} radius={(hasInvestments || hasTradingProjection) ? [0,0,0,0] : [4,4,0,0]} />
             {hasInvestments && (
-              <Bar dataKey="investmentPortfolio" name="Investment Portfolio" stackId="value" fill="#a78bfa" fillOpacity={0.85} radius={hasTradingProjection ? [0,0,0,0] : [4,4,0,0]} />
+              <Bar yAxisId="left" dataKey="investmentPortfolio" name="Investment Portfolio" stackId="value" fill="#a78bfa" fillOpacity={0.85} radius={hasTradingProjection ? [0,0,0,0] : [4,4,0,0]} />
             )}
             {hasTradingProjection && (
-              <Bar dataKey="tradingProjection" name="Trading Portfolio" stackId="value" fill="#6366f1" fillOpacity={0.85} radius={[4,4,0,0]} />
+              <Bar yAxisId="left" dataKey="tradingProjection" name="Trading Portfolio" stackId="value" fill="#6366f1" fillOpacity={0.85} radius={[4,4,0,0]} />
             )}
             {/* Total Return line overlaid */}
-            <Line type="monotone" dataKey="totalReturn" name="Total Return" stroke="#f59e0b" strokeWidth={2} dot={false} activeDot={{ r: 5, fill: '#f59e0b' }} strokeDasharray="5 3" />
+            <Line yAxisId="left" type="monotone" dataKey="totalReturn" name="Total Return" stroke="#f59e0b" strokeWidth={2} dot={false} activeDot={{ r: 5, fill: '#f59e0b' }} strokeDasharray="5 3" />
+            <Line yAxisId="right" type="monotone" dataKey="investmentMonthlyCashFlow" name="Investment CF / mo" stroke="#06b6d4" strokeWidth={2} dot={false} activeDot={{ r: 4, fill: '#06b6d4' }} />
             {/* Planned investment markers */}
             {Object.entries(investmentMarkers).map(([label, invs]) => (
               <ReferenceLine

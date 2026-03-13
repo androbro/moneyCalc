@@ -48,6 +48,49 @@ function getRentalActiveFractionInWindow(property, windowStart) {
   return activeMonths / 12
 }
 
+function addMonths(date, months) {
+  const d = new Date(date)
+  d.setMonth(d.getMonth() + months)
+  return d
+}
+
+function yearsBetween(fromDate, toDate) {
+  return (toDate.getTime() - fromDate.getTime()) / (365.25 * 24 * 60 * 60 * 1000)
+}
+
+function isInvestmentProperty(property) {
+  return (
+    property.status === 'rented' ||
+    property.isRented === true ||
+    property.intendedRental === true ||
+    Boolean(property.rentalStartDate)
+  )
+}
+
+// Mirrors PropertyTimeline rental activation behavior.
+function isRentalActiveForTimelineCF(property, date) {
+  const rentalStart = property.rentalStartDate ? new Date(property.rentalStartDate) : null
+  const rentalEnd = property.rentalEndDate ? new Date(property.rentalEndDate) : null
+  return (
+    (property.status === 'rented' || Boolean(rentalStart)) &&
+    (!rentalStart || date >= rentalStart) &&
+    (!rentalEnd || date <= rentalEnd)
+  )
+}
+
+// Mirrors PropertyTimeline: cash cost from financing = interest only (capital builds equity).
+function getAnnualInterestAtDate(loan, targetDate) {
+  if (!loan.startDate || !loan.termMonths) return 0
+  const loanStart = new Date(loan.startDate)
+  const loanEnd = addMonths(loanStart, Number(loan.termMonths))
+  if (targetDate >= loanEnd) return 0
+
+  const balance = getRemainingBalance(loan, targetDate.toISOString())
+  const monthlyRate = (loan.interestRate || 0) / 12
+  const monthlyInterest = balance * monthlyRate
+  return monthlyInterest * 12
+}
+
 /**
  * Build 20-year projection for a portfolio of properties
  * 
@@ -82,6 +125,7 @@ export function buildProjection(properties) {
     let totalLoanBalance = 0
     let totalAnnualIncome = 0
     let totalAnnualCosts = 0
+    let totalInvestmentAnnualCF = 0
     let plannedInvestCost = 0
 
     for (const property of properties) {
@@ -120,6 +164,8 @@ export function buildProjection(properties) {
         const grossRent = baseRent * Math.pow(1 + indexRate, year)
         const effectiveRent = grossRent * (1 - vacancyRate)
         totalAnnualIncome += effectiveRent * rentalActiveFraction
+
+        // Keep totalAnnualIncome behavior for the main projection dataset.
       }
 
       // Indexed operating costs
@@ -135,6 +181,33 @@ export function buildProjection(properties) {
         for (const loan of property.loans || []) {
           totalAnnualCosts += getAnnualLoanPayment(loan, year)
         }
+      }
+
+      // Investment-only CF line:
+      // Use PropertyTimeline semantics and exclude non-investment owner-occupied homes.
+      if (ownedAtTargetDate && isInvestmentProperty(property)) {
+        const yOffset = Math.max(0, yearsBetween(today, targetDate))
+        const inflRate = property.inflationRate ?? 0.02
+        const annualCosts =
+          (property.annualMaintenanceCost || 0) * Math.pow(1 + inflRate, yOffset) +
+          (property.annualInsuranceCost || 0) * Math.pow(1 + inflRate, yOffset) +
+          (property.monthlyExpenses || 0) * 12 * Math.pow(1 + inflRate, yOffset) +
+          (property.annualPropertyTax || 0)
+
+        const annualInterest = (property.loans || []).reduce(
+          (sum, loan) => sum + getAnnualInterestAtDate(loan, targetDate),
+          0
+        )
+
+        let annualRent = 0
+        if (isRentalActiveForTimelineCF(property, targetDate)) {
+          const rentalStart = property.rentalStartDate ? new Date(property.rentalStartDate) : null
+          const yearsRenting = rentalStart ? Math.max(0, yearsBetween(rentalStart, targetDate)) : year
+          const baseRent = (property.startRentalIncome || property.monthlyRentalIncome || 0) * 12
+          annualRent = baseRent * Math.pow(1 + (property.indexationRate || 0.02), yearsRenting)
+        }
+
+        totalInvestmentAnnualCF += annualRent - annualCosts - annualInterest
       }
     }
 
@@ -156,6 +229,8 @@ export function buildProjection(properties) {
       annualCashFlow,
       annualCosts: Math.round(totalAnnualCosts + plannedInvestCost),
       cumulativeCF: Math.round(cumulativeCF),
+      investmentAnnualCashFlow: Math.round(totalInvestmentAnnualCF),
+      investmentMonthlyCashFlow: Math.round(totalInvestmentAnnualCF / 12),
       plannedInvestCost: Math.round(plannedInvestCost),
       totalReturn: Math.round(netWorth + cumulativeCF),
     })
