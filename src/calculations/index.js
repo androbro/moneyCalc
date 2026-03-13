@@ -61,6 +61,15 @@ export {
   formatCompact
 } from './formatters/index.js'
 
+// Growth planning
+export {
+  simulateGrowthRoadmap,
+  computeAvailableEquity,
+  computeMonthlySurplus,
+  calcMonthlyPayment,
+  calcBulletMonthlyPayment,
+} from './growth/index.js'
+
 // Legacy compatibility export
 // Re-export monthsBetween as monthsBetweenPublic for backward compatibility
 export { monthsBetween as monthsBetweenPublic } from './utils/dateUtils.js'

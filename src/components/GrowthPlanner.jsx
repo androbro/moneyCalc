@@ -1,0 +1,1171 @@
+/**
+ * GrowthPlanner.jsx
+ *
+ * 25-year property snowball simulator and Belgian loan guide.
+ *
+ * Three sections:
+ *   1. Position bar — current equity, surplus, available equity, borrowing power
+ *   2. Acquisition roadmap — config cards + SnowballChart + milestone cards
+ *   3. Acceleration advice — algorithmic advice on how to buy sooner
+ *   4. Belgian Loan Guide — collapsible reference for all 7 loan types
+ *
+ * Props:
+ *   properties  – current portfolio array (from App state)
+ *   profile     – household profile { members, householdExpenses }
+ */
+
+import { useState, useMemo } from 'react'
+import {
+  ComposedChart, Area, Line,
+  XAxis, YAxis, CartesianGrid, Tooltip, Legend,
+  ResponsiveContainer, ReferenceLine,
+} from 'recharts'
+import { computeSummary, getRemainingBalance, formatEUR } from '../utils/projectionUtils'
+import {
+  simulateGrowthRoadmap,
+  computeAvailableEquity,
+  generateGrowthAdvice,
+  calcMonthlyPayment,
+  calcBulletMonthlyPayment,
+} from '../calculations/growth/index.js'
+import { BELGIAN_LOAN_TYPES } from '../data/belgianLoanTypes.js'
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+const fmt = formatEUR
+
+function num(v, fallback = 0) {
+  const n = parseFloat(String(v).replace(',', '.'))
+  return isNaN(n) ? fallback : n
+}
+
+const AXIS_TICK = { fill: '#94a3b8', fontSize: 11 }
+
+function kFmt(v) {
+  const abs = Math.abs(v)
+  if (abs >= 1_000_000) return `€${(v / 1_000_000).toFixed(1)}M`
+  if (abs >= 1_000) return `€${(v / 1_000).toFixed(0)}k`
+  return `€${Math.round(v)}`
+}
+
+function buildHistoricalData(properties) {
+  const today = new Date()
+  const purchaseDates = properties
+    .map((p) => p.purchaseDate)
+    .filter(Boolean)
+    .map((d) => new Date(d))
+  if (!purchaseDates.length) return []
+
+  const earliest = new Date(Math.min(...purchaseDates.map((d) => d.getTime())))
+  const startYear = earliest.getFullYear()
+  const endYear = today.getFullYear() // "Today" point comes from simulation, stop before it
+
+  const result = []
+  for (let year = startYear; year < endYear; year++) {
+    const snapDate = new Date(year, 6, 1) // mid-year snapshot for stable values
+    const snapISO = snapDate.toISOString()
+    const yearsFromNow = (today.getTime() - snapDate.getTime()) / (365.25 * 24 * 3600 * 1000)
+
+    let portfolioValue = 0
+    let totalDebt = 0
+    for (const p of properties) {
+      if (!p.purchaseDate || new Date(p.purchaseDate) > snapDate) continue
+      const appRate = p.appreciationRate || 0.02
+      portfolioValue += (p.currentValue || 0) / Math.pow(1 + appRate, yearsFromNow)
+      for (const l of p.loans || []) {
+        if (!l.startDate || new Date(l.startDate) > snapDate) continue
+        try {
+          totalDebt += getRemainingBalance(l, snapISO)
+        } catch {
+          totalDebt += l.originalAmount || 0
+        }
+      }
+    }
+
+    result.push({
+      label: String(year),
+      portfolioValue: Math.round(portfolioValue),
+      totalDebt: Math.round(totalDebt),
+      netWorth: Math.round(portfolioValue - totalDebt),
+      monthlyCashFlow: 0,
+      isHistorical: true,
+    })
+  }
+  return result
+}
+
+function monthsToText(months) {
+  if (months === null || months === undefined) return 'Not within horizon'
+  if (months === 0) return 'Right now'
+  const y = Math.floor(months / 12)
+  const m = months % 12
+  const parts = []
+  if (y > 0) parts.push(`${y}y`)
+  if (m > 0) parts.push(`${m}mo`)
+  return parts.join(' ')
+}
+
+const COLOR_MAP = {
+  brand:   { border: 'border-brand-500/50',   badge: 'bg-brand-900/40 text-brand-300',   dot: '#3b82f6' },
+  amber:   { border: 'border-amber-500/50',   badge: 'bg-amber-900/40 text-amber-300',   dot: '#f59e0b' },
+  red:     { border: 'border-red-500/50',     badge: 'bg-red-900/40 text-red-300',       dot: '#ef4444' },
+  emerald: { border: 'border-emerald-500/50', badge: 'bg-emerald-900/40 text-emerald-300', dot: '#10b981' },
+  violet:  { border: 'border-violet-500/50',  badge: 'bg-violet-900/40 text-violet-300', dot: '#8b5cf6' },
+  cyan:    { border: 'border-cyan-500/50',    badge: 'bg-cyan-900/40 text-cyan-300',     dot: '#06b6d4' },
+  rose:    { border: 'border-rose-500/50',    badge: 'bg-rose-900/40 text-rose-300',     dot: '#f43f5e' },
+}
+
+function getBadgeClass(color) {
+  return (COLOR_MAP[color] || COLOR_MAP.brand).badge
+}
+
+// ─── Input components ─────────────────────────────────────────────────────────
+
+function Field({ label, hint, children }) {
+  return (
+    <div className="space-y-1">
+      <label className="block text-xs font-medium text-slate-400">{label}</label>
+      {children}
+      {hint && <p className="text-xs text-slate-500">{hint}</p>}
+    </div>
+  )
+}
+
+function MoneyInput({ value, onChange, placeholder = '0', disabled = false }) {
+  return (
+    <div className="relative">
+      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-sm">€</span>
+      <input
+        type="number"
+        min="0"
+        step="1"
+        value={value === 0 ? '' : value}
+        onChange={(e) => onChange(num(e.target.value))}
+        placeholder={placeholder}
+        disabled={disabled}
+        className="input pl-7 w-full disabled:opacity-40"
+      />
+    </div>
+  )
+}
+
+function PctInput({ value, onChange, step = '0.1', min = 0, max = 100 }) {
+  return (
+    <div className="relative">
+      <input
+        type="number"
+        min={min}
+        max={max}
+        step={step}
+        value={value === 0 ? '' : +(value * 100).toFixed(2)}
+        onChange={(e) => {
+          const n = parseFloat(e.target.value)
+          onChange(isNaN(n) ? 0 : n / 100)
+        }}
+        placeholder="0"
+        className="input pr-7 w-full"
+      />
+      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 text-sm">%</span>
+    </div>
+  )
+}
+
+// ─── Default acquisition template ─────────────────────────────────────────────
+
+const DEFAULT_ACQUISITION = {
+  label: 'New Investment Property',
+  targetPrice: 300000,
+  myShare: 1.0,
+  isPrimaryResidence: false,
+  monthlyRent: 1000,
+  monthlyExpenses: 250,
+  appreciationRate: 0.02,
+  loanType: 'hypothecaire_lening',
+  loanRate: 0.035,
+  loanTermYears: 20,
+  acquisitionCostRate: 0.14,
+}
+
+// ─── Position Bar ─────────────────────────────────────────────────────────────
+
+function MetricTile({ label, value, color, subtitle }) {
+  return (
+    <div className="text-center p-1">
+      <p className="text-xs text-slate-400 leading-tight">{label}</p>
+      <p className={`text-lg font-bold tabular-nums ${color}`}>{fmt(value)}</p>
+      {subtitle && <p className="text-xs text-slate-500 mt-0.5">{subtitle}</p>}
+    </div>
+  )
+}
+
+function PositionBar({ properties, profile }) {
+  const summary = useMemo(() => computeSummary(properties, profile), [properties, profile])
+  const availableEquity = useMemo(
+    () => computeAvailableEquity(properties, new Date().toISOString()),
+    [properties]
+  )
+
+  const totalMemberIncome = (profile.members || []).reduce(
+    (s, m) => s + (m.netIncome || 0) + (m.investmentIncome || 0),
+    0
+  )
+  const monthlyRentalNetCF = summary.totalMonthlyCashFlow || 0
+  const totalLoanPayments = properties.reduce(
+    (s, p) =>
+      s +
+      (p.loans || []).reduce((ls, l) => ls + (l.monthlyPayment || 0), 0),
+    0
+  )
+  const monthlySurplus = Math.max(
+    0,
+    totalMemberIncome - (profile.householdExpenses || 0) - totalLoanPayments + monthlyRentalNetCF
+  )
+
+  const borrowingPower = Math.max(0, summary.totalNetWorth * 0.8)
+
+  return (
+    <div className="card grid grid-cols-2 sm:grid-cols-4 gap-3 mb-0">
+      <MetricTile
+        label="Portfolio Equity"
+        value={summary.totalNetWorth || 0}
+        color="text-brand-400"
+        subtitle="Current net worth"
+      />
+      <MetricTile
+        label="Monthly Surplus"
+        value={monthlySurplus}
+        color={monthlySurplus >= 0 ? 'text-emerald-400' : 'text-red-400'}
+        subtitle="After all costs & loans"
+      />
+      <MetricTile
+        label="Available Equity"
+        value={availableEquity}
+        color="text-amber-400"
+        subtitle="80% LTV − debt"
+      />
+      <MetricTile
+        label="Est. Borrowing Power"
+        value={borrowingPower}
+        color="text-violet-400"
+        subtitle="Approx. 80% of equity"
+      />
+    </div>
+  )
+}
+
+// ─── Acquisition Config Card ──────────────────────────────────────────────────
+
+function LoanTypePill({ loanTypeId }) {
+  const lt = BELGIAN_LOAN_TYPES.find((t) => t.id === loanTypeId)
+  if (!lt) return null
+  return (
+    <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${getBadgeClass(lt.color)}`}>
+      {lt.nameEN}
+    </span>
+  )
+}
+
+function AcquisitionConfigCard({ acquisition, index, isExpanded, onToggle, onChange, onRemove }) {
+  const isBullet =
+    acquisition.loanType === 'bullet_loan' ||
+    acquisition.loanType === 'ipt_bullet' ||
+    acquisition.loanType === 'liquidatiereserve_bullet'
+
+  const loanAmount = acquisition.targetPrice * (acquisition.isPrimaryResidence ? 0.90 : 0.80) * acquisition.myShare
+  const termMonths = acquisition.loanTermYears * 12
+  const monthlyPayment = isBullet
+    ? calcBulletMonthlyPayment(loanAmount, acquisition.loanRate)
+    : calcMonthlyPayment(loanAmount, acquisition.loanRate, termMonths)
+
+  function update(key, value) {
+    const updated = { ...acquisition, [key]: value }
+    // Auto-adjust acquisition cost rate when primary residence changes
+    if (key === 'isPrimaryResidence') {
+      updated.acquisitionCostRate = value ? 0.04 : 0.14
+    }
+    // Auto-populate rate from loan type default
+    if (key === 'loanType') {
+      const lt = BELGIAN_LOAN_TYPES.find((t) => t.id === value)
+      if (lt) updated.loanRate = lt.rateRange.min
+    }
+    onChange(updated)
+  }
+
+  return (
+    <div className="card border border-slate-700/50">
+      {/* Header (always visible) */}
+      <button
+        onClick={onToggle}
+        className="w-full flex items-center justify-between gap-3 text-left"
+      >
+        <div className="flex items-center gap-2 min-w-0">
+          <span className="shrink-0 w-6 h-6 rounded-full bg-amber-500/20 text-amber-400 text-xs font-bold flex items-center justify-center">
+            {index + 1}
+          </span>
+          <div className="min-w-0">
+            <p className="font-semibold text-white text-sm truncate">{acquisition.label || 'Unnamed'}</p>
+            <p className="text-xs text-slate-400">{fmt(acquisition.targetPrice)}</p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2 shrink-0">
+          <LoanTypePill loanTypeId={acquisition.loanType} />
+          <ChevronIcon open={isExpanded} />
+        </div>
+      </button>
+
+      {/* Expanded form */}
+      {isExpanded && (
+        <div className="mt-4 space-y-4 border-t border-slate-700/50 pt-4">
+          {/* Label */}
+          <Field label="Label">
+            <input
+              type="text"
+              value={acquisition.label}
+              onChange={(e) => update('label', e.target.value)}
+              className="input w-full"
+              placeholder="e.g. New House, Rental Apartment"
+            />
+          </Field>
+
+          {/* Primary residence toggle */}
+          <div className="flex items-center justify-between">
+            <label className="text-xs font-medium text-slate-400">Primary Residence</label>
+            <button
+              onClick={() => update('isPrimaryResidence', !acquisition.isPrimaryResidence)}
+              className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                acquisition.isPrimaryResidence ? 'bg-brand-500' : 'bg-slate-600'
+              }`}
+            >
+              <span
+                className={`inline-block h-3.5 w-3.5 rounded-full bg-white transition-transform ${
+                  acquisition.isPrimaryResidence ? 'translate-x-4' : 'translate-x-1'
+                }`}
+              />
+            </button>
+          </div>
+          {acquisition.isPrimaryResidence && (
+            <p className="text-xs text-amber-400/80 -mt-2">
+              Primary residence: 90% LTV, ~4% acquisition costs (verlaagd tarief)
+            </p>
+          )}
+
+          {/* Price + share */}
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Target Price">
+              <MoneyInput value={acquisition.targetPrice} onChange={(v) => update('targetPrice', v)} />
+            </Field>
+            <Field label="My Share %" hint="50% for joint purchase">
+              <div className="relative">
+                <input
+                  type="number"
+                  min="1"
+                  max="100"
+                  step="1"
+                  value={Math.round(acquisition.myShare * 100)}
+                  onChange={(e) => update('myShare', Math.max(0.01, Math.min(1, num(e.target.value) / 100)))}
+                  className="input pr-7 w-full"
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 text-sm">%</span>
+              </div>
+            </Field>
+          </div>
+
+          {/* Rent + expenses */}
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Monthly Rent" hint={acquisition.isPrimaryResidence ? 'Not applicable' : ''}>
+              <MoneyInput
+                value={acquisition.monthlyRent}
+                onChange={(v) => update('monthlyRent', v)}
+                disabled={acquisition.isPrimaryResidence}
+              />
+            </Field>
+            <Field label="Monthly Expenses" hint="Insurance, maintenance, etc.">
+              <MoneyInput value={acquisition.monthlyExpenses} onChange={(v) => update('monthlyExpenses', v)} />
+            </Field>
+          </div>
+
+          {/* Appreciation + acquisition cost */}
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Annual Appreciation">
+              <PctInput value={acquisition.appreciationRate} onChange={(v) => update('appreciationRate', v)} />
+            </Field>
+            <Field label="Acquisition Costs" hint="Registration tax + notary">
+              <PctInput value={acquisition.acquisitionCostRate} onChange={(v) => update('acquisitionCostRate', v)} />
+            </Field>
+          </div>
+
+          {/* Loan type */}
+          <Field label="Loan Type">
+            <select
+              value={acquisition.loanType}
+              onChange={(e) => update('loanType', e.target.value)}
+              className="input w-full"
+            >
+              {BELGIAN_LOAN_TYPES.map((lt) => (
+                <option key={lt.id} value={lt.id}>
+                  {lt.nameEN} ({lt.rateLabel})
+                </option>
+              ))}
+            </select>
+          </Field>
+          {isBullet && (
+            <p className="text-xs text-emerald-400/80 -mt-2">
+              Interest-only: monthly payment ≈ {fmt(monthlyPayment)}/mo — capital repaid at maturity
+            </p>
+          )}
+
+          {/* Rate + term */}
+          <div className="grid grid-cols-2 gap-3">
+            <Field label="Interest Rate">
+              <PctInput value={acquisition.loanRate} onChange={(v) => update('loanRate', v)} step="0.05" />
+            </Field>
+            <Field label="Loan Term (years)">
+              <input
+                type="number"
+                min="5"
+                max="30"
+                step="1"
+                value={acquisition.loanTermYears}
+                onChange={(e) => update('loanTermYears', Math.max(5, num(e.target.value)))}
+                className="input w-full"
+              />
+            </Field>
+          </div>
+
+          {/* Payment summary */}
+          {(() => {
+            const ltv = acquisition.isPrimaryResidence ? 0.90 : 0.80
+            const downPayment = acquisition.targetPrice * acquisition.myShare * (1 - ltv)
+            const acqCosts = acquisition.targetPrice * acquisition.acquisitionCostRate * acquisition.myShare
+            const requiredOwn = Math.max(0, downPayment + acqCosts)
+            return (
+              <div className="rounded-lg bg-slate-800/50 p-3 space-y-1">
+                <p className="text-xs text-slate-400 font-medium">Loan summary</p>
+                <div className="flex justify-between text-xs">
+                  <span className="text-slate-400">Loan amount ({Math.round(ltv * acquisition.myShare * 100)}% LTV)</span>
+                  <span className="text-white font-semibold">{fmt(loanAmount)}</span>
+                </div>
+                <div className="flex justify-between text-xs">
+                  <span className="text-slate-400">Monthly payment</span>
+                  <span className="text-emerald-400 font-semibold">{fmt(monthlyPayment)}/mo</span>
+                </div>
+                <div className="flex justify-between text-xs border-t border-slate-700/50 pt-1 mt-1">
+                  <span className="text-slate-500">Own funds breakdown:</span>
+                </div>
+                <div className="flex justify-between text-xs pl-2">
+                  <span className="text-slate-400">↳ Down payment ({Math.round((1 - ltv) * 100)}%)</span>
+                  <span className="text-white">{fmt(downPayment)}</span>
+                </div>
+                <div className="flex justify-between text-xs pl-2">
+                  <span className="text-slate-400">↳ Acquisition costs ({Math.round(acquisition.acquisitionCostRate * 100)}%)</span>
+                  <span className="text-white">{fmt(acqCosts)}</span>
+                </div>
+                <div className="flex justify-between text-xs border-t border-slate-700/50 pt-1 mt-1">
+                  <span className="text-slate-400 font-medium">Required own funds</span>
+                  <span className="text-amber-400 font-semibold">{fmt(requiredOwn)}</span>
+                </div>
+              </div>
+            )
+          })()}
+
+          {/* Remove button */}
+          <button
+            onClick={onRemove}
+            className="text-xs text-red-400/70 hover:text-red-400 transition-colors"
+          >
+            Remove this acquisition
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── Snowball Chart ───────────────────────────────────────────────────────────
+
+function SnowballTooltip({ active, payload, label, milestones }) {
+  if (!active || !payload?.length) return null
+  const milestone = milestones.find((m) => `+${m.year}y` === label || (label === 'Today' && m.year === 0))
+  return (
+    <div className="bg-slate-800 border border-slate-600 rounded-xl p-3 shadow-xl text-xs min-w-[200px]">
+      <p className="font-semibold text-white mb-2 text-sm">{label}</p>
+      {payload.map((entry) => (
+        <div key={entry.dataKey} className="flex items-center justify-between gap-4 mb-1">
+          <span className="font-medium flex items-center gap-1.5" style={{ color: entry.color }}>
+            <span className="w-2 h-2 rounded-full inline-block" style={{ background: entry.color }} />
+            {entry.name}
+          </span>
+          <span className="text-white font-semibold">
+            {entry.dataKey === 'monthlyCashFlow' ? `€${Math.round(entry.value)}/mo` : kFmt(entry.value)}
+          </span>
+        </div>
+      ))}
+      {milestone && (
+        <div className="mt-2 pt-2 border-t border-slate-600">
+          <p className="text-amber-400 font-semibold">🏠 {milestone.label}</p>
+          <p className="text-slate-400">Own funds: {fmt(milestone.cashUsed)}</p>
+          <p className="text-slate-400">New loan: {fmt(milestone.newLoanAmount)}</p>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function SnowballChart({ yearlyData, milestones, historicalData, properties }) {
+  if (!yearlyData.length) return null
+
+  const combinedData = [...historicalData, ...yearlyData]
+  const validLabels = new Set(combinedData.map((d) => d.label))
+  const tickInterval = Math.max(1, Math.floor(combinedData.length / 10))
+
+  const currentYear = new Date().getFullYear()
+
+  // Owned properties → blue reference lines at their historical purchase year
+  const ownedPurchaseYears = [...new Set(
+    properties
+      .filter((p) => p.status !== 'planned')
+      .map((p) => p.purchaseDate && new Date(p.purchaseDate).getFullYear())
+      .filter(Boolean)
+  )]
+
+  // Planned properties → amber reference lines mapped to "Today" (current year) or "+Xy"
+  const plannedMarkers = properties
+    .filter((p) => p.status === 'planned' && p.purchaseDate)
+    .map((p) => {
+      const yr = new Date(p.purchaseDate).getFullYear()
+      const diff = yr - currentYear
+      return {
+        name: p.name || p.address || 'Planned',
+        label: diff <= 0 ? 'Today' : `+${diff}y`,
+      }
+    })
+
+  const firstYear = historicalData.length ? historicalData[0].label : 'Today'
+  const horizonY = yearlyData.length - 1
+
+  return (
+    <div>
+      <h3 className="text-sm font-semibold text-slate-300 mb-3">
+        Portfolio Growth ({firstYear} → +{horizonY}y)
+      </h3>
+      <ResponsiveContainer width="100%" height={300}>
+        <ComposedChart data={combinedData} margin={{ top: 10, right: 60, left: 0, bottom: 0 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+          <XAxis dataKey="label" tick={AXIS_TICK} interval={tickInterval} />
+          <YAxis yAxisId="left" tickFormatter={kFmt} tick={AXIS_TICK} width={60} />
+          <YAxis yAxisId="cf" orientation="right" tickFormatter={(v) => `€${Math.round(v)}`} tick={AXIS_TICK} width={60} />
+          <Tooltip content={<SnowballTooltip milestones={milestones} />} />
+          <Legend wrapperStyle={{ fontSize: 11, color: '#94a3b8' }} />
+          <Area
+            yAxisId="left"
+            type="monotone"
+            dataKey="portfolioValue"
+            name="Portfolio Value"
+            fill="#1e3a5f"
+            stroke="#3b82f6"
+            strokeWidth={2}
+          />
+          <Area
+            yAxisId="left"
+            type="monotone"
+            dataKey="netWorth"
+            name="Net Worth"
+            fill="#052e16"
+            stroke="#10b981"
+            strokeWidth={2}
+          />
+          <Line
+            yAxisId="left"
+            type="monotone"
+            dataKey="totalDebt"
+            name="Total Debt"
+            stroke="#ef4444"
+            strokeWidth={1.5}
+            dot={false}
+          />
+          <Line
+            yAxisId="cf"
+            type="monotone"
+            dataKey="monthlyCashFlow"
+            name="Monthly Cash Flow"
+            stroke="#22d3ee"
+            strokeWidth={2}
+            dot={false}
+            strokeDasharray="5 3"
+          />
+          {/* Owned property acquisitions — blue lines */}
+          {ownedPurchaseYears.map((yr) => {
+            const lbl = String(yr)
+            if (!validLabels.has(lbl)) return null
+            return (
+              <ReferenceLine
+                key={`hist_${yr}`}
+                yAxisId="left"
+                x={lbl}
+                stroke="#3b82f6"
+                strokeDasharray="4 2"
+                label={{ value: `🏠 ${yr}`, position: 'top', fill: '#60a5fa', fontSize: 9 }}
+              />
+            )
+          })}
+          {/* Planned (not yet owned) property acquisitions — violet lines */}
+          {plannedMarkers.map((pm) => {
+            if (!validLabels.has(pm.label)) return null
+            return (
+              <ReferenceLine
+                key={`planned_${pm.label}_${pm.name}`}
+                yAxisId="left"
+                x={pm.label}
+                stroke="#a78bfa"
+                strokeDasharray="4 2"
+                label={{ value: `🏠 ${pm.name}`, position: 'top', fill: '#c4b5fd', fontSize: 9 }}
+              />
+            )
+          })}
+          {/* Simulation milestones — amber lines */}
+          {milestones.map((m) => {
+            const xLabel = m.year === 0 ? 'Today' : `+${m.year}y`
+            if (!validLabels.has(xLabel)) return null
+            return (
+              <ReferenceLine
+                key={m.monthIndex}
+                yAxisId="left"
+                x={xLabel}
+                stroke="#f59e0b"
+                strokeDasharray="4 2"
+                label={{ value: `🏠 ${m.year === 0 ? 'Now' : `+${m.year}y`}`, position: 'top', fill: '#fbbf24', fontSize: 9 }}
+              />
+            )
+          })}
+        </ComposedChart>
+      </ResponsiveContainer>
+    </div>
+  )
+}
+
+// ─── Milestone Cards ──────────────────────────────────────────────────────────
+
+function MilestoneCard({ milestone, index }) {
+  const lt = BELGIAN_LOAN_TYPES.find((t) => t.id === milestone.recommendedLoanType)
+  const color = lt?.color || 'brand'
+
+  return (
+    <div
+      className={`card shrink-0 w-64 space-y-3 border-l-4 ${(COLOR_MAP[color] || COLOR_MAP.brand).border}`}
+    >
+      <div className="flex items-center justify-between">
+        <span className="text-xs text-slate-500">Acquisition {index + 1}</span>
+        <span className="text-xs font-semibold text-amber-400">
+          {milestone.year === 0
+            ? 'Now'
+            : `Year ${milestone.year}${milestone.month > 1 ? `, Mo ${milestone.month}` : ''}`}
+        </span>
+      </div>
+      <p className="font-semibold text-white text-sm leading-tight">{milestone.label}</p>
+      <div className="space-y-1">
+        <div className="flex justify-between text-xs">
+          <span className="text-slate-400">Property (my share)</span>
+          <span className="text-white font-semibold">{fmt(milestone.mySharePrice)}</span>
+        </div>
+        <div className="flex justify-between text-xs">
+          <span className="text-slate-400">Own funds needed</span>
+          <span className="text-amber-400 font-semibold">{fmt(milestone.cashUsed)}</span>
+        </div>
+        <div className="flex justify-between text-xs">
+          <span className="text-slate-400">New loan</span>
+          <span className="text-slate-300">{fmt(milestone.newLoanAmount)}</span>
+        </div>
+        <div className="flex justify-between text-xs">
+          <span className="text-slate-400">Monthly payment</span>
+          <span className={milestone.isBullet ? 'text-emerald-400' : 'text-slate-300'}>
+            {fmt(milestone.monthlyPayment)}/mo
+            {milestone.isBullet && ' (interest only)'}
+          </span>
+        </div>
+      </div>
+      {/* Portfolio after acquisition */}
+      <div className="rounded bg-slate-800/50 p-2 space-y-0.5">
+        <p className="text-xs text-slate-500 font-medium">After acquisition</p>
+        <div className="flex justify-between text-xs">
+          <span className="text-slate-400">Net worth</span>
+          <span className="text-emerald-400 font-semibold">{fmt(milestone.portfolioSnapshot.netWorth)}</span>
+        </div>
+        <div className="flex justify-between text-xs">
+          <span className="text-slate-400">Properties</span>
+          <span className="text-white">{milestone.portfolioSnapshot.propertyCount}</span>
+        </div>
+      </div>
+      <LoanTypePill loanTypeId={milestone.recommendedLoanType} />
+    </div>
+  )
+}
+
+// ─── Unified Timeline (existing + planned) ────────────────────────────────────
+
+function ExistingPropertyCard({ property }) {
+  const today = new Date().toISOString()
+  const isPlanned = property.status === 'planned'
+  const debt = (property.loans || []).reduce((s, l) => {
+    try { return s + getRemainingBalance(l, today) }
+    catch { return s + (l.originalAmount || 0) }
+  }, 0)
+  const equity = (property.currentValue || 0) - debt
+  const purchaseYear = property.purchaseDate
+    ? new Date(property.purchaseDate).getFullYear()
+    : '?'
+  const statusLabel = isPlanned ? 'Planned' :
+    property.status === 'rented' ? 'Rented out' :
+    property.status === 'owner_occupied' ? 'Owner-occupied' :
+    property.isRented ? 'Rented' : 'Owned'
+  const statusColor = isPlanned ? 'text-amber-400' : 'text-brand-400'
+  const borderColor = isPlanned ? 'border-amber-500/50' : 'border-brand-500/50'
+
+  return (
+    <div className={`card shrink-0 w-64 space-y-3 border-l-4 ${borderColor}`}>
+      <div className="flex items-center justify-between">
+        <span className="text-xs text-slate-500">
+          {isPlanned ? `Planned ${purchaseYear}` : `Purchased ${purchaseYear}`}
+        </span>
+        <span className={`text-xs font-semibold ${statusColor}`}>{statusLabel}</span>
+      </div>
+      <p className="font-semibold text-white text-sm leading-tight">
+        {property.name || property.address || 'Property'}
+      </p>
+      <div className="space-y-1">
+        {property.purchasePrice > 0 && (
+          <div className="flex justify-between text-xs">
+            <span className="text-slate-400">Purchase price</span>
+            <span className="text-slate-300">{fmt(property.purchasePrice)}</span>
+          </div>
+        )}
+        <div className="flex justify-between text-xs">
+          <span className="text-slate-400">Current value</span>
+          <span className="text-white font-semibold">{fmt(property.currentValue)}</span>
+        </div>
+        <div className="flex justify-between text-xs">
+          <span className="text-slate-400">Remaining debt</span>
+          <span className="text-red-400">{fmt(debt)}</span>
+        </div>
+        <div className="flex justify-between text-xs border-t border-slate-700/40 pt-1">
+          <span className="text-slate-400 font-medium">Equity</span>
+          <span className="text-emerald-400 font-semibold">{fmt(equity)}</span>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function UnifiedTimeline({ properties, milestones }) {
+  const sortedExisting = [...properties].sort(
+    (a, b) => new Date(a.purchaseDate || 0) - new Date(b.purchaseDate || 0)
+  )
+  return (
+    <div>
+      <h3 className="text-sm font-semibold text-slate-300 mb-1">Property Timeline</h3>
+      <p className="text-xs text-slate-500 mb-3">
+        <span className="text-brand-400">Blue</span> = existing &nbsp;·&nbsp;
+        <span className="text-amber-400">Amber</span> = planned acquisition
+      </p>
+      <div className="flex gap-4 overflow-x-auto pb-2">
+        {sortedExisting.map((p) => (
+          <ExistingPropertyCard key={p.id} property={p} />
+        ))}
+        {milestones.map((m, idx) => (
+          <MilestoneCard key={m.monthIndex} milestone={m} index={idx} />
+        ))}
+        {milestones.length === 0 && (
+          <div className="card shrink-0 w-56 text-center py-6 text-slate-500 text-xs border border-dashed border-slate-700/50">
+            No planned acquisitions triggered yet.
+            <br />
+            Add one above to see it here.
+          </div>
+        )}
+      </div>
+    </div>
+  )
+}
+
+// ─── Acceleration Advice ──────────────────────────────────────────────────────
+
+const ADVICE_COLOR_CLASSES = {
+  emerald: 'border-emerald-500/50 bg-emerald-900/10',
+  brand:   'border-brand-500/50 bg-brand-900/10',
+  amber:   'border-amber-500/50 bg-amber-900/10',
+  violet:  'border-violet-500/50 bg-violet-900/10',
+  cyan:    'border-cyan-500/50 bg-cyan-900/10',
+}
+
+function AdviceCard({ item }) {
+  const colorClass = ADVICE_COLOR_CLASSES[item.color] || ADVICE_COLOR_CLASSES.brand
+  return (
+    <div className={`rounded-xl border p-4 flex items-start gap-3 ${colorClass}`}>
+      <span className="text-xl shrink-0">{item.icon}</span>
+      <div className="min-w-0">
+        <p className="font-semibold text-white text-sm">{item.title}</p>
+        <p className="text-xs text-slate-400 mt-1 leading-relaxed">{item.description}</p>
+        {item.isImmediate && (
+          <p className="text-xs text-emerald-400 font-semibold mt-1.5">→ You can buy right now</p>
+        )}
+        {!item.isImmediate && item.monthsSaved > 0 && (
+          <p className="text-xs text-emerald-400 mt-1.5">
+            → Saves <span className="font-semibold">{item.monthsSaved} months</span>
+            {item.monthlyImpact > 0 && ` (+${fmt(item.monthlyImpact)}/mo)`}
+          </p>
+        )}
+      </div>
+    </div>
+  )
+}
+
+function AccelerationAdvice({ advice, baseReadyInMonths }) {
+  const hasAdvice = advice.length > 0
+  const canBuyNow = baseReadyInMonths === 0
+
+  return (
+    <div className="card space-y-4">
+      <div>
+        <h2 className="text-lg font-semibold text-white">Ways to Accelerate</h2>
+        {canBuyNow ? (
+          <p className="text-emerald-400 text-sm mt-1 font-medium">
+            You have enough to start your first acquisition right now.
+          </p>
+        ) : baseReadyInMonths !== null ? (
+          <p className="text-slate-400 text-sm mt-1">
+            Your first acquisition is ready in{' '}
+            <span className="text-white font-semibold">{monthsToText(baseReadyInMonths)}</span>.
+            Here are concrete ways to get there sooner:
+          </p>
+        ) : (
+          <p className="text-slate-400 text-sm mt-1">
+            No acquisition is reachable in the current horizon. These steps could change that:
+          </p>
+        )}
+      </div>
+      {hasAdvice ? (
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          {advice.map((item) => (
+            <AdviceCard key={item.id} item={item} />
+          ))}
+        </div>
+      ) : (
+        <p className="text-slate-500 text-sm">
+          No specific recommendations available. Add a planned acquisition above to see opportunities.
+        </p>
+      )}
+    </div>
+  )
+}
+
+// ─── Belgian Loan Guide ───────────────────────────────────────────────────────
+
+function LoanGuideCard({ loanType, expanded, onToggle }) {
+  const colors = COLOR_MAP[loanType.color] || COLOR_MAP.brand
+  return (
+    <div className={`rounded-xl border p-4 space-y-3 cursor-pointer transition-colors hover:border-slate-500 ${colors.border}`}>
+      <button onClick={onToggle} className="w-full text-left space-y-2">
+        <div className="flex items-start justify-between gap-2">
+          <div>
+            <p className="font-semibold text-white text-sm">{loanType.nameEN}</p>
+            <p className="text-xs text-slate-400">{loanType.nameNL}</p>
+          </div>
+          <span className={`text-xs px-2 py-0.5 rounded-full font-semibold shrink-0 ${colors.badge}`}>
+            {loanType.rateLabel}
+          </span>
+        </div>
+        <p className="text-xs text-slate-400 leading-relaxed line-clamp-2">{loanType.summaryEN}</p>
+        <div className="flex items-center gap-2 text-xs text-slate-500">
+          <span>{expanded ? '▲ Less' : '▼ More'}</span>
+          {loanType.taxDeductible && (
+            <span className="text-violet-400 font-medium">★ Tax deductible</span>
+          )}
+          {loanType.monthlyPaymentStyle === 'interest_only' && (
+            <span className="text-emerald-400">↓ Low monthly</span>
+          )}
+        </div>
+      </button>
+
+      {expanded && (
+        <div className="space-y-3 border-t border-slate-700/50 pt-3">
+          {/* Pros */}
+          <div>
+            <p className="text-xs font-semibold text-emerald-400 mb-1">Advantages</p>
+            <ul className="space-y-0.5">
+              {loanType.prosEN.map((p) => (
+                <li key={p} className="text-xs text-slate-300 flex gap-1.5">
+                  <span className="text-emerald-500 shrink-0">✓</span>
+                  {p}
+                </li>
+              ))}
+            </ul>
+          </div>
+          {/* Cons */}
+          <div>
+            <p className="text-xs font-semibold text-red-400 mb-1">Disadvantages</p>
+            <ul className="space-y-0.5">
+              {loanType.consEN.map((c) => (
+                <li key={c} className="text-xs text-slate-300 flex gap-1.5">
+                  <span className="text-red-500 shrink-0">✗</span>
+                  {c}
+                </li>
+              ))}
+            </ul>
+          </div>
+          {/* 2025 tax note */}
+          <div className="rounded bg-amber-950/40 border border-amber-700/30 p-2">
+            <p className="text-xs text-amber-300 font-semibold">2025 Tax Note</p>
+            <p className="text-xs text-amber-200/80 mt-0.5 leading-relaxed">{loanType.taxNote2025}</p>
+          </div>
+          {/* Details */}
+          <div className="flex flex-wrap gap-2 text-xs">
+            {loanType.typicalLTV && (
+              <span className="bg-slate-700/50 px-2 py-0.5 rounded text-slate-300">
+                LTV: {Math.round(loanType.typicalLTV * 100)}%
+              </span>
+            )}
+            <span className="bg-slate-700/50 px-2 py-0.5 rounded text-slate-300">
+              Term: {loanType.typicalTermYears}y typical
+            </span>
+            <span className="bg-slate-700/50 px-2 py-0.5 rounded text-slate-300">
+              {loanType.monthlyPaymentStyle === 'interest_only' ? 'Interest only' : 'Annuity (capital + interest)'}
+            </span>
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+function LoanGuide({ expandedCard, onToggleCard }) {
+  const [open, setOpen] = useState(false)
+
+  return (
+    <div className="card space-y-4">
+      <button
+        onClick={() => setOpen((o) => !o)}
+        className="w-full flex items-center justify-between gap-2"
+      >
+        <div className="text-left">
+          <h2 className="text-lg font-semibold text-white">Belgian Loan Guide</h2>
+          <p className="text-xs text-slate-400 mt-0.5">
+            7 financing options for Belgian real estate — including 2025 tax changes
+          </p>
+        </div>
+        <ChevronIcon open={open} />
+      </button>
+      {open && (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 pt-2">
+          {BELGIAN_LOAN_TYPES.map((lt) => (
+            <LoanGuideCard
+              key={lt.id}
+              loanType={lt}
+              expanded={expandedCard === lt.id}
+              onToggle={() => onToggleCard(lt.id === expandedCard ? null : lt.id)}
+            />
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── Icons ────────────────────────────────────────────────────────────────────
+
+function ChevronIcon({ open }) {
+  return (
+    <svg
+      className={`w-4 h-4 text-slate-400 transition-transform shrink-0 ${open ? 'rotate-180' : ''}`}
+      fill="none"
+      stroke="currentColor"
+      viewBox="0 0 24 24"
+    >
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+    </svg>
+  )
+}
+
+function PlusIcon() {
+  return (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+    </svg>
+  )
+}
+
+// ─── Main Component ───────────────────────────────────────────────────────────
+
+export default function GrowthPlanner({ properties, profile }) {
+  const [acquisitions, setAcquisitions] = useState([
+    { ...DEFAULT_ACQUISITION, id: '1' },
+  ])
+  const [expandedIdx, setExpandedIdx] = useState(0)
+  const [expandedLoanCard, setExpandedLoanCard] = useState(null)
+  const [horizonYears, setHorizonYears] = useState(25)
+  const [maxLTV, setMaxLTV] = useState(0.80)
+
+  // Exclude planned/simulated properties — they aren't owned yet and would skew the simulation
+  const realProperties = useMemo(
+    () => properties.filter((p) => p.status !== 'planned'),
+    [properties]
+  )
+
+  const startingCash = useMemo(
+    () => (profile.members || []).reduce((s, m) => s + (m.cash || 0), 0),
+    [profile]
+  )
+
+  const roadmapConfig = useMemo(
+    () => ({
+      horizonYears,
+      plannedAcquisitions: acquisitions,
+      maxLTV,
+      startingCash,
+      incomeSavingsBuffer: 0.10,
+    }),
+    [horizonYears, acquisitions, maxLTV, startingCash]
+  )
+
+  // Historical chart: only real owned properties (not planned future purchases)
+  const historicalData = useMemo(() => buildHistoricalData(realProperties), [realProperties])
+
+  // Simulation uses ALL properties — planned ones carry real loan costs that affect monthly surplus
+  const roadmap = useMemo(
+    () => simulateGrowthRoadmap(properties, profile, roadmapConfig),
+    [properties, profile, roadmapConfig]
+  )
+
+  const advice = useMemo(
+    () => generateGrowthAdvice(properties, profile, roadmapConfig, roadmap.summary.readyInMonths),
+    [properties, profile, roadmapConfig, roadmap.summary.readyInMonths]
+  )
+
+  function addAcquisition() {
+    const id = String(Date.now())
+    setAcquisitions((prev) => [
+      ...prev,
+      { ...DEFAULT_ACQUISITION, label: `Investment Property ${prev.length + 1}`, id },
+    ])
+    setExpandedIdx(acquisitions.length)
+  }
+
+  function updateAcquisition(idx, updated) {
+    setAcquisitions((prev) => prev.map((a, i) => (i === idx ? updated : a)))
+  }
+
+  function removeAcquisition(idx) {
+    setAcquisitions((prev) => prev.filter((_, i) => i !== idx))
+    setExpandedIdx((e) => (e >= idx ? Math.max(0, e - 1) : e))
+  }
+
+  const { milestones, yearlyData, summary } = roadmap
+
+  return (
+    <div className="space-y-5">
+      {/* Header */}
+      <div>
+        <h1 className="text-2xl font-bold text-white">Growth Planner</h1>
+        <p className="text-slate-400 text-sm mt-0.5">
+          Simulate your property snowball over {horizonYears} years — and discover how to accelerate it.
+        </p>
+      </div>
+
+      {/* Position bar */}
+      <PositionBar properties={realProperties} profile={profile} />
+
+      {/* Summary strip */}
+      {summary.totalProperties > properties.length && (
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div className="card text-center">
+            <p className="text-xs text-slate-400">First acquisition ready</p>
+            <p className="text-base font-bold text-amber-400">{monthsToText(summary.readyInMonths)}</p>
+          </div>
+          <div className="card text-center">
+            <p className="text-xs text-slate-400">Properties in {horizonYears}y</p>
+            <p className="text-base font-bold text-white">{summary.totalProperties}</p>
+          </div>
+          <div className="card text-center">
+            <p className="text-xs text-slate-400">Final net worth</p>
+            <p className="text-base font-bold text-emerald-400">{fmt(summary.finalNetWorth)}</p>
+          </div>
+          <div className="card text-center">
+            <p className="text-xs text-slate-400">Monthly CF at year {horizonYears}</p>
+            <p className="text-base font-bold text-emerald-400">{fmt(summary.finalMonthlyCF)}/mo</p>
+          </div>
+        </div>
+      )}
+
+      {/* Main two-panel grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-[360px_1fr] gap-5">
+        {/* LEFT: config */}
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h2 className="text-base font-semibold text-white">Planned Acquisitions</h2>
+            <button onClick={addAcquisition} className="btn-primary text-xs px-3 py-1.5 flex items-center gap-1.5">
+              <PlusIcon />
+              Add
+            </button>
+          </div>
+
+          {acquisitions.length === 0 ? (
+            <div className="card text-center py-8 text-slate-500 text-sm">
+              No planned acquisitions yet. Add one to see the snowball.
+            </div>
+          ) : (
+            acquisitions.map((acq, idx) => (
+              <AcquisitionConfigCard
+                key={acq.id || idx}
+                acquisition={acq}
+                index={idx}
+                isExpanded={expandedIdx === idx}
+                onToggle={() => setExpandedIdx(expandedIdx === idx ? -1 : idx)}
+                onChange={(updated) => updateAcquisition(idx, updated)}
+                onRemove={() => removeAcquisition(idx)}
+              />
+            ))
+          )}
+
+          {/* Simulation settings */}
+          <div className="card space-y-3">
+            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Simulation Settings</p>
+            <Field label="Horizon (years)">
+              <input
+                type="number"
+                min="5"
+                max="40"
+                step="1"
+                value={horizonYears}
+                onChange={(e) => setHorizonYears(Math.max(5, num(e.target.value)))}
+                className="input w-full"
+              />
+            </Field>
+            <Field label="Max LTV for new loans" hint="Banks typically cap at 80% for investment">
+              <PctInput value={maxLTV} onChange={setMaxLTV} step="1" min={50} max={100} />
+            </Field>
+          </div>
+        </div>
+
+        {/* RIGHT: roadmap chart + milestones */}
+        <div className="space-y-4">
+          <div className="card">
+            <SnowballChart
+              yearlyData={yearlyData}
+              milestones={milestones}
+              historicalData={historicalData}
+              properties={properties}
+            />
+          </div>
+
+          <UnifiedTimeline properties={properties} milestones={milestones} />
+        </div>
+      </div>
+
+      {/* Acceleration advice */}
+      <AccelerationAdvice advice={advice} baseReadyInMonths={summary.readyInMonths} />
+
+      {/* Belgian Loan Guide */}
+      <LoanGuide
+        expandedCard={expandedLoanCard}
+        onToggleCard={setExpandedLoanCard}
+      />
+    </div>
+  )
+}

@@ -53,6 +53,7 @@ import {
 } from "./services/portfolioService";
 import { Analytics } from "@vercel/analytics/react";
 import { computePositions } from "./calculations/trading/tradingUtils";
+import GrowthPlanner from "./components/GrowthPlanner";
 
 // ─── Loading screen ───────────────────────────────────────────────────────────
 
@@ -707,6 +708,11 @@ export default function App() {
 						}
 					/>
 				)}
+
+			{/* ── Growth Planner ── */}
+			{activeTab === "growth" && (
+				<GrowthPlanner properties={properties} profile={householdProfile} />
+			)}
 
 			{/* ── Trading Account ── */}
 			{activeTab === "trading" && (
