@@ -135,7 +135,7 @@ function Toast({ message, type = "error", onDismiss }) {
 	);
 }
 
-function InstallAppBanner({ onInstall, onDismiss, installSupported }) {
+function InstallAppBanner({ onInstall, onDismiss, installSupported, hasDirectDownload }) {
 	return (
 		<div className="fixed bottom-24 left-4 right-4 z-40 md:hidden">
 			<div className="rounded-2xl border border-brand-500/30 bg-slate-900/95 shadow-neo-lg px-4 py-3 flex items-center gap-3">
@@ -149,7 +149,9 @@ function InstallAppBanner({ onInstall, onDismiss, installSupported }) {
 					<p className="text-xs text-neo-muted">
 						{installSupported
 							? "Tap download to install it like a native app."
-							: "Tap download to see install steps for your browser."}
+							: hasDirectDownload
+								? "Tap download to get the native app package."
+								: "Tap download to install in a supported browser."}
 					</p>
 				</div>
 				<button onClick={onInstall} className="btn-primary text-xs px-3 py-2 whitespace-nowrap">
@@ -287,6 +289,7 @@ export default function App() {
 	const [aiChatOpen, setAiChatOpen] = useState(false);
 	const [deferredInstallPrompt, setDeferredInstallPrompt] = useState(null);
 	const [showInstallBanner, setShowInstallBanner] = useState(false);
+	const mobileAppDownloadUrl = import.meta.env.VITE_MOBILE_APP_DOWNLOAD_URL;
 
 	// Pick the right data-layer functions based on auth state
 	const db = isLoggedIn
@@ -453,29 +456,14 @@ export default function App() {
 			return;
 		}
 
-		const ua = navigator.userAgent.toLowerCase();
-		const isIOS = /iphone|ipad|ipod/.test(ua);
-		const isFirefox = ua.includes("firefox");
-
-		if (isIOS) {
-			setToast({
-				message: "On iPhone/iPad: tap Share, then 'Add to Home Screen'.",
-				type: "success",
-			});
-			return;
-		}
-
-		if (isFirefox) {
-			setToast({
-				message: "Firefox: open browser menu and use 'Install' or 'Add to Home Screen'.",
-				type: "success",
-			});
+		if (mobileAppDownloadUrl) {
+			window.location.href = mobileAppDownloadUrl;
 			return;
 		}
 
 		setToast({
-			message: "Open your browser menu and use Install/Add to Home Screen.",
-			type: "success",
+			message: "Direct download is not configured yet.",
+			type: "error",
 		});
 	};
 
@@ -645,6 +633,7 @@ export default function App() {
 					onInstall={handleInstallApp}
 					onDismiss={dismissInstallBanner}
 					installSupported={Boolean(deferredInstallPrompt)}
+					hasDirectDownload={Boolean(mobileAppDownloadUrl)}
 				/>
 			)}
 
