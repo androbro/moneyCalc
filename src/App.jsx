@@ -135,6 +135,44 @@ function Toast({ message, type = "error", onDismiss }) {
 	);
 }
 
+function InstallAppBanner({ onInstall, onDismiss, installSupported }) {
+	return (
+		<div className="fixed bottom-24 left-4 right-4 z-40 md:hidden">
+			<div className="rounded-2xl border border-brand-500/30 bg-slate-900/95 shadow-neo-lg px-4 py-3 flex items-center gap-3">
+				<div className="w-9 h-9 rounded-xl bg-brand-500/20 border border-brand-400/30 flex items-center justify-center shrink-0">
+					<svg className="w-4 h-4 text-brand-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+						<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 16V4m0 12l-4-4m4 4l4-4M4 20h16" />
+					</svg>
+				</div>
+				<div className="min-w-0 flex-1">
+					<p className="text-sm font-semibold text-neo-text">Install wenLambo on your phone</p>
+					<p className="text-xs text-neo-muted">
+						{installSupported
+							? "Tap download to install it like a native app."
+							: "Tap download to see install steps for your browser."}
+					</p>
+				</div>
+				<button onClick={onInstall} className="btn-primary text-xs px-3 py-2 whitespace-nowrap">
+					Download app
+				</button>
+				<button onClick={onDismiss} className="text-neo-muted hover:text-neo-text">
+					✕
+				</button>
+			</div>
+		</div>
+	);
+}
+
+function isRunningInstalledApp() {
+	return (
+		window.matchMedia?.("(display-mode: standalone)").matches ||
+		window.matchMedia?.("(display-mode: fullscreen)").matches ||
+		window.matchMedia?.("(display-mode: minimal-ui)").matches ||
+		window.navigator.standalone === true ||
+		document.referrer.startsWith("android-app://")
+	);
+}
+
 // ─── Claim-data migration banner ──────────────────────────────────────────────
 
 function MigrationBanner({ onClaim, onDismiss }) {
@@ -247,6 +285,8 @@ export default function App() {
 
 	// AI chat (controlled so MobileLayout can use its own trigger)
 	const [aiChatOpen, setAiChatOpen] = useState(false);
+	const [deferredInstallPrompt, setDeferredInstallPrompt] = useState(null);
+	const [showInstallBanner, setShowInstallBanner] = useState(false);
 
 	// Pick the right data-layer functions based on auth state
 	const db = isLoggedIn
@@ -316,6 +356,37 @@ export default function App() {
 		if (!authLoading) load();
 	}, [authLoading, load]);
 
+	useEffect(() => {
+		if (!isMobile) return;
+
+		if (isRunningInstalledApp()) return;
+
+		const dismissed = localStorage.getItem("install-banner-dismissed") === "1";
+		if (!dismissed) {
+			setShowInstallBanner(true);
+		}
+
+		const handleBeforeInstallPrompt = (event) => {
+			if (isRunningInstalledApp()) return;
+			event.preventDefault();
+			setDeferredInstallPrompt(event);
+			setShowInstallBanner(true);
+		};
+
+		const handleAppInstalled = () => {
+			setDeferredInstallPrompt(null);
+			setShowInstallBanner(false);
+			setToast({ message: "wenLambo installed successfully", type: "success" });
+		};
+
+		window.addEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+		window.addEventListener("appinstalled", handleAppInstalled);
+		return () => {
+			window.removeEventListener("beforeinstallprompt", handleBeforeInstallPrompt);
+			window.removeEventListener("appinstalled", handleAppInstalled);
+		};
+	}, [isMobile]);
+
 	// ── Check for unclaimed data after sign-in ──
 	useEffect(() => {
 		if (!isLoggedIn || migrationChecked) return;
@@ -368,6 +439,49 @@ export default function App() {
 		resetGuestStorage();
 		load();
 		setToast({ message: "Demo data reset to default", type: "success" });
+	};
+
+	const handleInstallApp = async () => {
+		if (deferredInstallPrompt) {
+			deferredInstallPrompt.prompt();
+			try {
+				await deferredInstallPrompt.userChoice;
+			} catch {
+				// No-op; browser handles dismiss/accept state.
+			}
+			setDeferredInstallPrompt(null);
+			return;
+		}
+
+		const ua = navigator.userAgent.toLowerCase();
+		const isIOS = /iphone|ipad|ipod/.test(ua);
+		const isFirefox = ua.includes("firefox");
+
+		if (isIOS) {
+			setToast({
+				message: "On iPhone/iPad: tap Share, then 'Add to Home Screen'.",
+				type: "success",
+			});
+			return;
+		}
+
+		if (isFirefox) {
+			setToast({
+				message: "Firefox: open browser menu and use 'Install' or 'Add to Home Screen'.",
+				type: "success",
+			});
+			return;
+		}
+
+		setToast({
+			message: "Open your browser menu and use Install/Add to Home Screen.",
+			type: "success",
+		});
+	};
+
+	const dismissInstallBanner = () => {
+		setShowInstallBanner(false);
+		localStorage.setItem("install-banner-dismissed", "1");
 	};
 
 	// ── Shared save wrapper ──
@@ -524,6 +638,14 @@ export default function App() {
 			{/* Share modal */}
 			{showShareModal && (
 				<ShareModal onClose={() => setShowShareModal(false)} />
+			)}
+
+			{isMobile && showInstallBanner && (
+				<InstallAppBanner
+					onInstall={handleInstallApp}
+					onDismiss={dismissInstallBanner}
+					installSupported={Boolean(deferredInstallPrompt)}
+				/>
 			)}
 
 			<ActiveLayout
