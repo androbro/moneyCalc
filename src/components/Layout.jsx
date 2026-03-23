@@ -189,7 +189,7 @@ function FloatingSidebar({ active, onNav, isLoggedIn, user, onSignOut, onResetDe
     <div className="flex flex-col h-full py-4 px-2.5">
 
       {/* Logo — pulsing glow */}
-      <div className="flex justify-center mb-5">
+      <div className="flex justify-center mb-5 shrink-0">
         <div
           className="w-11 h-11 rounded-2xl bg-brand-600 flex items-center justify-center sidebar-logo-pulse"
           style={{ boxShadow: '0 0 18px rgba(234,88,12,0.55)' }}
@@ -201,21 +201,21 @@ function FloatingSidebar({ active, onNav, isLoggedIn, user, onSignOut, onResetDe
       </div>
 
       {/* Group: Portfolio */}
-      <p className="text-[8px] text-neo-subtle uppercase tracking-widest text-center mb-1.5 opacity-60">
+      <p className="text-[8px] text-neo-subtle uppercase tracking-widest text-center mb-1.5 opacity-60 shrink-0">
         Portfolio
       </p>
-      <nav className="flex flex-col items-center gap-0.5">
+      <nav className="flex flex-col items-center gap-0.5 shrink-0">
         {NAV_ITEMS.filter(i => i.group === 'portfolio').map(({ id, label, fullLabel, icon: Icon }, idx) => (
           <NavPill key={id} id={id} label={label} fullLabel={fullLabel} Icon={Icon} active={active} onNav={onNav} index={idx} />
         ))}
       </nav>
 
       {/* Divider + Group: Strategy */}
-      <div className="w-8 h-px bg-white/10 my-2 mx-auto" />
-      <p className="text-[8px] text-neo-subtle uppercase tracking-widest text-center mb-1.5 opacity-60">
+      <div className="w-8 h-px bg-white/10 my-2 mx-auto shrink-0" />
+      <p className="text-[8px] text-neo-subtle uppercase tracking-widest text-center mb-1.5 opacity-60 shrink-0">
         Strategy
       </p>
-      <nav className="flex-1 flex flex-col items-center gap-0.5 overflow-y-auto">
+      <nav className="flex flex-col items-center gap-0.5 flex-1">
         {NAV_ITEMS.filter(i => i.group === 'strategy').map(({ id, label, fullLabel, icon: Icon }, idx) => (
           <NavPill key={id} id={id} label={label} fullLabel={fullLabel} Icon={Icon} active={active} onNav={onNav} index={idx + 6} />
         ))}
@@ -417,22 +417,17 @@ function MobileFloatingSidebar({ active, onNav, isLoggedIn, user, onSignOut, onR
   )
 }
 
-// ─── Layout ───────────────────────────────────────────────────────────────────
+// ─── Desktop Layout ───────────────────────────────────────────────────────────
 
 export default function Layout({ activeTab, onTabChange, children, isLoggedIn, user, onSignOut, onResetDemo, onShare }) {
-  const [mobileOpen, setMobileOpen] = useState(false)
-
-  const handleNav = (id) => {
-    onTabChange(id)
-    setMobileOpen(false)
-  }
+  const handleNav = (id) => onTabChange(id)
 
   return (
     <div className="min-h-screen flex">
 
-      {/* ── Floating desktop sidebar ── */}
+      {/* Floating sidebar */}
       <aside
-        className="hidden md:flex flex-col fixed left-3 top-3 bottom-3 w-[82px] z-20 rounded-3xl border border-white/[0.10]"
+        className="flex flex-col fixed left-3 top-3 bottom-3 w-[82px] z-20 rounded-3xl border border-white/[0.10]"
         style={{
           background: 'rgba(6, 10, 20, 0.70)',
           backdropFilter: 'blur(20px)',
@@ -451,69 +446,9 @@ export default function Layout({ activeTab, onTabChange, children, isLoggedIn, u
         />
       </aside>
 
-      {/* ── Mobile fullscreen menu ── */}
-      <div
-        className={`fixed inset-0 z-40 md:hidden flex flex-col
-                    transition-all duration-300
-                    ${mobileOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
-        style={{
-          background: 'rgba(4, 7, 14, 0.82)',
-          backdropFilter: 'blur(24px)',
-          WebkitBackdropFilter: 'blur(24px)',
-        }}
-      >
-        {/* Close button */}
-        <button
-          className="absolute top-4 right-4 z-10 w-10 h-10 rounded-2xl flex items-center justify-center
-                     text-neo-muted hover:text-neo-text transition-colors"
-          style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.08)' }}
-          onClick={() => setMobileOpen(false)}
-        >
-          <CloseIcon />
-        </button>
-        <div
-          className={`flex-1 overflow-y-auto transition-all duration-300
-                      ${mobileOpen ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}`}
-        >
-          <MobileFloatingSidebar
-            active={activeTab}
-            onNav={handleNav}
-            isLoggedIn={isLoggedIn}
-            user={user}
-            onSignOut={onSignOut}
-            onResetDemo={onResetDemo}
-            onShare={onShare}
-          />
-        </div>
-      </div>
-
-      {/* ── Main content ── */}
-      <div className="flex-1 md:ml-[98px] flex flex-col min-h-screen">
-
-        {/* Mobile top bar */}
-        <header
-          className="md:hidden flex items-center gap-3 px-4 py-3 border-b border-white/[0.09] sticky top-0 z-10"
-          style={{ background: 'rgba(6, 10, 20, 0.72)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)' }}
-        >
-          <button className="text-neo-muted hover:text-neo-text" onClick={() => setMobileOpen(true)}>
-            <MenuIcon />
-          </button>
-          <span className="font-semibold text-neo-text flex-1">MoneyCalc</span>
-          {isLoggedIn ? (
-            <button onClick={onSignOut} className="text-xs text-neo-muted hover:text-neo-text/95 transition-colors px-2 py-1">
-              Sign out
-            </button>
-          ) : (
-            <button
-              onClick={() => { window.history.pushState(null, '', '/login'); window.dispatchEvent(new PopStateEvent('popstate')) }}
-              className="text-xs text-brand-400 hover:text-brand-300 font-medium transition-colors px-2 py-1"
-            >
-              Sign in
-            </button>
-          )}
-        </header>
-
-        <main className="flex-1 p-4 sm:p-5 lg:p-6 max-w-[1400px] w-full mx-auto">
+      {/* Main content */}
+      <div className="flex-1 ml-[98px] flex flex-col min-h-screen">
+        <main className="flex-1 p-5 lg:p-6 max-w-[1400px] w-full mx-auto">
           {children}
         </main>
       </div>

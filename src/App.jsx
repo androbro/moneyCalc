@@ -1,5 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import Layout from "./components/Layout";
+import MobileLayout from "./components/MobileLayout";
+import { useMediaQuery } from "./hooks/useMediaQuery";
 import Dashboard from "./components/Dashboard";
 import ProjectionChart from "./components/ProjectionChart";
 import PropertyForm from "./components/PropertyForm";
@@ -199,6 +201,8 @@ function MigrationBanner({ onClaim, onDismiss }) {
 
 export default function App() {
 	const { session, user, loading: authLoading, signOut } = useAuth();
+	const isMobile = useMediaQuery('(max-width: 767px)')
+	const ActiveLayout = isMobile ? MobileLayout : Layout
 
 	const isLoggedIn = Boolean(session);
 
@@ -240,6 +244,9 @@ export default function App() {
 
 	// Share modal
 	const [showShareModal, setShowShareModal] = useState(false);
+
+	// AI chat (controlled so MobileLayout can use its own trigger)
+	const [aiChatOpen, setAiChatOpen] = useState(false);
 
 	// Pick the right data-layer functions based on auth state
 	const db = isLoggedIn
@@ -519,7 +526,7 @@ export default function App() {
 				<ShareModal onClose={() => setShowShareModal(false)} />
 			)}
 
-			<Layout
+			<ActiveLayout
 				activeTab={activeTab}
 				onTabChange={(tab) => {
 					setActiveTab(tab);
@@ -531,6 +538,8 @@ export default function App() {
 				onSignOut={handleSignOut}
 				onResetDemo={handleResetDemo}
 				onShare={() => setShowShareModal(true)}
+				aiChatOpen={aiChatOpen}
+				onAiChatToggle={() => setAiChatOpen(o => !o)}
 			>
 			{/* ── Dashboard ── */}
 			{activeTab === "dashboard" && (
@@ -759,7 +768,7 @@ export default function App() {
 					onPortfolioValue={setTradingPortfolioValue}
 				/>
 			)}
-			</Layout>
+			</ActiveLayout>
 
 			{/* Toast */}
 			{toast && (
@@ -777,6 +786,8 @@ export default function App() {
 				activeTab={activeTab}
 				simState={simState}
 				isOwner={isLoggedIn}
+				open={isMobile ? aiChatOpen : undefined}
+				onToggle={isMobile ? () => setAiChatOpen(o => !o) : undefined}
 			/>
 		</>
 	);

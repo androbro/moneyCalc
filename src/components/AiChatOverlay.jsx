@@ -714,8 +714,10 @@ function SessionPanel({ sessions, activeId, onSelect, onNew, onDelete, onClose }
 
 // ─── Main overlay component ───────────────────────────────────────────────────
 
-export default function AiChatOverlay({ properties, profile, activeTab, simState, isOwner }) {
-  const [open, setOpen]                   = useState(false)
+export default function AiChatOverlay({ properties, profile, activeTab, simState, isOwner, open: controlledOpen, onToggle }) {
+  const [internalOpen, setInternalOpen]   = useState(false)
+  const open    = controlledOpen !== undefined ? controlledOpen : internalOpen
+  const setOpen = onToggle ?? setInternalOpen
   const [showSessions, setShowSessions]   = useState(false)
   const [sessions, setSessions]           = useState(() => loadSessions())
   const [activeId, setActiveId]           = useState(() => {
@@ -917,12 +919,13 @@ export default function AiChatOverlay({ properties, profile, activeTab, simState
 
   return (
     <>
-      {/* ── Floating action button ── */}
+      {/* ── Floating action button (desktop only — mobile uses center nav button) ── */}
       <button
         onClick={() => setOpen((o) => !o)}
         title="AI Chat"
         className={`fixed bottom-6 right-6 z-[100] w-14 h-14 rounded-full shadow-neo-lg
-                    flex items-center justify-center transition-all duration-200
+                    items-center justify-center transition-all duration-200
+                    ${controlledOpen !== undefined ? 'hidden' : 'flex'}
                     ${open
                       ? 'bg-neo-sunken hover:bg-neo-sunken rotate-45'
                       : 'bg-brand-600 hover:bg-brand-500 hover:scale-105'
