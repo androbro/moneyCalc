@@ -110,7 +110,7 @@ function StatPill({ icon, label, value }) {
   return (
     <div
       className="flex items-center gap-3 border border-white/[0.10] rounded-2xl px-4 py-3 flex-1 min-w-0"
-      style={{ background: 'rgba(10, 14, 24, 0.42)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)' }}
+      style={{ background: 'rgba(10, 14, 24, 0.38)', backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)' }}
     >
       <div className="w-9 h-9 rounded-xl bg-brand-600/15 flex items-center justify-center
                       shrink-0 text-brand-400">

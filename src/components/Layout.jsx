@@ -1,18 +1,20 @@
 import { useState, useRef, useEffect } from 'react'
 
 const NAV_ITEMS = [
-  { id: 'dashboard',   label: 'Dashboard',        icon: ChartIcon,      group: 'portfolio' },
-  { id: 'properties',  label: 'Properties',       icon: BuildingIcon,   group: 'portfolio' },
-  { id: 'investments', label: 'Investments',      icon: InvestmentIcon, group: 'portfolio' },
-  { id: 'projection',  label: 'Projection',       icon: TrendingIcon,   group: 'portfolio' },
-  { id: 'scenario',    label: 'Scenarios',        icon: ScenarioIcon,   group: 'portfolio' },
-  { id: 'trading',     label: 'Trading',          icon: TradingIcon,    group: 'portfolio' },
-  { id: 'household',   label: 'Household Profile',icon: HouseholdIcon,  group: 'strategy' },
-  { id: 'cashflow',    label: 'Cash Flow',        icon: CashFlowIcon,   group: 'strategy' },
-  { id: 'moneyflow',   label: 'Money Flow',       icon: MoneyFlowIcon,  group: 'strategy' },
-  { id: 'simulator',   label: 'Simulator',        icon: SimulatorIcon,  group: 'strategy' },
-  { id: 'growth',      label: 'Growth Planner',   icon: GrowthPlannerIcon, group: 'strategy' },
+  { id: 'dashboard',   label: 'Dashboard',  fullLabel: 'Dashboard',         icon: ChartIcon,         group: 'portfolio' },
+  { id: 'properties',  label: 'Properties', fullLabel: 'Properties',        icon: BuildingIcon,      group: 'portfolio' },
+  { id: 'investments', label: 'Invest',     fullLabel: 'Investments',       icon: InvestmentIcon,    group: 'portfolio' },
+  { id: 'projection',  label: 'Projection', fullLabel: 'Projection',        icon: TrendingIcon,      group: 'portfolio' },
+  { id: 'scenario',    label: 'Scenarios',  fullLabel: 'Scenarios',         icon: ScenarioIcon,      group: 'portfolio' },
+  { id: 'trading',     label: 'Trading',    fullLabel: 'Trading',           icon: TradingIcon,       group: 'portfolio' },
+  { id: 'household',   label: 'Household',  fullLabel: 'Household Profile', icon: HouseholdIcon,     group: 'strategy' },
+  { id: 'cashflow',    label: 'Cash Flow',  fullLabel: 'Cash Flow',         icon: CashFlowIcon,      group: 'strategy' },
+  { id: 'moneyflow',   label: 'Money',      fullLabel: 'Money Flow',        icon: MoneyFlowIcon,     group: 'strategy' },
+  { id: 'simulator',   label: 'Simulator',  fullLabel: 'Simulator',         icon: SimulatorIcon,     group: 'strategy' },
+  { id: 'growth',      label: 'Growth',     fullLabel: 'Growth Planner',    icon: GrowthPlannerIcon, group: 'strategy' },
 ]
+
+// ─── Icons ────────────────────────────────────────────────────────────────────
 
 function ChartIcon() {
   return (
@@ -22,7 +24,6 @@ function ChartIcon() {
     </svg>
   )
 }
-
 function BuildingIcon() {
   return (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -31,25 +32,20 @@ function BuildingIcon() {
     </svg>
   )
 }
-
 function TrendingIcon() {
   return (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-        d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
     </svg>
   )
 }
-
 function InvestmentIcon() {
   return (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-        d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
     </svg>
   )
 }
-
 function ScenarioIcon() {
   return (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -58,7 +54,6 @@ function ScenarioIcon() {
     </svg>
   )
 }
-
 function HouseholdIcon() {
   return (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -67,7 +62,6 @@ function HouseholdIcon() {
     </svg>
   )
 }
-
 function CashFlowIcon() {
   return (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -76,7 +70,6 @@ function CashFlowIcon() {
     </svg>
   )
 }
-
 function MoneyFlowIcon() {
   return (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -85,7 +78,6 @@ function MoneyFlowIcon() {
     </svg>
   )
 }
-
 function SimulatorIcon() {
   return (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -94,16 +86,13 @@ function SimulatorIcon() {
     </svg>
   )
 }
-
 function GrowthPlannerIcon() {
   return (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-        d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
     </svg>
   )
 }
-
 function TradingIcon() {
   return (
     <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -112,7 +101,6 @@ function TradingIcon() {
     </svg>
   )
 }
-
 function MenuIcon() {
   return (
     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -120,7 +108,6 @@ function MenuIcon() {
     </svg>
   )
 }
-
 function CloseIcon() {
   return (
     <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -129,100 +116,303 @@ function CloseIcon() {
   )
 }
 
-// ─── User menu (avatar + dropdown) ───────────────────────────────────────────
+// ─── Animated NavPill (desktop) ──────────────────────────────────────────────
 
-function UserMenu({ user, onSignOut, onResetDemo }) {
-  const [open, setOpen] = useState(false)
-  const ref = useRef(null)
-
-  // Close on click outside
-  useEffect(() => {
-    const handler = (e) => {
-      if (ref.current && !ref.current.contains(e.target)) setOpen(false)
-    }
-    document.addEventListener('mousedown', handler)
-    return () => document.removeEventListener('mousedown', handler)
-  }, [])
-
-  if (!user) {
-    // Guest mode footer
-    return (
-      <div className="px-3 py-3 border-t border-white/[0.07] space-y-2">
-        <div className="flex items-center gap-2.5 px-3 py-2">
-          <div className="w-7 h-7 rounded-full bg-neo-bg shadow-neo-inset-sm flex items-center justify-center shrink-0">
-            <svg className="w-3.5 h-3.5 text-neo-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-            </svg>
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-xs font-medium text-neo-muted">Guest mode</p>
-            <p className="text-[10px] text-neo-subtle truncate">Demo data only</p>
-          </div>
-        </div>
-        <button
-          onClick={onResetDemo}
-          className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-xs text-neo-subtle
-                     hover:text-neo-muted hover:bg-neo-raised transition-colors"
-        >
-          <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-              d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-          </svg>
-          Reset demo data
-        </button>
-      </div>
-    )
-  }
-
-  // Authenticated user footer
-  const email = user.email ?? ''
-  const initials = email.slice(0, 2).toUpperCase()
-  const shortEmail = email.length > 22 ? email.slice(0, 20) + '…' : email
-
+function NavPill({ id, label, fullLabel, Icon, active, onNav, index = 0 }) {
+  const isActive = active === id
   return (
-    <div ref={ref} className="px-3 py-3 border-t border-white/[0.07] relative">
+    <div
+      className="relative w-full group/pill"
+      style={{ animation: `navFadeIn 0.3s ease-out ${index * 35}ms both` }}
+    >
       <button
-        onClick={() => setOpen((o) => !o)}
-        className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg
-                   hover:bg-neo-raised transition-colors"
+        onClick={() => onNav(id)}
+        className="w-full flex flex-col items-center gap-1 py-1.5 px-1 rounded-2xl transition-all duration-200"
+        style={isActive
+          ? { background: 'rgba(234,88,12,0.15)', border: '1px solid rgba(234,88,12,0.28)' }
+          : { border: '1px solid transparent' }}
       >
-        <div className="w-7 h-7 rounded-full bg-brand-600 flex items-center justify-center shrink-0 text-xs font-bold text-white">
-          {initials}
-        </div>
-        <div className="flex-1 min-w-0 text-left">
-          <p className="text-xs font-medium text-neo-text/95 truncate">{shortEmail}</p>
-          <p className="text-[10px] text-neo-subtle">Signed in</p>
-        </div>
-        <svg
-          className={`w-3.5 h-3.5 text-neo-subtle shrink-0 transition-transform ${open ? 'rotate-180' : ''}`}
-          fill="none" stroke="currentColor" viewBox="0 0 24 24"
+        {/* Icon box */}
+        <div
+          className={`w-9 h-9 rounded-xl flex items-center justify-center
+                      transition-all duration-200
+                      group-hover/pill:scale-110
+                      ${isActive ? '' : 'text-neo-subtle group-hover/pill:text-neo-text'}`}
+          style={isActive ? {
+            background: 'linear-gradient(135deg, #ea580c, #c2410c)',
+            boxShadow: '0 0 14px rgba(234,88,12,0.55)',
+            color: '#fff',
+          } : {}}
         >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-        </svg>
+          <Icon />
+        </div>
+        {/* Short label */}
+        <span className={`text-[9px] leading-tight font-medium transition-colors truncate w-full text-center
+          ${isActive ? 'text-brand-400' : 'text-neo-subtle group-hover/pill:text-neo-muted'}`}>
+          {label}
+        </span>
       </button>
 
-      {open && (
+      {/* Hover tooltip — slides in from the right */}
+      <div
+        className="pointer-events-none absolute left-full top-1/2 -translate-y-1/2 ml-3 z-[60]
+                   opacity-0 -translate-x-2
+                   group-hover/pill:opacity-100 group-hover/pill:translate-x-0
+                   transition-all duration-200"
+      >
         <div
-          className="absolute bottom-full left-3 right-3 mb-1 border border-white/[0.12] rounded-2xl shadow-neo-lg overflow-hidden z-50"
-          style={{ background: 'rgba(8, 12, 22, 0.90)', backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)' }}
+          className="px-3 py-1.5 rounded-xl text-xs font-semibold text-neo-text whitespace-nowrap"
+          style={{
+            background: 'rgba(8,12,22,0.92)',
+            backdropFilter: 'blur(12px)',
+            WebkitBackdropFilter: 'blur(12px)',
+            border: '1px solid rgba(255,255,255,0.12)',
+            boxShadow: '0 4px 20px rgba(0,0,0,0.5)',
+          }}
         >
-          <div className="px-3 py-2.5 border-b border-neo-border/60">
-            <p className="text-xs text-neo-muted truncate">{email}</p>
+          {fullLabel}
+          {/* Arrow */}
+          <span
+            className="absolute right-full top-1/2 -translate-y-1/2"
+            style={{ borderRight: '5px solid rgba(8,12,22,0.92)', borderTop: '5px solid transparent', borderBottom: '5px solid transparent', width: 0, height: 0 }}
+          />
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Floating narrow sidebar (desktop) ────────────────────────────────────────
+
+function FloatingSidebar({ active, onNav, isLoggedIn, user, onSignOut, onResetDemo, onShare }) {
+  return (
+    <div className="flex flex-col h-full py-4 px-2.5">
+
+      {/* Logo — pulsing glow */}
+      <div className="flex justify-center mb-5">
+        <div
+          className="w-11 h-11 rounded-2xl bg-brand-600 flex items-center justify-center sidebar-logo-pulse"
+          style={{ boxShadow: '0 0 18px rgba(234,88,12,0.55)' }}
+        >
+          <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+            <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
+          </svg>
+        </div>
+      </div>
+
+      {/* Group: Portfolio */}
+      <p className="text-[8px] text-neo-subtle uppercase tracking-widest text-center mb-1.5 opacity-60">
+        Portfolio
+      </p>
+      <nav className="flex flex-col items-center gap-0.5">
+        {NAV_ITEMS.filter(i => i.group === 'portfolio').map(({ id, label, fullLabel, icon: Icon }, idx) => (
+          <NavPill key={id} id={id} label={label} fullLabel={fullLabel} Icon={Icon} active={active} onNav={onNav} index={idx} />
+        ))}
+      </nav>
+
+      {/* Divider + Group: Strategy */}
+      <div className="w-8 h-px bg-white/10 my-2 mx-auto" />
+      <p className="text-[8px] text-neo-subtle uppercase tracking-widest text-center mb-1.5 opacity-60">
+        Strategy
+      </p>
+      <nav className="flex-1 flex flex-col items-center gap-0.5 overflow-y-auto">
+        {NAV_ITEMS.filter(i => i.group === 'strategy').map(({ id, label, fullLabel, icon: Icon }, idx) => (
+          <NavPill key={id} id={id} label={label} fullLabel={fullLabel} Icon={Icon} active={active} onNav={onNav} index={idx + 6} />
+        ))}
+      </nav>
+
+      {/* Bottom actions */}
+      <div className="flex flex-col items-center gap-0.5 pt-3 border-t border-white/[0.07]">
+        {isLoggedIn && (
+          <div className="relative w-full group/share">
+            <button
+              onClick={onShare}
+              className="w-full flex flex-col items-center gap-1 py-2 rounded-2xl border border-transparent
+                         hover:bg-white/[0.06] transition-all duration-200"
+            >
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center text-neo-subtle
+                              group-hover/share:text-neo-text group-hover/share:scale-110 transition-all duration-200">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                </svg>
+              </div>
+              <span className="text-[8px] text-neo-subtle group-hover/share:text-neo-muted transition-colors">Share</span>
+            </button>
+            <div className="pointer-events-none absolute left-full top-1/2 -translate-y-1/2 ml-3 z-[60]
+                           opacity-0 -translate-x-2 group-hover/share:opacity-100 group-hover/share:translate-x-0
+                           transition-all duration-200">
+              <div className="px-3 py-1.5 rounded-xl text-xs font-semibold text-neo-text whitespace-nowrap"
+                   style={{ background: 'rgba(8,12,22,0.92)', backdropFilter: 'blur(12px)', border: '1px solid rgba(255,255,255,0.12)', boxShadow: '0 4px 20px rgba(0,0,0,0.5)' }}>
+                Share Portfolio
+              </div>
+            </div>
           </div>
+        )}
+        <div className="relative w-full group/logout">
           <button
-            onClick={() => { setOpen(false); onSignOut() }}
-            className="w-full flex items-center gap-2 px-3 py-2.5 text-sm text-neo-muted
-                       hover:text-neo-text hover:bg-neo-bg transition-colors"
+            onClick={user ? onSignOut : onResetDemo}
+            className="w-full flex flex-col items-center gap-1 py-2 rounded-2xl border border-transparent
+                       hover:bg-red-500/10 transition-all duration-200"
           >
-            <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
-            </svg>
-            Sign out
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center text-neo-subtle
+                            group-hover/logout:text-red-400 group-hover/logout:scale-110 transition-all duration-200">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                  d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+              </svg>
+            </div>
+            <span className="text-[8px] text-neo-subtle group-hover/logout:text-red-400 transition-colors">
+              {user ? 'Logout' : 'Reset'}
+            </span>
           </button>
+          <div className="pointer-events-none absolute left-full top-1/2 -translate-y-1/2 ml-3 z-[60]
+                         opacity-0 -translate-x-2 group-hover/logout:opacity-100 group-hover/logout:translate-x-0
+                         transition-all duration-200">
+            <div className="px-3 py-1.5 rounded-xl text-xs font-semibold text-red-400 whitespace-nowrap"
+                 style={{ background: 'rgba(8,12,22,0.92)', backdropFilter: 'blur(12px)', border: '1px solid rgba(239,68,68,0.2)', boxShadow: '0 4px 20px rgba(0,0,0,0.5)' }}>
+              {user ? 'Sign Out' : 'Reset Demo'}
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Mobile floating sidebar ─────────────────────────────────────────────────
+
+function MobileNavItem({ id, label, fullLabel, Icon, active, onNav, danger = false }) {
+  const isActive = active === id
+  return (
+    <button
+      onClick={() => onNav(id)}
+      className="w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl text-sm font-medium
+                 transition-all duration-200 text-left group"
+      style={isActive
+        ? { background: 'rgba(234,88,12,0.15)', border: '1px solid rgba(234,88,12,0.28)' }
+        : { border: '1px solid transparent' }}
+    >
+      <div
+        className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-all duration-200
+                    group-hover:scale-110
+                    ${isActive ? '' : danger ? 'text-red-400/60 group-hover:text-red-400' : 'text-neo-subtle group-hover:text-neo-text'}`}
+        style={isActive ? {
+          background: 'linear-gradient(135deg, #ea580c, #c2410c)',
+          color: '#fff',
+          boxShadow: '0 0 12px rgba(234,88,12,0.45)',
+        } : {}}
+      >
+        <Icon />
+      </div>
+      <span className={`transition-colors ${isActive ? 'text-brand-400' : danger ? 'text-red-400/60 group-hover:text-red-400' : 'text-neo-muted group-hover:text-neo-text'}`}>
+        {fullLabel}
+      </span>
+      {isActive && (
+        <span className="ml-auto w-1.5 h-1.5 rounded-full bg-brand-500 shrink-0"
+              style={{ boxShadow: '0 0 6px rgba(234,88,12,0.8)' }} />
+      )}
+    </button>
+  )
+}
+
+function MobileFloatingSidebar({ active, onNav, isLoggedIn, user, onSignOut, onResetDemo, onShare }) {
+  return (
+    <div className="flex flex-col h-full py-5 px-3">
+
+      {/* Logo + title */}
+      <div className="flex items-center gap-3 px-2 mb-5">
+        <div className="w-10 h-10 rounded-2xl bg-brand-600 flex items-center justify-center shrink-0 sidebar-logo-pulse"
+             style={{ boxShadow: '0 0 16px rgba(234,88,12,0.5)' }}>
+          <svg className="w-5 h-5 text-white" fill="currentColor" viewBox="0 0 20 20">
+            <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
+          </svg>
+        </div>
+        <div>
+          <p className="font-bold text-neo-text leading-tight">MoneyCalc</p>
+          <p className="text-[11px] text-neo-muted">Real Estate Tracker</p>
+        </div>
+      </div>
+
+      {/* Guest banner */}
+      {!isLoggedIn && (
+        <div className="mx-1 mb-3 rounded-2xl border border-white/[0.07] px-3 py-2.5"
+             style={{ background: 'rgba(234,88,12,0.07)' }}>
+          <p className="text-xs font-medium text-neo-muted">Demo mode</p>
+          <p className="text-[11px] text-neo-subtle mt-0.5">
+            <button
+              onClick={() => { window.history.pushState(null,'','/login'); window.dispatchEvent(new PopStateEvent('popstate')) }}
+              className="text-brand-400 hover:text-brand-300 font-medium"
+            >Sign in
+            </button>{' '}to access your portfolio.
+          </p>
         </div>
       )}
+
+      {/* Nav */}
+      <nav className="flex-1 overflow-y-auto space-y-0.5">
+        <p className="text-[9px] text-neo-subtle uppercase tracking-widest px-3 mb-2 opacity-70">Portfolio</p>
+        {NAV_ITEMS.filter(i => i.group === 'portfolio').map(({ id, label, fullLabel, icon: Icon }, idx) => (
+          <div key={id} style={{ animation: `navFadeIn 0.25s ease-out ${idx * 30}ms both` }}>
+            <MobileNavItem id={id} label={label} fullLabel={fullLabel} Icon={Icon} active={active} onNav={onNav} />
+          </div>
+        ))}
+        <div className="h-px bg-white/[0.07] mx-3 my-2" />
+        <p className="text-[9px] text-neo-subtle uppercase tracking-widest px-3 mb-2 opacity-70">Strategy</p>
+        {NAV_ITEMS.filter(i => i.group === 'strategy').map(({ id, label, fullLabel, icon: Icon }, idx) => (
+          <div key={id} style={{ animation: `navFadeIn 0.25s ease-out ${(idx + 6) * 30}ms both` }}>
+            <MobileNavItem id={id} label={label} fullLabel={fullLabel} Icon={Icon} active={active} onNav={onNav} />
+          </div>
+        ))}
+      </nav>
+
+      {/* Bottom */}
+      <div className="pt-3 border-t border-white/[0.07] space-y-0.5">
+        {isLoggedIn && (
+          <button
+            onClick={onShare}
+            className="w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl text-sm font-medium
+                       text-neo-muted border border-transparent hover:bg-white/[0.05] hover:text-neo-text
+                       transition-all duration-200 group"
+          >
+            <div className="w-9 h-9 rounded-xl flex items-center justify-center text-neo-subtle
+                            group-hover:text-neo-text group-hover:scale-110 transition-all duration-200">
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                  d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+              </svg>
+            </div>
+            Share Portfolio
+          </button>
+        )}
+        {/* User / logout row */}
+        <div className="flex items-center gap-3 px-3 py-2.5 rounded-2xl border border-transparent
+                        hover:bg-red-500/10 transition-all duration-200 group cursor-pointer"
+             onClick={user ? onSignOut : onResetDemo}>
+          <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 transition-all duration-200 group-hover:scale-110
+            ${user ? 'bg-brand-600 text-white text-xs font-bold' : 'text-neo-subtle group-hover:text-red-400'}`}
+               style={user ? { boxShadow: '0 0 10px rgba(234,88,12,0.35)' } : {}}>
+            {user
+              ? (user.email ?? '').slice(0, 2).toUpperCase()
+              : <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                </svg>
+            }
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-neo-muted group-hover:text-red-400 transition-colors truncate">
+              {user ? (user.email ?? 'Account') : 'Reset Demo'}
+            </p>
+            <p className="text-[10px] text-neo-subtle">{user ? 'Tap to sign out' : 'Clear sample data'}</p>
+          </div>
+          <svg className="w-4 h-4 text-neo-subtle group-hover:text-red-400 transition-colors shrink-0"
+               fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+              d="M17 16l4-4m0 0l-4-4m4 4H7" />
+          </svg>
+        </div>
+      </div>
     </div>
   )
 }
@@ -239,12 +429,18 @@ export default function Layout({ activeTab, onTabChange, children, isLoggedIn, u
 
   return (
     <div className="min-h-screen flex">
-      {/* ── Desktop sidebar ── */}
+
+      {/* ── Floating desktop sidebar ── */}
       <aside
-        className="hidden md:flex md:w-56 lg:w-64 flex-col border-r border-white/[0.09] fixed inset-y-0 left-0 z-20"
-        style={{ background: 'rgba(6, 10, 20, 0.68)', backdropFilter: 'blur(28px)', WebkitBackdropFilter: 'blur(28px)' }}
+        className="hidden md:flex flex-col fixed left-3 top-3 bottom-3 w-[82px] z-20 rounded-3xl border border-white/[0.10]"
+        style={{
+          background: 'rgba(6, 10, 20, 0.70)',
+          backdropFilter: 'blur(20px)',
+          WebkitBackdropFilter: 'blur(20px)',
+          boxShadow: '0 8px 40px rgba(0,0,0,0.45), inset 0 1px 0 rgba(255,255,255,0.06)',
+        }}
       >
-        <SidebarContent
+        <FloatingSidebar
           active={activeTab}
           onNav={handleNav}
           isLoggedIn={isLoggedIn}
@@ -255,58 +451,56 @@ export default function Layout({ activeTab, onTabChange, children, isLoggedIn, u
         />
       </aside>
 
-      {/* ── Mobile overlay ── */}
-      {mobileOpen && (
-        <div
-          className="fixed inset-0 z-30 bg-neo-text/20 backdrop-blur-[2px] md:hidden"
-          onClick={() => setMobileOpen(false)}
-        />
-      )}
-
-      {/* ── Mobile drawer ── */}
-      <aside
-        className={`fixed inset-y-0 left-0 z-40 w-64 border-r border-white/[0.09] shadow-neo-lg
-                    transform transition-transform duration-300 md:hidden
-                    ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}`}
-        style={{ background: 'rgba(6, 10, 20, 0.82)', backdropFilter: 'blur(28px)', WebkitBackdropFilter: 'blur(28px)' }}
+      {/* ── Mobile fullscreen menu ── */}
+      <div
+        className={`fixed inset-0 z-40 md:hidden flex flex-col
+                    transition-all duration-300
+                    ${mobileOpen ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
+        style={{
+          background: 'rgba(4, 7, 14, 0.82)',
+          backdropFilter: 'blur(24px)',
+          WebkitBackdropFilter: 'blur(24px)',
+        }}
       >
+        {/* Close button */}
         <button
-          className="absolute top-4 right-4 text-neo-muted hover:text-neo-text"
+          className="absolute top-4 right-4 z-10 w-10 h-10 rounded-2xl flex items-center justify-center
+                     text-neo-muted hover:text-neo-text transition-colors"
+          style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.08)' }}
           onClick={() => setMobileOpen(false)}
         >
           <CloseIcon />
         </button>
-        <SidebarContent
-          active={activeTab}
-          onNav={handleNav}
-          isLoggedIn={isLoggedIn}
-          user={user}
-          onSignOut={onSignOut}
-          onResetDemo={onResetDemo}
-          onShare={onShare}
-        />
-      </aside>
+        <div
+          className={`flex-1 overflow-y-auto transition-all duration-300
+                      ${mobileOpen ? 'translate-y-0 opacity-100' : 'translate-y-4 opacity-0'}`}
+        >
+          <MobileFloatingSidebar
+            active={activeTab}
+            onNav={handleNav}
+            isLoggedIn={isLoggedIn}
+            user={user}
+            onSignOut={onSignOut}
+            onResetDemo={onResetDemo}
+            onShare={onShare}
+          />
+        </div>
+      </div>
 
       {/* ── Main content ── */}
-      <div className="flex-1 md:ml-56 lg:ml-64 flex flex-col min-h-screen">
+      <div className="flex-1 md:ml-[98px] flex flex-col min-h-screen">
+
         {/* Mobile top bar */}
         <header
           className="md:hidden flex items-center gap-3 px-4 py-3 border-b border-white/[0.09] sticky top-0 z-10"
           style={{ background: 'rgba(6, 10, 20, 0.72)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)' }}
         >
-          <button
-            className="text-neo-muted hover:text-neo-text"
-            onClick={() => setMobileOpen(true)}
-          >
+          <button className="text-neo-muted hover:text-neo-text" onClick={() => setMobileOpen(true)}>
             <MenuIcon />
           </button>
           <span className="font-semibold text-neo-text flex-1">MoneyCalc</span>
-          {/* Mobile: sign in link or user avatar */}
           {isLoggedIn ? (
-            <button
-              onClick={onSignOut}
-              className="text-xs text-neo-muted hover:text-neo-text/95 transition-colors px-2 py-1"
-            >
+            <button onClick={onSignOut} className="text-xs text-neo-muted hover:text-neo-text/95 transition-colors px-2 py-1">
               Sign out
             </button>
           ) : (
@@ -319,103 +513,10 @@ export default function Layout({ activeTab, onTabChange, children, isLoggedIn, u
           )}
         </header>
 
-        <main className="flex-1 p-4 sm:p-6 lg:p-8 max-w-7xl w-full mx-auto">
+        <main className="flex-1 p-4 sm:p-5 lg:p-6 max-w-[1400px] w-full mx-auto">
           {children}
         </main>
       </div>
-    </div>
-  )
-}
-
-const NAV_GROUPS = [
-  { id: 'portfolio', label: 'Portfolio' },
-  { id: 'strategy',  label: 'Strategy & AI' },
-]
-
-function SidebarContent({ active, onNav, isLoggedIn, user, onSignOut, onResetDemo, onShare }) {
-  return (
-    <div className="flex flex-col h-full">
-      {/* Logo */}
-      <div className="px-5 py-6 border-b border-white/[0.07]">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-xl bg-brand-600 flex items-center justify-center shadow-neo-sm">
-            <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
-              <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
-            </svg>
-          </div>
-          <div>
-            <p className="font-bold text-neo-text leading-tight">MoneyCalc</p>
-            <p className="text-xs text-neo-muted">Real Estate Tracker</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Nav */}
-      <nav className="flex-1 px-3 py-4 space-y-4 overflow-y-auto">
-        {/* Guest mode banner */}
-        {!isLoggedIn && (
-          <div className="mx-1 mb-2 rounded-2xl bg-neo-raised/50 border border-white/[0.07] px-3 py-2.5 space-y-1.5">
-            <p className="text-xs font-medium text-neo-muted">Demo mode</p>
-            <p className="text-[11px] text-neo-subtle leading-relaxed">
-              You're browsing with sample data.{' '}
-              <button
-                onClick={() => { window.history.pushState(null, '', '/login'); window.dispatchEvent(new PopStateEvent('popstate')) }}
-                className="text-brand-400 hover:text-brand-300 font-medium bg-transparent border-0 cursor-pointer underline-offset-2"
-              >
-                Sign in
-              </button>{' '}
-              to access your portfolio.
-            </p>
-          </div>
-        )}
-
-        {NAV_GROUPS.map((group) => {
-          const items = NAV_ITEMS.filter((i) => i.group === group.id)
-          return (
-            <div key={group.id}>
-              <p className="px-3 mb-1 text-xs font-semibold text-neo-subtle uppercase tracking-wider">
-                {group.label}
-              </p>
-              <div className="space-y-0.5">
-                {items.map(({ id, label, icon: Icon }) => (
-                  <button
-                    key={id}
-                    onClick={() => onNav(id)}
-                    className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl text-sm font-medium
-                                transition-all text-left
-                                ${active === id
-                                  ? 'bg-brand-600/15 text-brand-400 border border-brand-500/25 shadow-glow-sm'
-                                  : 'text-neo-muted border border-transparent hover:text-neo-text hover:bg-neo-raised/40'}`}
-                  >
-                    <Icon />
-                    {label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          )
-        })}
-      </nav>
-
-      {/* Share button — authenticated only */}
-      {isLoggedIn && (
-        <div className="px-3 pb-1 border-t border-white/[0.07] pt-3">
-          <button
-            onClick={onShare}
-            className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium
-                       text-neo-muted hover:text-neo-text hover:bg-neo-raised transition-colors"
-          >
-            <svg className="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-            </svg>
-            Share portfolio
-          </button>
-        </div>
-      )}
-
-      {/* Footer — user menu */}
-      <UserMenu user={user} onSignOut={onSignOut} onResetDemo={onResetDemo} />
     </div>
   )
 }
