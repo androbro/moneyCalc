@@ -110,6 +110,40 @@
   }
 }
 
+/* ─── Mobile overrides ────────────────────────────────────────────────────── */
+
+@media (max-width: 767px) {
+  .card {
+    @apply p-3 rounded-2xl;
+  }
+
+  .section-title {
+    @apply text-sm mb-2;
+  }
+
+  .stat-value {
+    @apply text-lg;
+  }
+
+  .stat-label {
+    @apply text-xs;
+  }
+
+  .label {
+    @apply text-xs mb-0.5;
+  }
+
+  .btn-primary,
+  .btn-secondary,
+  .btn-danger {
+    @apply px-3 py-2 text-sm rounded-xl;
+  }
+
+  .input {
+    @apply text-sm px-2.5 py-2 rounded-lg;
+  }
+}
+
 /* ─── Sidebar animations ──────────────────────────────────────────────────── */
 
 @keyframes navFadeIn {
