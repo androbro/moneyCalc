@@ -670,17 +670,23 @@ export default function App() {
 
 				{/* ── Properties list ── */}
 				{activeTab === "properties" && !showForm && !detailProperty && (
-					<div className="space-y-4">
+					<div className="space-y-3">
 						<div className="flex items-center justify-between">
 							<div>
-								<h1 className="text-2xl font-bold text-neo-text">Properties</h1>
-								<p className="text-neo-muted text-sm mt-0.5">
-									Manage your real estate portfolio
-								</p>
+								{isMobile ? (
+									<h1 className="text-base font-bold text-neo-text">Properties</h1>
+								) : (
+									<>
+										<h1 className="text-2xl font-bold text-neo-text">Properties</h1>
+										<p className="text-neo-muted text-sm mt-0.5">
+											Manage your real estate portfolio
+										</p>
+									</>
+								)}
 							</div>
 							<button onClick={handleAddProperty} className="btn-primary">
 								<PlusIcon />
-								Add Property
+								{!isMobile && "Add Property"}
 							</button>
 						</div>
 
@@ -694,6 +700,21 @@ export default function App() {
 									<PlusIcon />
 									Add Property
 								</button>
+							</div>
+						) : isMobile ? (
+							<div
+								className="rounded-2xl overflow-hidden border border-white/[0.08]"
+								style={{ background: 'rgba(10, 14, 24, 0.50)', backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)' }}
+							>
+								{properties.map((p) => (
+									<PropertyListRow
+										key={p.id}
+										property={p}
+										onView={() => setDetailProperty(p)}
+										onEdit={() => handleEditProperty(p)}
+										onDelete={() => handleDeleteProperty(p.id)}
+									/>
+								))}
 							</div>
 						) : (
 							<div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
@@ -1186,6 +1207,70 @@ function PropertyListCard({ property, onView, onEdit, onDelete }) {
 			<p className="text-xs text-brand-400 opacity-0 group-hover:opacity-100 transition-opacity">
 				Click to view full property details →
 			</p>
+		</div>
+	);
+}
+
+// ─── Property list row (mobile compact) ──────────────────────────────────────
+
+function PropertyListRow({ property, onView, onEdit, onDelete }) {
+	const fmt = (n) =>
+		new Intl.NumberFormat("nl-BE", {
+			style: "currency",
+			currency: "EUR",
+			maximumFractionDigits: 0,
+		}).format(n);
+
+	const STATUS_SHORT = {
+		owner_occupied: "Owner",
+		rented: "Rented",
+		vacant: "Vacant",
+		for_sale: "For sale",
+		renovation: "Reno",
+	};
+	const sl = STATUS_SHORT[property.status] ?? property.status;
+	const appRate = ((property.appreciationRate || 0.02) * 100).toFixed(1);
+
+	return (
+		<div
+			className="flex items-center gap-2 px-3 py-2.5 border-b border-white/[0.05] last:border-0 active:bg-white/[0.04] transition-colors"
+			onClick={onView}
+			role="button"
+			tabIndex={0}
+			onKeyDown={(e) => e.key === "Enter" && onView()}
+		>
+			<div className="flex-1 min-w-0">
+				<div className="flex items-center gap-1.5">
+					<p className="text-sm font-medium text-neo-text truncate">{property.name}</p>
+					<span className="text-[9px] px-1.5 py-0.5 rounded-full shrink-0 text-neo-muted"
+					      style={{ background: 'rgba(255,255,255,0.07)', border: '1px solid rgba(255,255,255,0.08)' }}>
+						{sl}
+					</span>
+				</div>
+				{property.address && (
+					<p className="text-[10px] text-neo-subtle truncate mt-0.5">{property.address}</p>
+				)}
+			</div>
+			<div className="text-right shrink-0">
+				<p className="text-sm font-semibold text-neo-text tabular-nums">{fmt(property.currentValue)}</p>
+				<p className="text-[10px] text-neo-subtle">{appRate}% p.a.</p>
+			</div>
+			<div className="flex items-center gap-0.5 shrink-0 ml-1" onClick={(e) => e.stopPropagation()}>
+				<button
+					onClick={onEdit}
+					className="p-1.5 text-neo-subtle hover:text-brand-400 transition-colors"
+					title="Edit"
+				>
+					<EditIcon />
+				</button>
+				<button
+					onClick={onDelete}
+					className="p-1.5 text-neo-subtle hover:text-red-400 transition-colors"
+					title="Delete"
+				>
+					<TrashIcon />
+				</button>
+			</div>
 		</div>
 	);
 }

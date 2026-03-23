@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { useMediaQuery } from '../../hooks/useMediaQuery'
 import { AnimatePresence, motion } from 'motion/react'
 import {
   buildProjection,
@@ -542,7 +543,7 @@ function InvestmentReadyCard({ total, equityPart, cashPart }) {
 
   return (
     <div
-      className="relative rounded-3xl p-5 overflow-hidden border border-brand-500/20"
+      className="relative rounded-2xl p-3 sm:p-5 overflow-hidden border border-brand-500/20"
       style={{ background: 'linear-gradient(135deg, rgba(234,88,12,0.18) 0%, rgba(194,65,12,0.10) 60%, rgba(10,14,24,0.38) 100%)', backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)', boxShadow: '0 0 40px rgba(234,88,12,0.12), 0 8px 32px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.07)' }}
     >
       {/* Decorative glow */}
@@ -555,7 +556,7 @@ function InvestmentReadyCard({ total, equityPart, cashPart }) {
             <div className="w-2 h-2 rounded-full bg-brand-500 animate-pulse" style={{ boxShadow: '0 0 8px rgba(234,88,12,0.8)' }} />
             <p className="text-xs font-semibold text-brand-400 uppercase tracking-wider">Investment Ready Capital</p>
           </div>
-          <p className="text-3xl sm:text-4xl font-bold text-neo-text tabular-nums leading-none mb-2" style={{ textShadow: '0 0 30px rgba(234,88,12,0.3)' }}>
+          <p className="text-2xl sm:text-4xl font-bold text-neo-text tabular-nums leading-none mb-2" style={{ textShadow: '0 0 30px rgba(234,88,12,0.3)' }}>
             {formatEUR(total)}
           </p>
           <div className="flex items-center gap-3">
@@ -743,6 +744,7 @@ export default function Dashboard({
   const [goalBeingEdited, setGoalBeingEdited] = useState(null)
   const [excludedLoanKeys, setExcludedLoanKeys] = useState([])
 
+  const isMobile = useMediaQuery('(max-width: 767px)')
   const s = computeSummary(properties, profile, { tradingPortfolioValue })
   const ltv = s.totalPortfolioValue > 0 ? (s.totalDebt / s.totalPortfolioValue) * 100 : null
 
@@ -947,13 +949,15 @@ export default function Dashboard({
       {/* ══ Main content ══════════════════════════════════════ */}
       <div className="flex-1 flex flex-col gap-5 min-w-0">
 
-        {/* Header */}
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-neo-text tracking-tight">My Dashboard</h1>
-            <p className="text-sm text-neo-muted mt-0.5">Real estate portfolio overview</p>
+        {/* Header — hidden on mobile (active tab shown in nav bar) */}
+        {!isMobile && (
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div>
+              <h1 className="text-2xl font-bold text-neo-text tracking-tight">My Dashboard</h1>
+              <p className="text-sm text-neo-muted mt-0.5">Real estate portfolio overview</p>
+            </div>
           </div>
-        </div>
+        )}
 
         {/* ── Investment Ready Capital hero ── */}
         <motion.div {...cardReveal}>
@@ -965,81 +969,103 @@ export default function Dashboard({
         </motion.div>
 
         {/* ── Key Stats ── */}
-        <motion.div
-          className="grid grid-cols-2 sm:grid-cols-4 gap-3"
-          initial="initial"
-          animate="animate"
-          variants={{
-            initial: {},
-            animate: {
-              transition: {
-                staggerChildren: 0.05,
+        {isMobile ? (
+          /* Mobile: single compact panel — no individual card chrome per stat */
+          <div
+            className="rounded-2xl overflow-hidden border border-white/[0.08]"
+            style={{ background: 'rgba(10, 14, 24, 0.50)', backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)' }}
+          >
+            <div className="grid grid-cols-2 divide-x divide-y" style={{ borderColor: 'rgba(255,255,255,0.06)' }}>
+              {[
+                { label: 'Net Worth',     value: formatEUR(s.personalNetWorth) },
+                { label: 'Monthly CF',    value: formatEUR(s.totalMonthlyCashFlow) },
+                { label: 'Portfolio LTV', value: ltv !== null ? `${ltv.toFixed(1)}%` : '—' },
+                { label: 'Properties',    value: s.propertyCount },
+              ].map(stat => (
+                <div key={stat.label} className="px-3 py-2.5">
+                  <p className="text-[10px] text-neo-muted">{stat.label}</p>
+                  <p className="text-sm font-bold text-neo-text tabular-nums">{stat.value}</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <motion.div
+            className="grid grid-cols-2 sm:grid-cols-4 gap-3"
+            initial="initial"
+            animate="animate"
+            variants={{
+              initial: {},
+              animate: {
+                transition: {
+                  staggerChildren: 0.05,
+                },
               },
-            },
-          }}
-        >
-          {[
-            {
-              icon: <WalletIcon />,
-              label: 'Net Worth',
-              value: formatEUR(s.personalNetWorth),
-              explanation: (
-                <>
-                  <p>Personal net worth includes your share of real-estate equity, plus liquid cash and trading portfolio value.</p>
-                  <p className="mt-1.5 font-mono text-[10px] text-neo-icon">
-                    {kFmt(s.personalRealEstateNetWorth)} + {kFmt(s.personalCash)} + {kFmt(s.personalTradingValue)}
-                  </p>
-                </>
-              ),
-            },
-            {
-              icon: <CashFlowIcon />,
-              label: 'Monthly CF',
-              value: formatEUR(s.totalMonthlyCashFlow),
-              explanation: (
-                <>
-                  <p>Monthly cash flow is rent minus operating costs and interest (capital repayment is tracked separately).</p>
-                  <p className="mt-1.5 font-mono text-[10px] text-neo-icon">
-                    {kFmt(s.annualRentalIncome / 12)} - {kFmt(s.annualOpex / 12)} - {kFmt(s.monthlyInterest)}
-                  </p>
-                </>
-              ),
-            },
-            {
-              icon: (
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-                </svg>
-              ),
-              label: 'Portfolio LTV',
-              value: ltv !== null ? `${ltv.toFixed(1)}%` : '—',
-              explanation: (
-                <>
-                  <p>Loan-to-value compares total outstanding debt to total portfolio value across live properties.</p>
-                  <p className="mt-1.5 font-mono text-[10px] text-neo-icon">
-                    ({kFmt(s.totalDebt)} / {kFmt(s.totalPortfolioValue)}) x 100
-                  </p>
-                </>
-              ),
-            },
-            {
-              icon: <HomeIcon />,
-              label: 'Properties',
-              value: s.propertyCount,
-              explanation: 'Count of live properties currently in portfolio metrics (planned entries are excluded).',
-            },
-          ].map((pill) => (
-            <motion.div
-              key={pill.label}
-              variants={{
-                initial: { opacity: 0, y: 10 },
-                animate: { opacity: 1, y: 0, transition: { duration: 0.25, ease: SOFT_EASE } },
-              }}
-            >
-              <StatPill {...pill} />
-            </motion.div>
-          ))}
-        </motion.div>
+            }}
+          >
+            {[
+              {
+                icon: <WalletIcon />,
+                label: 'Net Worth',
+                value: formatEUR(s.personalNetWorth),
+                explanation: (
+                  <>
+                    <p>Personal net worth includes your share of real-estate equity, plus liquid cash and trading portfolio value.</p>
+                    <p className="mt-1.5 font-mono text-[10px] text-neo-icon">
+                      {kFmt(s.personalRealEstateNetWorth)} + {kFmt(s.personalCash)} + {kFmt(s.personalTradingValue)}
+                    </p>
+                  </>
+                ),
+              },
+              {
+                icon: <CashFlowIcon />,
+                label: 'Monthly CF',
+                value: formatEUR(s.totalMonthlyCashFlow),
+                explanation: (
+                  <>
+                    <p>Monthly cash flow is rent minus operating costs and interest (capital repayment is tracked separately).</p>
+                    <p className="mt-1.5 font-mono text-[10px] text-neo-icon">
+                      {kFmt(s.annualRentalIncome / 12)} - {kFmt(s.annualOpex / 12)} - {kFmt(s.monthlyInterest)}
+                    </p>
+                  </>
+                ),
+              },
+              {
+                icon: (
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                  </svg>
+                ),
+                label: 'Portfolio LTV',
+                value: ltv !== null ? `${ltv.toFixed(1)}%` : '—',
+                explanation: (
+                  <>
+                    <p>Loan-to-value compares total outstanding debt to total portfolio value across live properties.</p>
+                    <p className="mt-1.5 font-mono text-[10px] text-neo-icon">
+                      ({kFmt(s.totalDebt)} / {kFmt(s.totalPortfolioValue)}) x 100
+                    </p>
+                  </>
+                ),
+              },
+              {
+                icon: <HomeIcon />,
+                label: 'Properties',
+                value: s.propertyCount,
+                explanation: 'Count of live properties currently in portfolio metrics (planned entries are excluded).',
+              },
+            ].map((pill) => (
+              <motion.div
+                key={pill.label}
+                variants={{
+                  initial: { opacity: 0, y: 10 },
+                  animate: { opacity: 1, y: 0, transition: { duration: 0.25, ease: SOFT_EASE } },
+                }}
+              >
+                <StatPill {...pill} />
+              </motion.div>
+            ))}
+          </motion.div>
+        )}
 
         {/* ── Chart + Equity Breakdown ── */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
