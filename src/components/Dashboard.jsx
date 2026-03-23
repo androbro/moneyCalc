@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import {
+  buildProjection,
   computeSummary,
   formatEUR,
+  getAnnualLoanPayment,
   getRemainingBalance,
-  isRentalActiveOn,
 } from '../utils/projectionUtils'
 import {
   AreaChart,
@@ -59,6 +60,31 @@ function _projectPoints(properties, years, perPointFn) {
   })
 }
 
+function toValidDate(dateLike) {
+  if (!dateLike) return null
+  const parsed = new Date(dateLike)
+  return Number.isNaN(parsed.getTime()) ? null : parsed
+}
+
+function getOwnershipFractionInWindow(property, windowStart, windowEnd) {
+  const purchaseDate = toValidDate(property.purchaseDate)
+  if (!purchaseDate) {
+    return property.status === 'planned' ? 0 : 1
+  }
+  if (purchaseDate >= windowEnd) return 0
+  if (purchaseDate <= windowStart) return 1
+  const activeMs = windowEnd.getTime() - purchaseDate.getTime()
+  const totalMs = windowEnd.getTime() - windowStart.getTime()
+  if (totalMs <= 0) return 0
+  return Math.max(0, Math.min(1, activeMs / totalMs))
+}
+
+function getLoanKey(property, loan, loanIndex) {
+  if (loan?.id) return `loan:${loan.id}`
+  const propertyKey = property?.id || property?.name || property?.address || 'property'
+  return `loan:${propertyKey}:${loanIndex}:${loan?.startDate || ''}:${loan?.monthlyPayment || 0}:${loan?.termMonths || 0}`
+}
+
 function generateNetWorthProjection(properties, personalCash, years = 10) {
   return _projectPoints(properties, years, (liveProp, i, futureISO) => {
     let totalValue = 0
@@ -86,28 +112,36 @@ function generateInvestmentReadyProjection(properties, personalCash, years = 10)
   })
 }
 
-function generateCashFlowProjection(properties, years = 10) {
-  return _projectPoints(properties, years, (liveProp, i, futureISO) => {
-    let monthlyCF = 0
-    liveProp.forEach((p) => {
-      const indexRate = (parseFloat(p.indexationRate) || 2) / 100
-      const inflRate  = (parseFloat(p.inflationRate)  || 2) / 100
-      const rent = (p.startRentalIncome || 0) * Math.pow(1 + indexRate, i)
-      const expenses = (
-        (p.monthlyExpenses || 0) * Math.pow(1 + inflRate, i) +
-        (p.annualMaintenanceCost || 0) / 12 +
-        (p.annualInsuranceCost || 0) / 12 +
-        (p.annualPropertyTax || 0) / 12
-      )
-      const loanPayments = (p.loans || []).reduce((s, l) => {
-        // loan still running at this future date?
-        const bal = getRemainingBalance(l, futureISO)
-        return s + (bal > 0 ? (l.monthlyPayment || 0) : 0)
-      }, 0)
-      monthlyCF += rent - expenses - loanPayments
-    })
-    return monthlyCF
-  })
+function generateCashFlowProjection(properties, years = 10, includedLoanKeys = null) {
+  const today = new Date()
+  const todayYear = today.getFullYear()
+  // Use the same projection engine as ProjectionChart for consistent rental timing.
+  const projectionPoints = buildProjection(properties)
+  const maxYear = Math.max(0, Math.min(years, projectionPoints.length - 1))
+  const yearCount = maxYear + 1
+  const excludedLoanByYear = new Array(yearCount).fill(0)
+
+  if (includedLoanKeys && includedLoanKeys.size > 0) {
+    properties.forEach((property) => {
+        ;(property.loans || []).forEach((loan, idx) => {
+          const loanKey = getLoanKey(property, loan, idx)
+          if (includedLoanKeys.has(loanKey)) return
+          for (let year = 0; year < yearCount; year++) {
+            const yearStart = new Date(today.getFullYear() + year, today.getMonth(), today.getDate())
+            const yearEnd = new Date(today.getFullYear() + year + 1, today.getMonth(), today.getDate())
+            const ownershipFraction = getOwnershipFractionInWindow(property, yearStart, yearEnd)
+            if (ownershipFraction <= 0) continue
+            excludedLoanByYear[year] += getAnnualLoanPayment(loan, year) * ownershipFraction
+          }
+        })
+      })
+  }
+
+  return projectionPoints.slice(0, maxYear + 1).map((pt) => ({
+    label: pt.year === 0 ? 'Now' : `${todayYear + pt.year}`,
+    value: Math.round(((pt.annualCashFlow || 0) + excludedLoanByYear[pt.year]) / 12),
+    year: pt.year,
+  }))
 }
 
 // Chart catalogue
@@ -133,6 +167,7 @@ function GlowCard({
   borderGlowSize = 180,
   borderGlowOpacity = 0.34,
   whileHover,
+  overflowVisible = false,
   ...motionProps
 }) {
   const [glow, setGlow] = useState({ x: 0, y: 0, active: false })
@@ -153,7 +188,7 @@ function GlowCard({
   return (
     <motion.div
       {...motionProps}
-      className={`${className} relative overflow-hidden`}
+      className={`${className} relative ${overflowVisible ? 'overflow-visible' : 'overflow-hidden'}`}
       style={style}
       whileHover={whileHover}
       onMouseMove={handleMouseMove}
@@ -702,9 +737,11 @@ export default function Dashboard({
 }) {
   const [chartRange, setChartRange]       = useState(10)
   const [chartPickerOpen, setChartPickerOpen] = useState(false)
+  const [loanPickerOpen, setLoanPickerOpen] = useState(false)
   const [activeChart, setActiveChart]     = useState(profile?.dashboardChart ?? 'net_worth')
   const [goalModalOpen, setGoalModalOpen] = useState(false)
   const [goalBeingEdited, setGoalBeingEdited] = useState(null)
+  const [excludedLoanKeys, setExcludedLoanKeys] = useState([])
 
   const s = computeSummary(properties, profile, { tradingPortfolioValue })
   const ltv = s.totalPortfolioValue > 0 ? (s.totalDebt / s.totalPortfolioValue) * 100 : null
@@ -716,20 +753,89 @@ export default function Dashboard({
     [ltv, s.totalMonthlyCashFlow, s.propertyCount]
   )
 
+  function handleChartSelect(id) {
+    setActiveChart(id)
+    setChartPickerOpen(false)
+    if (id !== 'cashflow') setLoanPickerOpen(false)
+    if (onSaveProfile && profile) {
+      onSaveProfile({ ...profile, dashboardChart: id })
+    }
+  }
+
+  const loanOptions = useMemo(() => {
+    return properties
+      .filter((p) => p.status !== 'planned' || Boolean(p.purchaseDate))
+      .flatMap((property) =>
+        (property.loans || []).map((loan, idx) => ({
+          key: getLoanKey(property, loan, idx),
+          propertyLabel: property.name || property.address || 'Property',
+          loanLabel: `Loan ${idx + 1}`,
+          monthlyPayment: loan.monthlyPayment || 0,
+          startDate: loan.startDate || '',
+          termMonths: loan.termMonths || 0,
+        }))
+      )
+  }, [properties])
+
+  useEffect(() => {
+    if (!loanOptions.length) {
+      setExcludedLoanKeys([])
+      return
+    }
+    const valid = new Set(loanOptions.map((l) => l.key))
+    setExcludedLoanKeys((prev) => prev.filter((k) => valid.has(k)))
+  }, [loanOptions])
+
+  const includedLoanKeys = useMemo(() => {
+    const excluded = new Set(excludedLoanKeys)
+    return new Set(loanOptions.map((l) => l.key).filter((k) => !excluded.has(k)))
+  }, [loanOptions, excludedLoanKeys])
+
+  const includedLoanMonthlyEstimate = useMemo(() => {
+    return loanOptions.reduce((sum, loan) => {
+      if (!includedLoanKeys.has(loan.key)) return sum
+      return sum + (loan.monthlyPayment || 0)
+    }, 0)
+  }, [loanOptions, includedLoanKeys])
+
+  const currentExpenseBreakdown = useMemo(() => {
+    const todayISO = new Date().toISOString()
+    const selectedLoanMonthlyToday = properties.reduce((sum, property) => {
+      return sum + (property.loans || []).reduce((loanSum, loan, idx) => {
+        const key = getLoanKey(property, loan, idx)
+        if (!includedLoanKeys.has(key)) return loanSum
+        const remaining = getRemainingBalance(loan, todayISO)
+        if (remaining <= 0) return loanSum
+        return loanSum + (loan.monthlyPayment || 0)
+      }, 0)
+    }, 0)
+
+    const rentMonthly = (s.annualRentalIncome || 0) / 12
+    const opexMonthly = (s.annualOpex || 0) / 12
+    const netMonthly = rentMonthly - opexMonthly - selectedLoanMonthlyToday
+
+    return {
+      rentMonthly,
+      opexMonthly,
+      selectedLoanMonthlyToday,
+      netMonthly,
+    }
+  }, [properties, includedLoanKeys, s.annualRentalIncome, s.annualOpex])
+
   const chartData = useMemo(() => {
     if (activeChart === 'investment_ready')
       return generateInvestmentReadyProjection(properties, s.personalCash, chartRange)
     if (activeChart === 'cashflow')
-      return generateCashFlowProjection(properties, chartRange)
+      return generateCashFlowProjection(properties, chartRange, includedLoanKeys)
     return generateNetWorthProjection(properties, s.personalCash, chartRange)
-  }, [properties, s.personalCash, chartRange, activeChart])
+  }, [properties, s.personalCash, chartRange, activeChart, includedLoanKeys])
 
-  function handleChartSelect(id) {
-    setActiveChart(id)
-    setChartPickerOpen(false)
-    if (onSaveProfile && profile) {
-      onSaveProfile({ ...profile, dashboardChart: id })
-    }
+  function toggleLoanIncluded(loanKey) {
+    setExcludedLoanKeys((prev) => (
+      prev.includes(loanKey)
+        ? prev.filter((k) => k !== loanKey)
+        : [...prev, loanKey]
+    ))
   }
 
   // Goals: portfolio value progress & monthly cash flow progress
@@ -939,7 +1045,7 @@ export default function Dashboard({
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
 
           {/* Projection Chart — switchable */}
-          <GlowCard className="card relative" {...cardReveal}>
+          <GlowCard className="card relative z-40" overflowVisible {...cardReveal}>
 
             {/* ── Header: clickable title + range toggle ── */}
             <div className="flex items-center justify-between mb-4">
@@ -982,6 +1088,18 @@ export default function Dashboard({
                     {y}Y
                   </button>
                 ))}
+                {activeChart === 'cashflow' && loanOptions.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={() => setLoanPickerOpen((open) => !open)}
+                    className={`px-3 py-1 rounded-xl text-xs font-medium transition-all border
+                      ${loanPickerOpen
+                        ? 'bg-brand-600/15 text-brand-400 border-brand-500/20'
+                        : 'text-neo-subtle hover:text-neo-muted border-white/[0.08]'}`}
+                  >
+                    Loans {includedLoanKeys.size}/{loanOptions.length}
+                  </button>
+                )}
               </div>
             </div>
 
@@ -989,7 +1107,7 @@ export default function Dashboard({
             <AnimatePresence>
             {chartPickerOpen && (
               <motion.div
-                className="absolute left-4 top-14 z-20 rounded-2xl border border-white/[0.10] overflow-hidden shadow-2xl"
+                className="absolute left-4 top-14 z-[120] rounded-2xl border border-white/[0.10] overflow-visible shadow-2xl"
                 style={{ background: 'rgba(8,12,22,0.95)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', minWidth: '220px' }}
                 initial={{ opacity: 0, y: -4, scale: 0.98 }}
                 animate={{ opacity: 1, y: 0, scale: 1 }}
@@ -1001,17 +1119,133 @@ export default function Dashboard({
                     key={c.id}
                     onClick={() => handleChartSelect(c.id)}
                     className={`w-full flex flex-col items-start px-4 py-3 text-left transition-colors
+                      first:rounded-t-2xl last:rounded-b-2xl
                       hover:bg-white/[0.06]
                       ${activeChart === c.id ? 'bg-brand-600/10' : ''}`}
                   >
-                    <span className={`text-sm font-medium ${activeChart === c.id ? 'text-brand-400' : 'text-neo-text'}`}>
-                      {c.label}
+                    <span className="flex items-center gap-1.5">
+                      <span className={`text-sm font-medium ${activeChart === c.id ? 'text-brand-400' : 'text-neo-text'}`}>
+                        {c.label}
+                      </span>
+                      {c.id === 'cashflow' && (
+                        <span className="relative inline-flex items-center justify-center text-neo-subtle group/info">
+                          <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          <span
+                            className="pointer-events-none absolute z-[140] left-full top-1/2 ml-2 -translate-y-1/2 w-64
+                                       rounded-xl border border-white/[0.12] px-3 py-2 text-[11px] leading-relaxed text-neo-muted
+                                       opacity-0 group-hover/info:opacity-100 transition-opacity duration-150"
+                            style={{ background: 'rgba(8, 12, 22, 0.95)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)' }}
+                          >
+                            Net monthly cash flow uses:
+                            <br />
+                            <span className="text-neo-text">Rent − operating costs − selected loan payments</span>
+                            <br /><br />
+                            Included loans: <span className="text-neo-text tabular-nums">{includedLoanKeys.size}/{loanOptions.length}</span>
+                            <br />
+                            Est. included loan expense: <span className="text-neo-text tabular-nums">{kFmt(includedLoanMonthlyEstimate)}/mo</span>
+                            <br /><br />
+                            <span className="text-neo-text">Current snapshot (today):</span>
+                            <br />
+                            Rent: <span className="text-neo-text tabular-nums">{kFmt(currentExpenseBreakdown.rentMonthly)}/mo</span>
+                            <br />
+                            Opex: <span className="text-neo-text tabular-nums">-{kFmt(currentExpenseBreakdown.opexMonthly)}/mo</span>
+                            <br />
+                            Selected loans: <span className="text-neo-text tabular-nums">-{kFmt(currentExpenseBreakdown.selectedLoanMonthlyToday)}/mo</span>
+                            <br />
+                            Net: <span className={`tabular-nums ${currentExpenseBreakdown.netMonthly >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                              {currentExpenseBreakdown.netMonthly >= 0 ? '+' : ''}{kFmt(currentExpenseBreakdown.netMonthly)}/mo
+                            </span>
+                            <br /><br />
+                            <span className="text-[10px] text-neo-subtle">
+                              Projection points then apply future indexation, rental timing and loan schedule over time.
+                            </span>
+                          </span>
+                        </span>
+                      )}
                     </span>
                     <span className="text-[11px] text-neo-subtle mt-0.5">{c.sub}</span>
                   </button>
                 ))}
               </motion.div>
             )}
+            </AnimatePresence>
+
+            <AnimatePresence>
+              {activeChart === 'cashflow' && loanPickerOpen && loanOptions.length > 0 && (
+                <motion.div
+                  className="absolute right-4 top-14 z-20 rounded-2xl border border-white/[0.10] p-3 shadow-2xl"
+                  style={{ background: 'rgba(8,12,22,0.95)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', minWidth: '280px', maxWidth: '340px' }}
+                  initial={{ opacity: 0, y: -4, scale: 0.98 }}
+                  animate={{ opacity: 1, y: 0, scale: 1 }}
+                  exit={{ opacity: 0, y: -4, scale: 0.98 }}
+                  transition={{ duration: 0.16, ease: SOFT_EASE }}
+                >
+                  <div className="flex items-center justify-between gap-3 mb-2.5">
+                    <p className="text-xs font-semibold text-neo-text">Loans included in cash flow</p>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => setExcludedLoanKeys([])}
+                        className="text-[10px] text-neo-subtle hover:text-neo-muted"
+                      >
+                        All
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setExcludedLoanKeys(loanOptions.map((l) => l.key))}
+                        className="text-[10px] text-neo-subtle hover:text-neo-muted"
+                      >
+                        None
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="max-h-52 overflow-auto space-y-1 pr-1">
+                    {loanOptions.map((loan) => {
+                      const included = includedLoanKeys.has(loan.key)
+                      return (
+                        <label
+                          key={loan.key}
+                          className="flex items-start gap-2 rounded-lg px-2 py-1.5 hover:bg-white/[0.05] cursor-pointer"
+                        >
+                          <input
+                            type="checkbox"
+                            checked={included}
+                            onChange={() => toggleLoanIncluded(loan.key)}
+                            className="mt-0.5 accent-brand-500"
+                          />
+                          <span className="min-w-0">
+                            <span className="block text-xs text-neo-text truncate">
+                              {loan.propertyLabel} · {loan.loanLabel}
+                            </span>
+                            <span className="block text-[10px] text-neo-subtle tabular-nums flex items-center gap-1.5">
+                              <span>{kFmt(loan.monthlyPayment)}/mo{loan.startDate ? ` · ${loan.startDate}` : ''}</span>
+                              <span className="relative inline-flex items-center justify-center text-neo-subtle group/info">
+                                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                <span
+                                  className="pointer-events-none absolute z-30 right-0 top-full mt-1.5 w-56
+                                             rounded-xl border border-white/[0.12] px-2.5 py-2 text-[10px] leading-relaxed text-neo-muted
+                                             opacity-0 group-hover/info:opacity-100 transition-opacity duration-150"
+                                  style={{ background: 'rgba(8, 12, 22, 0.95)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)' }}
+                                >
+                                  Monthly payment: <span className="text-neo-text tabular-nums">{kFmt(loan.monthlyPayment)}</span><br />
+                                  Yearly cost estimate: <span className="text-neo-text tabular-nums">{kFmt(loan.monthlyPayment * 12)}</span><br />
+                                  {loan.startDate ? <>Start date: <span className="text-neo-text">{loan.startDate}</span><br /></> : null}
+                                  {loan.termMonths > 0 ? <>Term: <span className="text-neo-text">{loan.termMonths} months</span></> : null}
+                                </span>
+                              </span>
+                            </span>
+                          </span>
+                        </label>
+                      )
+                    })}
+                  </div>
+                </motion.div>
+              )}
             </AnimatePresence>
 
             {/* ── End-value badge ── */}
