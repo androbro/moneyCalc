@@ -44,28 +44,77 @@ function healthLabel(score) {
   return 'At Risk'
 }
 
-function generateChartData(properties, totalValue, months = 6) {
+// ─── Chart data generators ────────────────────────────────────────────────────
+
+function _projectPoints(properties, years, perPointFn) {
   const today = new Date()
   const liveProp = properties.filter((p) => p.status !== 'planned')
-
-  if (!totalValue || liveProp.length === 0) {
-    return Array.from({ length: months + 1 }, (_, i) => {
-      const d = new Date(today.getFullYear(), today.getMonth() - (months - i), 1)
-      return { month: d.toLocaleString('default', { month: 'short' }), value: 0 }
-    })
-  }
-
-  const avgMonthlyRate =
-    liveProp.reduce((sum, p) => sum + (parseFloat(p.appreciationRate) || 3), 0) /
-    liveProp.length / 100 / 12
-
-  return Array.from({ length: months + 1 }, (_, i) => {
-    const d = new Date(today.getFullYear(), today.getMonth() - (months - i), 1)
-    const monthsBack = months - i
-    const value = Math.round(totalValue / Math.pow(1 + avgMonthlyRate, monthsBack))
-    return { month: d.toLocaleString('default', { month: 'short' }), value }
+  return Array.from({ length: years + 1 }, (_, i) => {
+    const futureDate = new Date(today.getFullYear() + i, today.getMonth(), 1)
+    const futureISO = futureDate.toISOString()
+    const label = i === 0 ? 'Now' : `${futureDate.getFullYear()}`
+    const value = perPointFn(liveProp, i, futureISO)
+    return { label, value: Math.round(value), year: i }
   })
 }
+
+function generateNetWorthProjection(properties, personalCash, years = 10) {
+  return _projectPoints(properties, years, (liveProp, i, futureISO) => {
+    let totalValue = 0
+    let totalDebt = 0
+    liveProp.forEach((p) => {
+      const appRate = (parseFloat(p.appreciationRate) || 3) / 100
+      totalValue += (p.currentValue || 0) * Math.pow(1 + appRate, i)
+      totalDebt  += (p.loans || []).reduce((s, l) => s + getRemainingBalance(l, futureISO), 0)
+    })
+    return totalValue - totalDebt + (personalCash || 0)
+  })
+}
+
+function generateInvestmentReadyProjection(properties, personalCash, years = 10) {
+  const LTV = 0.80
+  return _projectPoints(properties, years, (liveProp, i, futureISO) => {
+    let equity = 0
+    liveProp.forEach((p) => {
+      const appRate = (parseFloat(p.appreciationRate) || 3) / 100
+      const futureVal = (p.currentValue || 0) * Math.pow(1 + appRate, i)
+      const futureDebt = (p.loans || []).reduce((s, l) => s + getRemainingBalance(l, futureISO), 0)
+      equity += Math.max(0, futureVal * LTV - futureDebt)
+    })
+    return equity + (personalCash || 0)
+  })
+}
+
+function generateCashFlowProjection(properties, years = 10) {
+  return _projectPoints(properties, years, (liveProp, i, futureISO) => {
+    let monthlyCF = 0
+    liveProp.forEach((p) => {
+      const indexRate = (parseFloat(p.indexationRate) || 2) / 100
+      const inflRate  = (parseFloat(p.inflationRate)  || 2) / 100
+      const rent = (p.startRentalIncome || 0) * Math.pow(1 + indexRate, i)
+      const expenses = (
+        (p.monthlyExpenses || 0) * Math.pow(1 + inflRate, i) +
+        (p.annualMaintenanceCost || 0) / 12 +
+        (p.annualInsuranceCost || 0) / 12 +
+        (p.annualPropertyTax || 0) / 12
+      )
+      const loanPayments = (p.loans || []).reduce((s, l) => {
+        // loan still running at this future date?
+        const bal = getRemainingBalance(l, futureISO)
+        return s + (bal > 0 ? (l.monthlyPayment || 0) : 0)
+      }, 0)
+      monthlyCF += rent - expenses - loanPayments
+    })
+    return monthlyCF
+  })
+}
+
+// Chart catalogue
+const CHARTS = [
+  { id: 'net_worth',        label: 'Net Worth',               sub: 'Appreciation − debt paydown'       },
+  { id: 'investment_ready', label: 'Investment Ready Capital', sub: '80% LTV headroom + cash'           },
+  { id: 'cashflow',         label: 'Monthly Cash Flow',        sub: 'Rent − expenses − loan payments'   },
+]
 
 // ─── Icons ────────────────────────────────────────────────────────────────────
 
@@ -126,7 +175,7 @@ function StatPill({ icon, label, value }) {
 
 // ─── Chart Tooltip ────────────────────────────────────────────────────────────
 
-function ChartTooltip({ active, payload, label }) {
+function ChartTooltip({ active, payload, label, suffix = '' }) {
   if (!active || !payload?.length) return null
   return (
     <div
@@ -135,7 +184,7 @@ function ChartTooltip({ active, payload, label }) {
     >
       <p className="text-xs text-neo-muted mb-0.5">{label}</p>
       <p className="text-sm font-bold text-brand-400 tabular-nums">
-        {kFmt(payload[0]?.value || 0)}
+        {kFmt(payload[0]?.value || 0)}{suffix}
       </p>
     </div>
   )
@@ -284,6 +333,8 @@ function EmptyState({ onAddProperty }) {
 // ─── Investment Ready Hero Card ───────────────────────────────────────────────
 
 function InvestmentReadyCard({ total, equityPart, cashPart, buyPowerConservative, buyPowerLeveraged }) {
+  const [expanded, setExpanded] = useState(false)
+
   return (
     <div
       className="relative rounded-3xl p-5 overflow-hidden border border-brand-500/20"
@@ -302,11 +353,23 @@ function InvestmentReadyCard({ total, equityPart, cashPart, buyPowerConservative
           <p className="text-3xl sm:text-4xl font-bold text-neo-text tabular-nums leading-none mb-2" style={{ textShadow: '0 0 30px rgba(234,88,12,0.3)' }}>
             {formatEUR(total)}
           </p>
-          <p className="text-xs text-neo-muted">Available for your next property acquisition</p>
+          <div className="flex items-center gap-3">
+            <p className="text-xs text-neo-muted">Available for your next property acquisition</p>
+            {/* Mobile-only expand toggle */}
+            <button
+              onClick={() => setExpanded(e => !e)}
+              className="sm:hidden flex items-center gap-1 text-[10px] text-neo-subtle hover:text-neo-muted transition-colors shrink-0"
+            >
+              <span>{expanded ? 'less' : 'how?'}</span>
+              <svg className={`w-3 h-3 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+          </div>
         </div>
 
-        {/* Right: breakdown + buy power */}
-        <div className="sm:w-72 shrink-0 space-y-2">
+        {/* Right: breakdown + buy power — always on sm+, collapsible on mobile */}
+        <div className={`sm:w-72 shrink-0 space-y-2 sm:block ${expanded ? 'block' : 'hidden'}`}>
           {/* Breakdown with formula */}
           <div className="rounded-2xl px-3 py-2.5 space-y-1.5" style={{ background: 'rgba(4,7,14,0.45)', border: '1px solid rgba(255,255,255,0.06)' }}>
             <div className="flex justify-between items-start gap-2">
@@ -384,9 +447,12 @@ export default function Dashboard({
   onAddProperty,
   onEditProperty,
   onDeleteProperty,
+  onSaveProfile,
   tradingPortfolioValue = 0,
 }) {
-  const [chartRange, setChartRange] = useState(6)
+  const [chartRange, setChartRange]       = useState(10)
+  const [chartPickerOpen, setChartPickerOpen] = useState(false)
+  const [activeChart, setActiveChart]     = useState(profile?.dashboardChart ?? 'net_worth')
 
   const s = computeSummary(properties, profile, { tradingPortfolioValue })
   const ltv = s.totalPortfolioValue > 0 ? (s.totalDebt / s.totalPortfolioValue) * 100 : null
@@ -398,10 +464,21 @@ export default function Dashboard({
     [ltv, s.totalMonthlyCashFlow, s.propertyCount]
   )
 
-  const chartData = useMemo(
-    () => generateChartData(properties, s.totalPortfolioValue, chartRange),
-    [properties, s.totalPortfolioValue, chartRange]
-  )
+  const chartData = useMemo(() => {
+    if (activeChart === 'investment_ready')
+      return generateInvestmentReadyProjection(properties, s.personalCash, chartRange)
+    if (activeChart === 'cashflow')
+      return generateCashFlowProjection(properties, chartRange)
+    return generateNetWorthProjection(properties, s.personalCash, chartRange)
+  }, [properties, s.personalCash, chartRange, activeChart])
+
+  function handleChartSelect(id) {
+    setActiveChart(id)
+    setChartPickerOpen(false)
+    if (onSaveProfile && profile) {
+      onSaveProfile({ ...profile, dashboardChart: id })
+    }
+  }
 
   // Goals: portfolio value progress & monthly cash flow progress
   const valueGoalPct = useMemo(() => {
@@ -525,41 +602,92 @@ export default function Dashboard({
         {/* ── Chart + Equity Breakdown ── */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
 
-          {/* Portfolio Growth Chart */}
-          <div className="card">
+          {/* Projection Chart — switchable */}
+          <div className="card relative">
+
+            {/* ── Header: clickable title + range toggle ── */}
             <div className="flex items-center justify-between mb-4">
-              <div>
-                <h2 className="font-semibold text-neo-text">Portfolio Value</h2>
-                <p className="text-xs text-neo-subtle mt-0.5">Historical growth</p>
-              </div>
-              <div className="flex gap-1.5">
-                {[3, 6, 12].map((m) => (
+
+              {/* Clickable title → opens chart picker */}
+              <button
+                onClick={() => setChartPickerOpen(o => !o)}
+                className="flex items-start gap-1.5 group text-left"
+              >
+                <div>
+                  <div className="flex items-center gap-1.5">
+                    <h2 className="font-semibold text-neo-text group-hover:text-brand-400 transition-colors">
+                      {CHARTS.find(c => c.id === activeChart)?.label ?? 'Projection'}
+                    </h2>
+                    {/* Chevron */}
+                    <svg
+                      className={`w-3.5 h-3.5 text-neo-subtle group-hover:text-brand-400 transition-all duration-200 ${chartPickerOpen ? 'rotate-180' : ''}`}
+                      fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                    >
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M19 9l-7 7-7-7" />
+                    </svg>
+                  </div>
+                  <p className="text-xs text-neo-subtle mt-0.5">
+                    {CHARTS.find(c => c.id === activeChart)?.sub}
+                  </p>
+                </div>
+              </button>
+
+              {/* Range toggle */}
+              <div className="flex gap-1.5 shrink-0">
+                {[5, 10, 25].map((y) => (
                   <button
-                    key={m}
-                    onClick={() => setChartRange(m)}
+                    key={y}
+                    onClick={() => setChartRange(y)}
                     className={`px-3 py-1 rounded-xl text-xs font-medium transition-all
-                      ${chartRange === m
+                      ${chartRange === y
                         ? 'bg-brand-600/15 text-brand-400 border border-brand-500/20'
                         : 'text-neo-subtle hover:text-neo-muted border border-transparent'}`}
                   >
-                    {m === 12 ? '1Y' : `${m}M`}
+                    {y}Y
                   </button>
                 ))}
               </div>
             </div>
 
-            {chartData.length > 0 && chartData[chartData.length - 1].value > 0 && (
+            {/* ── Chart picker dropdown ── */}
+            {chartPickerOpen && (
+              <div
+                className="absolute left-4 top-14 z-20 rounded-2xl border border-white/[0.10] overflow-hidden shadow-2xl"
+                style={{ background: 'rgba(8,12,22,0.95)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', minWidth: '220px' }}
+              >
+                {CHARTS.map((c) => (
+                  <button
+                    key={c.id}
+                    onClick={() => handleChartSelect(c.id)}
+                    className={`w-full flex flex-col items-start px-4 py-3 text-left transition-colors
+                      hover:bg-white/[0.06]
+                      ${activeChart === c.id ? 'bg-brand-600/10' : ''}`}
+                  >
+                    <span className={`text-sm font-medium ${activeChart === c.id ? 'text-brand-400' : 'text-neo-text'}`}>
+                      {c.label}
+                    </span>
+                    <span className="text-[11px] text-neo-subtle mt-0.5">{c.sub}</span>
+                  </button>
+                ))}
+              </div>
+            )}
+
+            {/* ── End-value badge ── */}
+            {chartData.length > 0 && Math.abs(chartData[chartData.length - 1].value) > 0 && (
               <div className="relative h-0">
                 <div className="absolute right-14 -top-1 z-10">
                   <div className="bg-brand-600/90 backdrop-blur-sm rounded-xl px-3 py-1.5 shadow-glow-sm">
                     <p className="text-white text-xs font-bold tabular-nums">
-                      {kFmt(chartData[chartData.length - 1].value)}
+                      {activeChart === 'cashflow'
+                        ? `${kFmt(chartData[chartData.length - 1].value)}/mo`
+                        : kFmt(chartData[chartData.length - 1].value)}
                     </p>
                   </div>
                 </div>
               </div>
             )}
 
+            {/* ── Chart ── */}
             <ResponsiveContainer width="100%" height={200}>
               <AreaChart data={chartData} margin={{ top: 28, right: 10, bottom: 0, left: 0 }}>
                 <defs>
@@ -569,9 +697,12 @@ export default function Dashboard({
                   </linearGradient>
                 </defs>
                 <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
-                <XAxis dataKey="month" tick={{ fill: '#8897b5', fontSize: 11 }} axisLine={false} tickLine={false} />
-                <YAxis tickFormatter={kFmt} tick={{ fill: '#8897b5', fontSize: 11 }} axisLine={false} tickLine={false} width={54} />
-                <Tooltip content={<ChartTooltip />} cursor={{ stroke: 'rgba(255,255,255,0.08)', strokeWidth: 1 }} />
+                <XAxis dataKey="label" tick={{ fill: '#8897b5', fontSize: 11 }} axisLine={false} tickLine={false}
+                  interval={chartRange <= 5 ? 0 : Math.floor(chartRange / 5)} />
+                <YAxis tickFormatter={activeChart === 'cashflow' ? (v) => `${kFmt(v)}` : kFmt}
+                  tick={{ fill: '#8897b5', fontSize: 11 }} axisLine={false} tickLine={false} width={54} />
+                <Tooltip content={<ChartTooltip suffix={activeChart === 'cashflow' ? '/mo' : ''} />}
+                  cursor={{ stroke: 'rgba(255,255,255,0.08)', strokeWidth: 1 }} />
                 <Area type="monotone" dataKey="value" stroke="#ea580c" strokeWidth={2.5}
                   fill="url(#valueGrad)" dot={false}
                   activeDot={{ r: 5, fill: '#ea580c', stroke: '#fff', strokeWidth: 2 }}

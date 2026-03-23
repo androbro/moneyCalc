@@ -458,18 +458,27 @@ function householdToDb(h, userId) {
     // Shared fields
     household_expenses:    h.householdExpenses ?? 0,
     personal_savings_rate: h.personalSavingsRate ?? 0.10,
+    // UI preferences JSONB
+    ui_preferences: {
+      ...(h.uiPreferences ?? {}),
+      dashboardChart: h.dashboardChart ?? 'net_worth',
+    },
   }
   if (userId) row.user_id = userId
   return row
 }
 
 function dbToHousehold(row) {
+  const uiPrefs = row.ui_preferences ?? {}
+
   // Prefer the structured members JSONB column if present
   if (Array.isArray(row.members) && row.members.length > 0) {
     return {
       members:             row.members,
       householdExpenses:   Number(row.household_expenses ?? 0),
       personalSavingsRate: Number(row.personal_savings_rate ?? 0.10),
+      dashboardChart:      uiPrefs.dashboardChart ?? 'net_worth',
+      uiPreferences:       uiPrefs,
     }
   }
 
@@ -497,6 +506,8 @@ function dbToHousehold(row) {
     members,
     householdExpenses:   Number(row.household_expenses ?? 0),
     personalSavingsRate: Number(row.personal_savings_rate ?? 0.10),
+    dashboardChart:      uiPrefs.dashboardChart ?? 'net_worth',
+    uiPreferences:       uiPrefs,
   }
 }
 

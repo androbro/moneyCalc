@@ -549,6 +549,7 @@ export default function App() {
 					onAddProperty={handleAddProperty}
 					onEditProperty={handleEditProperty}
 					onDeleteProperty={handleDeleteProperty}
+					onSaveProfile={handleSaveHousehold}
 					tradingPortfolioValue={tradingPortfolioValue}
 				/>
 			)}
