@@ -6,12 +6,12 @@ import PropertyTimeline from './PropertyTimeline'
 // ─── Property status options ───────────────────────────────────────────────────
 
 export const PROPERTY_STATUSES = [
-  { value: 'owner_occupied', label: 'Owner-occupied',    color: 'text-brand-400',   bg: 'bg-brand-900/40 border-brand-700/50' },
-  { value: 'rented',         label: 'Rented out',        color: 'text-emerald-400', bg: 'bg-emerald-900/40 border-emerald-700/50' },
-  { value: 'vacant',         label: 'Vacant',            color: 'text-amber-400',   bg: 'bg-amber-900/30 border-amber-700/40' },
-  { value: 'for_sale',       label: 'For sale',          color: 'text-orange-400',  bg: 'bg-orange-900/30 border-orange-700/40' },
-  { value: 'renovation',     label: 'Under renovation',  color: 'text-purple-400',  bg: 'bg-purple-900/30 border-purple-700/40' },
-  { value: 'planned',        label: 'Planned / Simulated', color: 'text-sky-400',   bg: 'bg-sky-900/30 border-sky-700/40' },
+  { value: 'owner_occupied', label: 'Owner-occupied',    color: 'text-sky-800',   bg: 'bg-sky-100 border-sky-200/80 shadow-neo-inset-sm' },
+  { value: 'rented',         label: 'Rented out',        color: 'text-emerald-800', bg: 'bg-emerald-100 border-emerald-200/80 shadow-neo-inset-sm' },
+  { value: 'vacant',         label: 'Vacant',            color: 'text-amber-900',   bg: 'bg-amber-50 border-amber-200/80 shadow-neo-inset-sm' },
+  { value: 'for_sale',       label: 'For sale',          color: 'text-orange-900',  bg: 'bg-orange-100 border-orange-200/80 shadow-neo-inset-sm' },
+  { value: 'renovation',     label: 'Under renovation',  color: 'text-purple-900',  bg: 'bg-purple-100 border-purple-200/80 shadow-neo-inset-sm' },
+  { value: 'planned',        label: 'Planned / Simulated', color: 'text-sky-900',   bg: 'bg-sky-50 border-sky-200/80 shadow-neo-inset-sm' },
 ]
 
 export function getStatusMeta(status) {
@@ -109,7 +109,7 @@ function Field({ label, hint, children, required, span2 = false }) {
         {required && <span className="text-red-400 ml-0.5">*</span>}
       </label>
       {children}
-      {hint && <p className="text-xs text-slate-500 mt-1">{hint}</p>}
+      {hint && <p className="text-xs text-neo-subtle mt-1">{hint}</p>}
     </div>
   )
 }
@@ -129,7 +129,7 @@ function PctInput({ value, onChange, placeholder = '2.0', step = '0.1', min = '0
           onChange(e.target.value !== '' ? String(Number(e.target.value) / 100) : '')
         }
       />
-      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">%</span>
+      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-neo-muted text-sm">%</span>
     </div>
   )
 }
@@ -144,7 +144,7 @@ function Toggle({ checked, onChange, label }) {
         onClick={() => onChange(!checked)}
         className={`relative inline-flex h-6 w-11 shrink-0 rounded-full border-2 border-transparent
                     transition-colors duration-200 focus:outline-none
-                    ${checked ? 'bg-brand-600' : 'bg-slate-600'}`}
+                    ${checked ? 'bg-brand-600' : 'bg-neo-sunken'}`}
       >
         <span
           className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow
@@ -152,7 +152,7 @@ function Toggle({ checked, onChange, label }) {
                       ${checked ? 'translate-x-5' : 'translate-x-0'}`}
         />
       </button>
-      <span className="text-sm text-slate-300">{label}</span>
+      <span className="text-sm text-neo-muted">{label}</span>
     </label>
   )
 }
@@ -169,9 +169,9 @@ function LoanForm({ loan, index, onChange, onRemove, onScheduleImport }) {
   }
 
   return (
-    <div className="border border-slate-600 rounded-xl p-4 space-y-4">
+    <div className="border border-neo-border rounded-xl p-4 space-y-4">
       <div className="flex items-center justify-between">
-        <h4 className="font-medium text-slate-200">Loan {index + 1}</h4>
+        <h4 className="font-medium text-neo-text/95">Loan {index + 1}</h4>
         <button type="button" onClick={() => onRemove(index)}
           className="text-red-400 hover:text-red-300 text-sm transition-colors">
           Remove
@@ -215,7 +215,7 @@ function LoanForm({ loan, index, onChange, onRemove, onScheduleImport }) {
       <div>
         {loan.amortizationSchedule?.length > 0 ? (
           <div className="flex items-center gap-3">
-            <div className="flex-1 bg-emerald-900/30 border border-emerald-700 rounded-lg px-3 py-2 text-sm text-emerald-300">
+            <div className="flex-1 bg-emerald-50 border border-emerald-200/80 rounded-xl px-3 py-2 text-sm text-emerald-900 shadow-neo-inset-sm">
               Schedule loaded: {loan.amortizationSchedule.length} rows
             </div>
             <button type="button" onClick={() => setShowImporter(!showImporter)}
@@ -266,10 +266,10 @@ function StatusSelector({ value, onChange }) {
           className={`rounded-xl border px-3 py-2.5 text-xs font-semibold text-left transition-all
             ${value === s.value
               ? `${s.bg} ${s.color} border-current shadow-sm`
-              : 'bg-slate-800 border-slate-700 text-slate-400 hover:border-slate-500 hover:text-slate-200'
+              : 'bg-neo-raised border-neo-border text-neo-muted hover:border-neo-border hover:text-neo-text/95'
             }`}
         >
-          <span className={`block text-base mb-0.5 ${value === s.value ? s.color : 'text-slate-500'}`}>
+          <span className={`block text-base mb-0.5 ${value === s.value ? s.color : 'text-neo-subtle'}`}>
             {STATUS_ICONS[s.value]}
           </span>
           {s.label}
@@ -449,10 +449,10 @@ export default function PropertyForm({ property: editProperty, profile, onSave, 
 
       {/* Header */}
       <div className="flex items-center justify-between">
-        <h2 className="text-xl font-bold text-white">
+        <h2 className="text-xl font-bold text-neo-text">
           {isEdit ? 'Edit Property' : 'Add Property'}
         </h2>
-        <button type="button" onClick={onCancel} className="text-slate-400 hover:text-slate-100">
+        <button type="button" onClick={onCancel} className="text-neo-muted hover:text-neo-text">
           <CloseIcon />
         </button>
       </div>
@@ -461,18 +461,18 @@ export default function PropertyForm({ property: editProperty, profile, onSave, 
       <div className="card space-y-3">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <p className="text-sm font-medium text-slate-200">Planned / simulated property</p>
-            <p className="text-xs text-slate-500 mt-0.5">
+            <p className="text-sm font-medium text-neo-text/95">Planned / simulated property</p>
+            <p className="text-xs text-neo-subtle mt-0.5">
               Turn on for properties you don't own yet — projections include it but it won't affect today's cash flow.
             </p>
           </div>
           <Toggle checked={isPlanned} onChange={togglePlanned} label="" />
         </div>
 
-        <div className="border-t border-slate-700/60 pt-3 flex items-start justify-between gap-4">
+        <div className="border-t border-neo-border/60 pt-3 flex items-start justify-between gap-4">
           <div>
-            <p className="text-sm font-medium text-slate-200">Will be rented out</p>
-            <p className="text-xs text-slate-500 mt-0.5">
+            <p className="text-sm font-medium text-neo-text/95">Will be rented out</p>
+            <p className="text-xs text-neo-subtle mt-0.5">
               Show rental income fields. Set a start date if you're not renting yet.
             </p>
           </div>
@@ -539,7 +539,7 @@ export default function PropertyForm({ property: editProperty, profile, onSave, 
       <div className="card space-y-3">
         <div>
           <h3 className="section-title mb-0">Ownership</h3>
-          <p className="text-xs text-slate-500 mt-0.5">
+          <p className="text-xs text-neo-subtle mt-0.5">
             Who owns this property and what share. Shares must add up to 100%.
             Your personal net worth only counts your share.
           </p>
@@ -562,7 +562,7 @@ export default function PropertyForm({ property: editProperty, profile, onSave, 
             const dropdownValue = isKnownMember ? (owner.name || '') : '__other__'
 
             return (
-              <div key={i} className="border border-slate-700/60 rounded-xl p-3 space-y-2.5">
+              <div key={i} className="border border-neo-border/60 rounded-xl p-3 space-y-2.5">
                 {/* Row 1: name selector + share + remove */}
                 <div className="flex items-center gap-2">
                   {/* Name — dropdown if household members exist, plain input otherwise */}
@@ -617,7 +617,7 @@ export default function PropertyForm({ property: editProperty, profile, onSave, 
                       value={owner.share !== '' ? Math.round(Number(owner.share) * 100) : ''}
                       onChange={(e) => updateOwner({ ...owner, share: Number(e.target.value) / 100 })}
                     />
-                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 text-xs">%</span>
+                    <span className="absolute right-2 top-1/2 -translate-y-1/2 text-neo-muted text-xs">%</span>
                   </div>
 
                   {/* Remove button */}
@@ -625,7 +625,7 @@ export default function PropertyForm({ property: editProperty, profile, onSave, 
                     <button
                       type="button"
                       onClick={removeOwner}
-                      className="text-slate-500 hover:text-red-400 transition-colors shrink-0"
+                      className="text-neo-subtle hover:text-red-400 transition-colors shrink-0"
                     >
                       <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -645,7 +645,7 @@ export default function PropertyForm({ property: editProperty, profile, onSave, 
                     value={owner.registrationTaxRate != null ? owner.registrationTaxRate : ''}
                     onChange={(v) => updateOwner({ ...owner, registrationTaxRate: v !== '' ? v : null })}
                   />
-                  <p className="text-xs text-slate-500 mt-1">
+                  <p className="text-xs text-neo-subtle mt-1">
                     Standard: 12% (Flemish investment/rental). Enige eigen woning since 2025: 2%.
                     Leave blank to skip.
                   </p>
@@ -666,7 +666,7 @@ export default function PropertyForm({ property: editProperty, profile, onSave, 
               <button
                 type="button"
                 onClick={() => sf('owners')([...(form.owners || []), { name: '', share: 0 }])}
-                className="text-slate-400 hover:text-brand-400 transition-colors flex items-center gap-1"
+                className="text-neo-muted hover:text-brand-400 transition-colors flex items-center gap-1"
               >
                 <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -686,13 +686,13 @@ export default function PropertyForm({ property: editProperty, profile, onSave, 
       {/* ── Section 3: Current Status ── */}
       <div className="card space-y-4">
         <h3 className="section-title mb-0">Current Status</h3>
-        <p className="text-xs text-slate-500 -mt-2">
+        <p className="text-xs text-neo-subtle -mt-2">
           What is the current situation with this property? This controls what shows in cash flow today.
         </p>
         <StatusSelector value={form.status} onChange={sf('status')} />
 
         {/* Primary residence toggle */}
-        <div className="pt-2 border-t border-slate-700/60 space-y-3">
+        <div className="pt-2 border-t border-neo-border/60 space-y-3">
           <Toggle
             checked={form.isPrimaryResidence}
             onChange={sib('isPrimaryResidence')}
@@ -718,7 +718,7 @@ export default function PropertyForm({ property: editProperty, profile, onSave, 
         <div className="card space-y-4">
           <div>
             <h3 className="section-title mb-0">Rental Income &amp; Period</h3>
-            <p className="text-xs text-slate-500 mt-0.5">
+            <p className="text-xs text-neo-subtle mt-0.5">
               Set the expected rent and when the rental period starts — even if you're not renting yet.
               Cash flow only counts rent once the start date is reached and status is "Rented out".
             </p>
@@ -758,7 +758,7 @@ export default function PropertyForm({ property: editProperty, profile, onSave, 
 
           {/* Contextual notices */}
           {!isRented && form.rentalStartDate && (
-            <div className="flex items-start gap-2 bg-slate-800/60 border border-slate-700 rounded-xl px-3 py-2.5 text-xs text-slate-400">
+            <div className="flex items-start gap-2 bg-neo-sunken/70 border border-neo-border rounded-xl px-3 py-2.5 text-xs text-neo-muted">
               <svg className="w-4 h-4 shrink-0 mt-0.5 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
@@ -768,7 +768,7 @@ export default function PropertyForm({ property: editProperty, profile, onSave, 
             </div>
           )}
           {isRented && form.rentalStartDate && new Date(form.rentalStartDate) > new Date() && (
-            <div className="flex items-start gap-2 bg-amber-900/20 border border-amber-700/40 rounded-xl px-3 py-2.5 text-xs text-amber-300">
+            <div className="flex items-start gap-2 bg-amber-50 border border-amber-200/80 rounded-2xl px-3 py-2.5 text-xs text-amber-900 shadow-neo-inset-sm">
               <svg className="w-4 h-4 shrink-0 mt-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                   d="M12 9v2m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z" />
@@ -791,14 +791,14 @@ export default function PropertyForm({ property: editProperty, profile, onSave, 
           
           {/* Belgian Maintenance Estimation Helper */}
           <div className="mt-2 space-y-2">
-            <div className="bg-blue-900/20 border border-blue-700/50 rounded-lg p-3">
-              <p className="text-xs font-semibold text-blue-300 mb-1.5">
+            <div className="bg-sky-50 border border-sky-200/80 rounded-2xl p-3 shadow-neo-inset-sm">
+              <p className="text-xs font-semibold text-sky-900 mb-1.5">
                 Belgian Maintenance Guidelines
               </p>
-              <div className="text-xs text-blue-200 space-y-1">
+              <div className="text-xs text-sky-900/90 space-y-1">
                 <p><strong>Apartments:</strong> €2,000-€2,500/year minimum (€30-35k over 15 years)</p>
                 <p><strong>Houses:</strong> €2,500-€4,000/year minimum (€37.5-60k over 15 years)</p>
-                <p className="text-blue-300 mt-2 pt-2 border-t border-blue-700/50">
+                <p className="text-sky-800 mt-2 pt-2 border-t border-sky-200/70">
                   <strong>Important:</strong> Plan for syndic special charges (bijzondere bijdragen) for roof, facade, elevator, or EPC renovations — these can reach €10-15k in a single call, especially with upcoming Flemish EPC requirements.
                 </p>
               </div>
@@ -806,7 +806,7 @@ export default function PropertyForm({ property: editProperty, profile, onSave, 
             
             {/* Warning if below minimum */}
             {form.annualMaintenanceCost && Number(form.annualMaintenanceCost) < 2000 && (
-              <div className="bg-amber-900/20 border border-amber-700/50 rounded-lg p-3 flex items-start gap-2">
+              <div className="bg-amber-50 border border-amber-200/80 rounded-2xl p-3 flex items-start gap-2 shadow-neo-inset-sm">
                 <svg className="w-4 h-4 text-amber-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                 </svg>
@@ -858,7 +858,7 @@ export default function PropertyForm({ property: editProperty, profile, onSave, 
         </div>
 
         {loans.length === 0 && (
-          <p className="text-slate-500 text-sm">No loans linked yet.</p>
+          <p className="text-neo-subtle text-sm">No loans linked yet.</p>
         )}
 
         {loans.map((loan, i) => (
@@ -871,7 +871,7 @@ export default function PropertyForm({ property: editProperty, profile, onSave, 
       {(loans.length > 0 || form.rentalStartDate || form.purchaseDate) && (
         <div className="card space-y-2">
           <h3 className="section-title mb-0">Timeline Preview</h3>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-neo-subtle">
             Live view — updates as you edit. Hover any year for financials.
           </p>
           <PropertyTimeline

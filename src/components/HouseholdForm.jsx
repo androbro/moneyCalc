@@ -36,7 +36,7 @@ function pct(v) {
 function Section({ title, children }) {
   return (
     <div className="card space-y-4">
-      <h3 className="text-sm font-semibold text-slate-300 uppercase tracking-wider border-b border-slate-700 pb-2">
+      <h3 className="text-sm font-semibold text-neo-muted uppercase tracking-wider border-b border-neo-border pb-2">
         {title}
       </h3>
       {children}
@@ -47,9 +47,9 @@ function Section({ title, children }) {
 function Field({ label, hint, children, className = '' }) {
   return (
     <div className={`space-y-1 ${className}`}>
-      <label className="block text-xs font-medium text-slate-400">{label}</label>
+      <label className="block text-xs font-medium text-neo-muted">{label}</label>
       {children}
-      {hint && <p className="text-xs text-slate-500">{hint}</p>}
+      {hint && <p className="text-xs text-neo-subtle">{hint}</p>}
     </div>
   )
 }
@@ -57,7 +57,7 @@ function Field({ label, hint, children, className = '' }) {
 function MoneyInput({ value, onChange, placeholder = '0', disabled = false }) {
   return (
     <div className="relative">
-      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-sm">€</span>
+      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-neo-subtle text-sm">€</span>
       <input
         type="number"
         min="0"
@@ -85,7 +85,7 @@ function PctInput({ value, onChange }) {
         placeholder="10"
         className="input pr-7 w-full"
       />
-      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 text-sm">%</span>
+      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-neo-subtle text-sm">%</span>
     </div>
   )
 }
@@ -105,7 +105,7 @@ function PositionRow({ pos, onChange, onRemove }) {
       />
       {/* Monthly contribution */}
       <div className="relative w-28">
-        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-xs">€</span>
+        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-neo-subtle text-xs">€</span>
         <input
           type="number"
           min="0"
@@ -133,13 +133,13 @@ function PositionRow({ pos, onChange, onRemove }) {
           className="input pr-6 text-sm w-full"
           title="Expected annual return %"
         />
-        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 text-xs">%</span>
+        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-neo-subtle text-xs">%</span>
       </div>
       {/* Remove */}
       <button
         type="button"
         onClick={onRemove}
-        className="text-slate-500 hover:text-red-400 transition-colors shrink-0"
+        className="text-neo-subtle hover:text-red-400 transition-colors shrink-0"
         title="Remove position"
       >
         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -180,7 +180,7 @@ function MemberCard({ member, onChange, onRemove, onSetMe, canRemove, tradingPor
   const totalMonthlyInvested = positions.reduce((s, p) => s + (p.monthlyAmount || 0), 0)
 
   return (
-    <div className="bg-slate-900/60 border border-slate-700 rounded-xl p-4 space-y-4">
+    <div className="bg-neo-bg/65 border border-neo-border rounded-xl p-4 space-y-4">
       {/* Name row */}
       <div className="flex items-center gap-3">
         <button
@@ -190,7 +190,7 @@ function MemberCard({ member, onChange, onRemove, onSetMe, canRemove, tradingPor
           className={`w-8 h-8 rounded-full border flex items-center justify-center shrink-0 font-bold text-sm transition-all
             ${member.isMe
               ? 'bg-brand-600/40 border-brand-500 text-brand-200'
-              : 'bg-slate-800 border-slate-600 text-slate-400 hover:border-brand-500 hover:text-brand-400'}`}
+              : 'bg-neo-raised border-neo-border text-neo-muted hover:border-brand-500 hover:text-brand-400'}`}
         >
           {member.isMe ? '★' : (member.name || '?').charAt(0).toUpperCase()}
         </button>
@@ -212,7 +212,7 @@ function MemberCard({ member, onChange, onRemove, onSetMe, canRemove, tradingPor
           <button
             type="button"
             onClick={onRemove}
-            className="text-slate-500 hover:text-red-400 transition-colors shrink-0"
+            className="text-neo-subtle hover:text-red-400 transition-colors shrink-0"
             title="Remove member"
           >
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -237,9 +237,9 @@ function MemberCard({ member, onChange, onRemove, onSetMe, canRemove, tradingPor
       </div>
 
       {/* ── Investment positions ── */}
-      <div className="space-y-2 pt-1 border-t border-slate-700/50">
+      <div className="space-y-2 pt-1 border-t border-neo-border/50">
         <div className="flex items-center justify-between">
-          <p className="text-xs font-medium text-slate-400">Investment Positions</p>
+          <p className="text-xs font-medium text-neo-muted">Investment Positions</p>
           {totalMonthlyInvested > 0 && (
             <span className="text-xs text-emerald-400 font-semibold">
               €{totalMonthlyInvested.toLocaleString('nl-BE')}/mo total
@@ -250,7 +250,7 @@ function MemberCard({ member, onChange, onRemove, onSetMe, canRemove, tradingPor
         {positions.length > 0 && (
           <div className="space-y-1.5">
             {/* Column headers */}
-            <div className="grid grid-cols-[1fr_auto_auto_auto] gap-2 text-xs text-slate-500 px-0.5">
+            <div className="grid grid-cols-[1fr_auto_auto_auto] gap-2 text-xs text-neo-subtle px-0.5">
               <span>Name / ticker</span>
               <span className="w-28 text-center">Monthly (€)</span>
               <span className="w-20 text-center">Return %</span>
@@ -270,7 +270,7 @@ function MemberCard({ member, onChange, onRemove, onSetMe, canRemove, tradingPor
         <button
           type="button"
           onClick={addPosition}
-          className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-brand-400 transition-colors py-1"
+          className="flex items-center gap-1.5 text-xs text-neo-muted hover:text-brand-400 transition-colors py-1"
         >
           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -280,7 +280,7 @@ function MemberCard({ member, onChange, onRemove, onSetMe, canRemove, tradingPor
       </div>
 
       {/* Inline totals */}
-      <div className="flex flex-wrap gap-4 text-xs text-slate-500 pt-1 border-t border-slate-700/50">
+      <div className="flex flex-wrap gap-4 text-xs text-neo-subtle pt-1 border-t border-neo-border/50">
         <span>
           Monthly income:{' '}
           <span className="text-emerald-400 font-semibold">
@@ -305,20 +305,20 @@ function MemberCard({ member, onChange, onRemove, onSetMe, canRemove, tradingPor
 
       {/* Trading portfolio summary — shown only on the owner (isMe) card */}
       {member.isMe && tradingPortfolioValue > 0 && (
-        <div className="pt-2 border-t border-slate-700/50">
-          <div className="flex items-center justify-between gap-2 bg-violet-900/20 border border-violet-700/40 rounded-lg px-3 py-2">
+        <div className="pt-2 border-t border-neo-border/50">
+          <div className="flex items-center justify-between gap-2 bg-violet-50 border border-violet-200/80 rounded-2xl px-3 py-2 shadow-neo-inset-sm">
             <div className="flex items-center gap-2">
-              <svg className="w-3.5 h-3.5 text-violet-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-3.5 h-3.5 text-violet-600 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                   d="M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z" />
               </svg>
-              <span className="text-xs text-violet-300 font-medium">Revolut trading portfolio</span>
+              <span className="text-xs text-violet-900 font-medium">Revolut trading portfolio</span>
             </div>
-            <span className="text-sm font-bold text-violet-300 tabular-nums">
+            <span className="text-sm font-bold text-violet-800 tabular-nums">
               €{tradingPortfolioValue.toLocaleString('nl-BE', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
             </span>
           </div>
-          <p className="text-[10px] text-slate-500 mt-1 ml-0.5">
+          <p className="text-[10px] text-neo-subtle mt-1 ml-0.5">
             Included in your personal net worth on the Dashboard
           </p>
         </div>
@@ -371,8 +371,8 @@ export default function HouseholdForm({ profile, onSave, saving, trades = [], tr
     <form onSubmit={handleSubmit} className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-white">Household Financial Profile</h1>
-        <p className="text-slate-400 text-sm mt-0.5">
+        <h1 className="text-2xl font-bold text-neo-text">Household Financial Profile</h1>
+        <p className="text-neo-muted text-sm mt-0.5">
           All members' income and cash — used by the Cash-Flow Aggregator and AI Insights.
         </p>
       </div>
@@ -383,13 +383,13 @@ export default function HouseholdForm({ profile, onSave, saving, trades = [], tr
         {form.members.length > 0 && (
           <div className="flex gap-6 px-1 text-sm">
             <div>
-              <span className="text-slate-500 text-xs">Combined monthly income </span>
+              <span className="text-neo-subtle text-xs">Combined monthly income </span>
               <span className="text-emerald-400 font-semibold">
                 €{totalMonthlyIncome.toLocaleString('nl-BE')}
               </span>
             </div>
             <div>
-              <span className="text-slate-500 text-xs">Total cash on hand </span>
+              <span className="text-neo-subtle text-xs">Total cash on hand </span>
               <span className="text-brand-400 font-semibold">
                 €{totalCash.toLocaleString('nl-BE')}
               </span>
@@ -400,7 +400,7 @@ export default function HouseholdForm({ profile, onSave, saving, trades = [], tr
         {/* Member cards */}
         <div className="space-y-3">
           {form.members.length === 0 && (
-            <p className="text-slate-500 text-sm text-center py-4">
+            <p className="text-neo-subtle text-sm text-center py-4">
               No members yet — add yourself and your partner below.
             </p>
           )}
@@ -425,7 +425,7 @@ export default function HouseholdForm({ profile, onSave, saving, trades = [], tr
           type="button"
           onClick={addMember}
           className="w-full flex items-center justify-center gap-2 py-2.5 border border-dashed
-                     border-slate-600 hover:border-brand-500 text-slate-400 hover:text-brand-400
+                     border-neo-border hover:border-brand-500 text-neo-muted hover:text-brand-400
                      rounded-xl text-sm transition-colors"
         >
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">

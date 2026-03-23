@@ -64,7 +64,7 @@ export default function InfoTooltip({ content, position = 'top', size = 'sm' }) 
       <button
         ref={iconRef}
         type="button"
-        className="inline-flex items-center justify-center text-slate-400 hover:text-slate-300 transition-colors cursor-help"
+        className="inline-flex items-center justify-center text-neo-muted hover:text-neo-muted transition-colors cursor-help"
         onMouseEnter={() => setVisible(true)}
         onMouseLeave={() => setVisible(false)}
         onFocus={() => setVisible(true)}
@@ -89,18 +89,18 @@ export default function InfoTooltip({ content, position = 'top', size = 'sm' }) 
       {visible && (
         <div
           ref={tooltipRef}
-          className="fixed z-[9999] bg-slate-800 border border-slate-600 rounded-lg p-3 shadow-xl text-xs max-w-sm pointer-events-none"
+          className="fixed z-[9999] bg-neo-surface border border-white/60 rounded-2xl p-3 shadow-neo-lg text-xs max-w-sm pointer-events-none text-neo-muted"
           style={{
             left: `${coords.x}px`,
             top: `${coords.y}px`,
           }}
         >
-          <div className="text-slate-200 leading-relaxed">
+          <div className="text-neo-text/95 leading-relaxed">
             {content}
           </div>
           {/* Arrow indicator */}
           <div
-            className={`absolute w-2 h-2 bg-slate-800 border-slate-600 transform rotate-45 ${
+            className={`absolute w-2 h-2 bg-neo-surface border-neo-border transform rotate-45 ${
               position === 'top'
                 ? 'bottom-[-5px] left-1/2 -translate-x-1/2 border-r border-b'
                 : position === 'bottom'

@@ -104,10 +104,10 @@ export default function InfoPopover({ children }) {
   const arrowStyle = pos.placement === 'top'
     ? { bottom: -ARROW, left: '50%', transform: 'translateX(-50%)',
         borderLeft: '6px solid transparent', borderRight: '6px solid transparent',
-        borderTop: `${ARROW}px solid #64748b` }
+        borderTop: `${ARROW}px solid #b8c4d4` }
     : { top: -ARROW, left: '50%', transform: 'translateX(-50%)',
         borderLeft: '6px solid transparent', borderRight: '6px solid transparent',
-        borderBottom: `${ARROW}px solid #64748b` }
+        borderBottom: `${ARROW}px solid #b8c4d4` }
 
   return (
     <span className="relative inline-flex items-center ml-1.5 align-middle">
@@ -115,8 +115,8 @@ export default function InfoPopover({ children }) {
         ref={btnRef}
         type="button"
         onClick={handleClick}
-        className="w-4 h-4 rounded-full bg-slate-600 hover:bg-brand-600 text-slate-300
-                   hover:text-white flex items-center justify-center transition-colors
+        className="w-4 h-4 rounded-full bg-neo-bg shadow-neo-inset-sm hover:bg-brand-600 text-neo-muted
+                   hover:text-white flex items-center justify-center transition-all
                    text-[10px] font-bold leading-none shrink-0"
         aria-label="Show explanation"
       >
@@ -127,8 +127,8 @@ export default function InfoPopover({ children }) {
         <div
           ref={bubbleCallbackRef}
           style={{ position: 'absolute', top: pos.top, left: pos.left, width: BUBBLE_W, zIndex: 9999 }}
-          className="bg-slate-700 border border-slate-500 rounded-xl p-3 shadow-2xl
-                     text-xs text-slate-200 leading-relaxed"
+          className="bg-neo-surface border border-white/60 rounded-2xl p-3 shadow-neo-lg
+                     text-xs text-neo-muted leading-relaxed"
         >
           <span style={{ position: 'absolute', width: 0, height: 0, ...arrowStyle }} />
           {children}

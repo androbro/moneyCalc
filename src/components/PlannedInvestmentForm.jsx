@@ -20,7 +20,7 @@ function Field({ label, hint, children, required }) {
         {required && <span className="text-red-400 ml-0.5">*</span>}
       </label>
       {children}
-      {hint && <p className="text-xs text-slate-500 mt-1">{hint}</p>}
+      {hint && <p className="text-xs text-neo-subtle mt-1">{hint}</p>}
     </div>
   )
 }
@@ -69,14 +69,14 @@ export default function PlannedInvestmentForm({ investment: editInvestment, prop
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-bold text-white">
+          <h2 className="text-xl font-bold text-neo-text">
             {isEdit ? 'Edit Planned Investment' : 'Add Planned Investment'}
           </h2>
-          <p className="text-slate-400 text-sm mt-0.5">
+          <p className="text-neo-muted text-sm mt-0.5">
             A one-off spend that increases a property's value from a specific date.
           </p>
         </div>
-        <button type="button" onClick={onCancel} className="text-slate-400 hover:text-slate-100">
+        <button type="button" onClick={onCancel} className="text-neo-muted hover:text-neo-text">
           <CloseIcon />
         </button>
       </div>
@@ -162,8 +162,8 @@ export default function PlannedInvestmentForm({ investment: editInvestment, prop
 
         {/* Quick summary */}
         {form.cost && form.valueIncrease && (
-          <div className="bg-slate-800/60 rounded-xl p-3 text-sm text-slate-300 mt-2">
-            <span className="text-slate-400">Net value impact: </span>
+          <div className="bg-neo-sunken/70 rounded-xl p-3 text-sm text-neo-muted mt-2">
+            <span className="text-neo-muted">Net value impact: </span>
             <span className={
               Number(form.valueIncrease) - Number(form.cost) >= 0
                 ? 'text-emerald-400 font-semibold'
@@ -173,7 +173,7 @@ export default function PlannedInvestmentForm({ investment: editInvestment, prop
               {new Intl.NumberFormat('nl-BE', { style: 'currency', currency: 'EUR', maximumFractionDigits: 0 })
                 .format(Number(form.valueIncrease) - Number(form.cost))}
             </span>
-            <span className="text-slate-500 ml-2">(value increase minus cost)</span>
+            <span className="text-neo-subtle ml-2">(value increase minus cost)</span>
           </div>
         )}
       </div>

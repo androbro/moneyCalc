@@ -66,7 +66,7 @@ export default function LoginPage() {
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 flex items-center justify-center p-4">
+    <div className="min-h-screen bg-neo-bg flex items-center justify-center p-4">
       <div className="w-full max-w-sm space-y-6">
 
         {/* Logo / branding */}
@@ -77,20 +77,20 @@ export default function LoginPage() {
             </svg>
           </div>
           <div>
-            <h1 className="text-2xl font-bold text-white">MoneyCalc</h1>
-            <p className="text-slate-400 text-sm">Real Estate Portfolio Tracker</p>
+            <h1 className="text-2xl font-bold text-neo-text">MoneyCalc</h1>
+            <p className="text-neo-muted text-sm">Real Estate Portfolio Tracker</p>
           </div>
         </div>
 
         {/* Card */}
-        <div className="bg-slate-900 border border-slate-700 rounded-2xl p-6 space-y-5 shadow-2xl">
+        <div className="bg-neo-surface border border-white/60 rounded-3xl p-6 space-y-5 shadow-neo-lg">
 
           {/* Mode heading */}
           <div>
-            <h2 className="text-lg font-semibold text-white">
+            <h2 className="text-lg font-semibold text-neo-text">
               {isSignUp ? 'Create an account' : 'Sign in'}
             </h2>
-            <p className="text-slate-400 text-sm mt-0.5">
+            <p className="text-neo-muted text-sm mt-0.5">
               {isSignUp
                 ? 'Your data is private — only you can see it.'
                 : 'Welcome back. Your portfolio is waiting.'}
@@ -99,12 +99,12 @@ export default function LoginPage() {
 
           {/* Feedback banners */}
           {error && (
-            <div className="rounded-xl bg-red-900/30 border border-red-700/50 px-3 py-2.5 text-sm text-red-300">
+            <div className="rounded-2xl bg-red-50 border border-red-200/80 px-3 py-2.5 text-sm text-red-800 shadow-neo-inset-sm">
               {error}
             </div>
           )}
           {info && (
-            <div className="rounded-xl bg-emerald-900/30 border border-emerald-700/50 px-3 py-2.5 text-sm text-emerald-300">
+            <div className="rounded-2xl bg-emerald-50 border border-emerald-200/80 px-3 py-2.5 text-sm text-emerald-800 shadow-neo-inset-sm">
               {info}
             </div>
           )}
@@ -113,12 +113,12 @@ export default function LoginPage() {
           <button
             onClick={handleGoogle}
             disabled={googleLoading || loading}
-            className="w-full flex items-center justify-center gap-3 py-2.5 px-4 rounded-xl
-                       bg-white hover:bg-slate-100 text-slate-900 font-medium text-sm
-                       transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+            className="w-full flex items-center justify-center gap-3 py-2.5 px-4 rounded-2xl
+                       bg-neo-surface text-neo-text font-medium text-sm border border-white/60
+                       shadow-neo-sm hover:shadow-neo active:shadow-neo-inset-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {googleLoading ? (
-              <span className="w-4 h-4 border-2 border-slate-400 border-t-slate-900 rounded-full animate-spin" />
+              <span className="w-4 h-4 border-2 border-neo-border border-t-brand-600 rounded-full animate-spin" />
             ) : (
               <GoogleIcon />
             )}
@@ -127,15 +127,15 @@ export default function LoginPage() {
 
           {/* Divider */}
           <div className="flex items-center gap-3">
-            <div className="flex-1 h-px bg-slate-700" />
-            <span className="text-xs text-slate-500">or</span>
-            <div className="flex-1 h-px bg-slate-700" />
+            <div className="flex-1 h-px bg-neo-border/50 shadow-neo-inset-sm" />
+            <span className="text-xs text-neo-subtle">or</span>
+            <div className="flex-1 h-px bg-neo-border/50 shadow-neo-inset-sm" />
           </div>
 
           {/* Email / password form */}
           <form onSubmit={handleSubmit} className="space-y-3">
             <div>
-              <label className="block text-xs font-medium text-slate-400 mb-1.5">
+              <label className="block text-xs font-medium text-neo-muted mb-1.5">
                 Email
               </label>
               <input
@@ -150,7 +150,7 @@ export default function LoginPage() {
             </div>
 
             <div>
-              <label className="block text-xs font-medium text-slate-400 mb-1.5">
+              <label className="block text-xs font-medium text-neo-muted mb-1.5">
                 Password
               </label>
               <input
@@ -182,7 +182,7 @@ export default function LoginPage() {
           </form>
 
           {/* Toggle sign-in / sign-up */}
-          <p className="text-center text-sm text-slate-400">
+          <p className="text-center text-sm text-neo-muted">
             {isSignUp ? 'Already have an account?' : "Don't have an account?"}{' '}
             <button
               onClick={() => { setMode(isSignUp ? 'signin' : 'signup'); setError(''); setInfo('') }}
@@ -194,11 +194,11 @@ export default function LoginPage() {
         </div>
 
         {/* Guest mode note */}
-        <p className="text-center text-xs text-slate-600">
+        <p className="text-center text-xs text-neo-subtle">
           Just browsing?{' '}
           <button
             onClick={() => { window.history.pushState(null, '', '/'); window.dispatchEvent(new PopStateEvent('popstate')) }}
-            className="text-slate-500 hover:text-slate-400 underline transition-colors bg-transparent border-0 cursor-pointer"
+            className="text-neo-subtle hover:text-neo-muted underline transition-colors bg-transparent border-0 cursor-pointer"
           >
             Continue as guest
           </button>

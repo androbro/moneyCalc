@@ -192,8 +192,8 @@ export default function CSVImporter({ onImport }) {
         onClick={() => fileRef.current?.click()}
         className={`border-2 border-dashed rounded-xl p-6 text-center cursor-pointer transition-colors
                     ${dragging
-                      ? 'border-brand-400 bg-brand-900/20'
-                      : 'border-slate-600 hover:border-brand-500 bg-slate-700/30'}`}
+                      ? 'border-brand-400 bg-sky-50 shadow-neo'
+                      : 'border-neo-border hover:border-brand-500 bg-neo-bg shadow-neo-inset-sm'}`}
       >
         <input
           ref={fileRef}
@@ -203,17 +203,17 @@ export default function CSVImporter({ onImport }) {
           onChange={handleFile}
         />
         <div className="flex flex-col items-center gap-2">
-          <svg className="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-8 h-8 text-neo-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
               d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
           </svg>
-          <p className="text-sm text-slate-300">
+          <p className="text-sm text-neo-muted">
             {dragging ? 'Drop the file here' : 'Drop your KBC export here, or click to browse'}
           </p>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-neo-subtle">
             .csv · .txt · .tsv — semicolon or tab separated, comma or dot decimals
           </p>
-          <p className="text-xs text-slate-600">
+          <p className="text-xs text-neo-subtle">
             Columns: vervaldatum · kapitaalaflossing · interest · te betalen · kapitaalsaldo
           </p>
         </div>
@@ -221,7 +221,7 @@ export default function CSVImporter({ onImport }) {
 
       {/* Error */}
       {error && (
-        <div className="bg-red-900/30 border border-red-700 rounded-lg px-4 py-3 text-sm text-red-300 whitespace-pre-wrap">
+        <div className="bg-red-50 border border-red-200/80 rounded-2xl px-4 py-3 text-sm text-red-800 whitespace-pre-wrap shadow-neo-inset-sm">
           {error}
         </div>
       )}
@@ -230,38 +230,38 @@ export default function CSVImporter({ onImport }) {
       {preview && (
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <p className="text-sm font-medium text-slate-300">
+            <p className="text-sm font-medium text-neo-muted">
               Preview — {parsed.length} rows parsed
             </p>
           </div>
 
-          <div className="overflow-x-auto rounded-xl border border-slate-700">
+          <div className="overflow-x-auto rounded-xl border border-neo-border">
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-slate-700">
-                  <th className="px-3 py-2 text-left text-xs font-medium text-slate-400">Period</th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-slate-400">Due Date</th>
-                  <th className="px-3 py-2 text-right text-xs font-medium text-slate-400">Capital</th>
-                  <th className="px-3 py-2 text-right text-xs font-medium text-slate-400">Interest</th>
-                  <th className="px-3 py-2 text-right text-xs font-medium text-slate-400">Total</th>
-                  <th className="px-3 py-2 text-right text-xs font-medium text-slate-400">Balance</th>
+                <tr className="bg-neo-sunken">
+                  <th className="px-3 py-2 text-left text-xs font-medium text-neo-muted">Period</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-neo-muted">Due Date</th>
+                  <th className="px-3 py-2 text-right text-xs font-medium text-neo-muted">Capital</th>
+                  <th className="px-3 py-2 text-right text-xs font-medium text-neo-muted">Interest</th>
+                  <th className="px-3 py-2 text-right text-xs font-medium text-neo-muted">Total</th>
+                  <th className="px-3 py-2 text-right text-xs font-medium text-neo-muted">Balance</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-700">
+              <tbody className="divide-y divide-neo-border/50">
                 {preview.map((row) => (
-                  <tr key={row.period} className="bg-slate-800 hover:bg-slate-700/50">
-                    <td className="px-3 py-2 text-slate-400">{row.period}</td>
-                    <td className="px-3 py-2 text-slate-200">{row.dueDate}</td>
-                    <td className="px-3 py-2 text-right text-slate-200">
+                  <tr key={row.period} className="bg-neo-raised hover:bg-neo-sunken/55">
+                    <td className="px-3 py-2 text-neo-muted">{row.period}</td>
+                    <td className="px-3 py-2 text-neo-text/95">{row.dueDate}</td>
+                    <td className="px-3 py-2 text-right text-neo-text/95">
                       {row.capitalRepayment.toLocaleString('nl-BE', { minimumFractionDigits: 2 })}
                     </td>
-                    <td className="px-3 py-2 text-right text-slate-200">
+                    <td className="px-3 py-2 text-right text-neo-text/95">
                       {row.interest.toLocaleString('nl-BE', { minimumFractionDigits: 2 })}
                     </td>
-                    <td className="px-3 py-2 text-right text-slate-200">
+                    <td className="px-3 py-2 text-right text-neo-text/95">
                       {row.totalPayment.toLocaleString('nl-BE', { minimumFractionDigits: 2 })}
                     </td>
-                    <td className="px-3 py-2 text-right font-medium text-white">
+                    <td className="px-3 py-2 text-right font-medium text-neo-text">
                       {row.remainingBalance.toLocaleString('nl-BE', { minimumFractionDigits: 2 })}
                     </td>
                   </tr>
@@ -269,7 +269,7 @@ export default function CSVImporter({ onImport }) {
               </tbody>
             </table>
             {parsed.length > 5 && (
-              <p className="px-3 py-2 text-xs text-slate-500 text-center bg-slate-800 border-t border-slate-700">
+              <p className="px-3 py-2 text-xs text-neo-subtle text-center bg-neo-raised border-t border-neo-border">
                 ... and {parsed.length - 5} more rows
               </p>
             )}

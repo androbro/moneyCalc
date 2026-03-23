@@ -40,7 +40,7 @@ function buildInvProjection(profile, years = 20) {
 const INFO = {
   propertyValue: (
     <>
-      <strong className="text-white block mb-1">Property Value</strong>
+      <strong className="text-neo-text block mb-1">Property Value</strong>
       Your current market value grown by the appreciation rate you set, compounded yearly.
       <br /><br />
       <code className="text-brand-300">Value × (1 + rate)^year</code>
@@ -50,7 +50,7 @@ const INFO = {
   ),
   loanBalance: (
     <>
-      <strong className="text-white block mb-1">Loan Balance</strong>
+      <strong className="text-neo-text block mb-1">Loan Balance</strong>
       The outstanding capital still owed to the bank at that point in time.
       <br /><br />
       Taken directly from the <strong>amortization schedule</strong> you uploaded (last row with a due date ≤ that year). If no CSV was uploaded, estimated with the standard annuity formula.
@@ -58,7 +58,7 @@ const INFO = {
   ),
   netWorth: (
     <>
-      <strong className="text-white block mb-1">Net Worth</strong>
+      <strong className="text-neo-text block mb-1">Net Worth</strong>
       What you would walk away with if you sold everything and repaid all loans.
       <br /><br />
       <code className="text-brand-300">Net Worth = Property Value − Loan Balance</code>
@@ -68,7 +68,7 @@ const INFO = {
   ),
   annualCF: (
     <>
-      <strong className="text-white block mb-1">Annual Cash Flow</strong>
+      <strong className="text-neo-text block mb-1">Annual Cash Flow</strong>
       The net cash in your pocket for that year, after all income and costs.
       <br /><br />
       <code className="text-brand-300">
@@ -85,7 +85,7 @@ const INFO = {
   ),
   cumulativeCF: (
     <>
-      <strong className="text-white block mb-1">Cumulative Cash Flow</strong>
+      <strong className="text-neo-text block mb-1">Cumulative Cash Flow</strong>
       The running total of all annual cash flows from today up to that year.
       <br /><br />
       When this line crosses zero, your rental income has fully covered all costs paid so far — your <strong>cash breakeven point</strong>.
@@ -93,7 +93,7 @@ const INFO = {
   ),
   propGain: (
     <>
-      <strong className="text-white block mb-1">Property Gain (20y)</strong>
+      <strong className="text-neo-text block mb-1">Property Gain (20y)</strong>
       How much more your portfolio is worth after 20 years of appreciation compared to today.
       <br /><br />
       <code className="text-brand-300">Value(+20y) − Value(today)</code>
@@ -101,7 +101,7 @@ const INFO = {
   ),
   debtRepaid: (
     <>
-      <strong className="text-white block mb-1">Debt Repaid (20y)</strong>
+      <strong className="text-neo-text block mb-1">Debt Repaid (20y)</strong>
       How much of your total loan principal will have been repaid over 20 years.
       <br /><br />
       <code className="text-brand-300">Loan Balance(today) − Loan Balance(+20y)</code>
@@ -109,7 +109,7 @@ const INFO = {
   ),
   netWorthGain: (
     <>
-      <strong className="text-white block mb-1">Net Worth Gain (20y)</strong>
+      <strong className="text-neo-text block mb-1">Net Worth Gain (20y)</strong>
       Combined effect of appreciation and debt repayment over 20 years.
       <br /><br />
       <code className="text-brand-300">Net Worth(+20y) − Net Worth(today)</code>
@@ -119,7 +119,7 @@ const INFO = {
   ),
   totalCF: (
     <>
-      <strong className="text-white block mb-1">Cumulative Cash Flow (20y)</strong>
+      <strong className="text-neo-text block mb-1">Cumulative Cash Flow (20y)</strong>
       Total cash generated (or consumed) by the portfolio over 20 years.
       <br /><br />
       Negative early on is normal — as rent is indexed upward and loans are repaid, cash flow typically turns positive.
@@ -127,7 +127,7 @@ const INFO = {
   ),
   equityGain: (
     <>
-      <strong className="text-white block mb-1">Equity Gain</strong>
+      <strong className="text-neo-text block mb-1">Equity Gain</strong>
       How much your net worth increased in this specific year — the combined effect of property appreciation and loan principal repaid.
       <br /><br />
       <code className="text-brand-300">Net Worth(year) − Net Worth(year − 1)</code>
@@ -135,7 +135,7 @@ const INFO = {
   ),
   annualCosts: (
     <>
-      <strong className="text-white block mb-1">Annual Costs</strong>
+      <strong className="text-neo-text block mb-1">Annual Costs</strong>
       Total cash out for this year: loan payments, maintenance, insurance, property tax, and any other expenses.
       <br /><br />
       This is what owning the property costs you in cash — shown as a negative bar so you can compare it against your equity gain.
@@ -143,7 +143,7 @@ const INFO = {
   ),
   totalReturn: (
     <>
-      <strong className="text-white block mb-1">Total Return</strong>
+      <strong className="text-neo-text block mb-1">Total Return</strong>
       Your true all-in return: equity <em>plus</em> every euro of rent received (or cost paid) so far.
       <br /><br />
       <code className="text-brand-300">Total Return = Net Worth + Cumulative Cash Flow</code>
@@ -153,7 +153,7 @@ const INFO = {
   ),
   investmentMonthlyCF: (
     <>
-      <strong className="text-white block mb-1">Investment Cash Flow (/mo)</strong>
+      <strong className="text-neo-text block mb-1">Investment Cash Flow (/mo)</strong>
       Monthly portfolio cash flow from investment properties only, aligned with Growth Planner logic.
       <br /><br />
       Excludes owner-occupied private housing costs.
@@ -163,7 +163,7 @@ const INFO = {
   ),
   investmentPortfolio: (
     <>
-      <strong className="text-white block mb-1">Investment Portfolio</strong>
+      <strong className="text-neo-text block mb-1">Investment Portfolio</strong>
       The projected value of your stock/ETF/savings positions from the Household Profile (your positions only).
       <br /><br />
       <code className="text-brand-300">FV = monthly × ((1+r)^n − 1) / r</code>
@@ -173,7 +173,7 @@ const INFO = {
   ),
   tradingProjection: (
     <>
-      <strong className="text-white block mb-1">Trading Portfolio (Revolut)</strong>
+      <strong className="text-neo-text block mb-1">Trading Portfolio (Revolut)</strong>
       Projected future value of your Revolut trading account, assuming your current holdings compound forward plus your observed average monthly buy amount continues indefinitely.
       <br /><br />
       <code className="text-brand-300">
@@ -186,7 +186,7 @@ const INFO = {
   ),
   personalNetWorth: (
     <>
-      <strong className="text-white block mb-1">Personal Net Worth</strong>
+      <strong className="text-neo-text block mb-1">Personal Net Worth</strong>
       Your real estate equity (your ownership share) plus your investment portfolio value at that point in time.
       <br /><br />
       <code className="text-brand-300">= Real Estate Equity (my share) + Investment Portfolio</code>
@@ -221,15 +221,15 @@ function formatYAxis(value) {
 function CustomTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null
   return (
-    <div className="bg-slate-800 border border-slate-600 rounded-xl p-3 shadow-xl text-xs min-w-[180px]">
-      <p className="font-semibold text-white mb-2 text-sm">{label}</p>
+    <div className="bg-neo-raised border border-neo-border rounded-xl p-3 shadow-xl text-xs min-w-[180px]">
+      <p className="font-semibold text-neo-text mb-2 text-sm">{label}</p>
       {payload.map((entry) => (
         <div key={entry.dataKey} className="flex items-center justify-between gap-4 mb-1">
           <span style={{ color: entry.color }} className="font-medium flex items-center gap-1">
             <span className="w-2 h-2 rounded-full inline-block" style={{ background: entry.color }} />
             {entry.name}
           </span>
-          <span className="text-white font-semibold">{formatEUR(entry.value)}</span>
+          <span className="text-neo-text font-semibold">{formatEUR(entry.value)}</span>
         </div>
       ))}
     </div>
@@ -322,8 +322,8 @@ function SummaryStrip({ data, hasInvestments, hasTradingProjection }) {
   return (
     <div className={`grid grid-cols-2 ${cols} gap-3 mt-4`}>
       {items.map((item) => (
-        <div key={item.label} className="bg-slate-700/50 rounded-xl p-3 text-center">
-          <p className="text-xs text-slate-400 mb-1 leading-tight flex items-center justify-center gap-0.5">
+        <div key={item.label} className="bg-neo-sunken/55 rounded-xl p-3 text-center">
+          <p className="text-xs text-neo-muted mb-1 leading-tight flex items-center justify-center gap-0.5">
             {item.label}
             <InfoPopover>{item.info}</InfoPopover>
           </p>
@@ -340,7 +340,7 @@ function SummaryStrip({ data, hasInvestments, hasTradingProjection }) {
 
 function ThWithInfo({ children, info, left = false }) {
   return (
-    <th className={`py-2 text-slate-400 font-medium text-xs ${left ? 'text-left pr-3' : 'text-right px-2'}`}>
+    <th className={`py-2 text-neo-muted font-medium text-xs ${left ? 'text-left pr-3' : 'text-right px-2'}`}>
       <span className="inline-flex items-center gap-0.5">
         {children}
         {info && <InfoPopover>{info}</InfoPopover>}
@@ -355,7 +355,7 @@ function PropertyBreakdown({ properties }) {
       <h3 className="section-title">Property Breakdown</h3>
       <table className="w-full text-sm min-w-[500px]">
         <thead>
-          <tr className="border-b border-slate-700">
+          <tr className="border-b border-neo-border">
             <ThWithInfo left>Property</ThWithInfo>
             <ThWithInfo info={INFO.breakdownTable.currentValue}>Current Value</ThWithInfo>
             <ThWithInfo info={INFO.breakdownTable.v5}>+5y Value</ThWithInfo>
@@ -365,20 +365,20 @@ function PropertyBreakdown({ properties }) {
             <ThWithInfo>Loans</ThWithInfo>
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-800">
+        <tbody className="divide-y divide-neo-border/50">
           {properties.map((p) => {
             const r   = p.appreciationRate || 0.02
             const v5  = p.currentValue * Math.pow(1 + r, 5)
             const v20 = p.currentValue * Math.pow(1 + r, 20)
             return (
-              <tr key={p.id} className="hover:bg-slate-700/30 transition-colors">
-                <td className="py-2 pr-3 font-medium text-slate-200 whitespace-nowrap">{p.name}</td>
-                <td className="py-2 px-2 text-right text-slate-200">{formatEUR(p.currentValue)}</td>
+              <tr key={p.id} className="hover:bg-neo-sunken/30 transition-colors">
+                <td className="py-2 pr-3 font-medium text-neo-text/95 whitespace-nowrap">{p.name}</td>
+                <td className="py-2 px-2 text-right text-neo-text/95">{formatEUR(p.currentValue)}</td>
                 <td className="py-2 px-2 text-right text-emerald-400">{formatEUR(v5)}</td>
                 <td className="py-2 px-2 text-right text-emerald-400 font-semibold">{formatEUR(v20)}</td>
-                <td className="py-2 px-2 text-right text-slate-300">{(r * 100).toFixed(1)}%</td>
-                <td className="py-2 px-2 text-right text-slate-300">{((p.indexationRate ?? 0.02) * 100).toFixed(1)}%</td>
-                <td className="py-2 pl-2 text-right text-slate-400">{p.loans?.length || 0}</td>
+                <td className="py-2 px-2 text-right text-neo-muted">{(r * 100).toFixed(1)}%</td>
+                <td className="py-2 px-2 text-right text-neo-muted">{((p.indexationRate ?? 0.02) * 100).toFixed(1)}%</td>
+                <td className="py-2 pl-2 text-right text-neo-muted">{p.loans?.length || 0}</td>
               </tr>
             )
           })}
@@ -407,7 +407,7 @@ function CashFlowTable({ data, hasInvestments, hasTradingProjection }) {
       </div>
       <table className="w-full text-sm min-w-[620px]">
         <thead>
-          <tr className="border-b border-slate-700">
+          <tr className="border-b border-neo-border">
             <ThWithInfo left>Year</ThWithInfo>
             <ThWithInfo info={INFO.cfTable.propertyValue}>Property Value</ThWithInfo>
             <ThWithInfo info={INFO.cfTable.loanBalance}>Loan Balance</ThWithInfo>
@@ -426,13 +426,13 @@ function CashFlowTable({ data, hasInvestments, hasTradingProjection }) {
             )}
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-800">
+        <tbody className="divide-y divide-neo-border/50">
           {rows.map((row) => (
-            <tr key={row.year} className="hover:bg-slate-700/30 transition-colors">
-              <td className="py-2 pr-3 text-slate-300 font-medium">{row.label}</td>
-              <td className="py-2 px-2 text-right text-slate-200">{formatEUR(row.propertyValue)}</td>
+            <tr key={row.year} className="hover:bg-neo-sunken/30 transition-colors">
+              <td className="py-2 pr-3 text-neo-muted font-medium">{row.label}</td>
+              <td className="py-2 px-2 text-right text-neo-text/95">{formatEUR(row.propertyValue)}</td>
               <td className="py-2 px-2 text-right text-red-400">{formatEUR(row.loanBalance)}</td>
-              <td className="py-2 px-2 text-right font-semibold text-white">{formatEUR(row.netWorth)}</td>
+              <td className="py-2 px-2 text-right font-semibold text-neo-text">{formatEUR(row.netWorth)}</td>
               <td className={`py-2 px-2 text-right font-medium ${row.annualCashFlow >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                 {row.annualCashFlow >= 0 ? '+' : ''}{formatEUR(row.annualCashFlow)}
               </td>
@@ -469,7 +469,7 @@ function CashFlowTable({ data, hasInvestments, hasTradingProjection }) {
 
 function ChartLegend({ items }) {
   return (
-    <div className="flex flex-wrap gap-4 text-xs text-slate-400">
+    <div className="flex flex-wrap gap-4 text-xs text-neo-muted">
       {items.map((item) => (
         <span key={item.label} className="flex items-center gap-1.5">
           <span className="w-3 h-3 rounded-sm shrink-0" style={{ background: item.color }} />
@@ -488,8 +488,8 @@ function CashFlowChart({ data }) {
     <div className="card">
       <div className="flex flex-wrap items-start justify-between gap-3 mb-5">
         <div>
-          <h2 className="font-semibold text-slate-100">Net Cash Flow per Year</h2>
-          <p className="text-xs text-slate-400 mt-0.5">Indexed rent minus indexed costs and loan payments</p>
+          <h2 className="font-semibold text-neo-text">Net Cash Flow per Year</h2>
+          <p className="text-xs text-neo-muted mt-0.5">Indexed rent minus indexed costs and loan payments</p>
         </div>
         <ChartLegend items={[
           { label: 'Annual CF',     color: '#0ea5e9', info: INFO.annualCF },
@@ -499,12 +499,12 @@ function CashFlowChart({ data }) {
 
       <ResponsiveContainer width="100%" height={300}>
         <ComposedChart data={data} margin={{ top: 10, right: 8, left: 0, bottom: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
-          <XAxis dataKey="label" tick={{ fill: '#94a3b8', fontSize: 11 }} axisLine={{ stroke: '#1e293b' }} tickLine={false} />
+          <CartesianGrid strokeDasharray="3 3" stroke="#cbd5e1" vertical={false} />
+          <XAxis dataKey="label" tick={{ fill: '#94a3b8', fontSize: 11 }} axisLine={{ stroke: '#cbd5e1' }} tickLine={false} />
           <YAxis yAxisId="left"  tickFormatter={formatYAxis} tick={{ fill: '#94a3b8', fontSize: 10 }} axisLine={false} tickLine={false} width={68} />
           <YAxis yAxisId="right" tickFormatter={formatYAxis} tick={{ fill: '#94a3b8', fontSize: 10 }} axisLine={false} tickLine={false} width={68} orientation="right" />
           <Tooltip content={<CustomTooltip />} />
-          <ReferenceLine yAxisId="left" y={0} stroke="#475569" strokeDasharray="4 2" />
+          <ReferenceLine yAxisId="left" y={0} stroke="#94a3b8" strokeDasharray="4 2" />
           <Bar  yAxisId="left"  dataKey="annualCashFlow" name="Annual CF"    fill="#0ea5e9" radius={[4,4,0,0]} maxBarSize={32} />
           <Line yAxisId="right" type="monotone" dataKey="cumulativeCF" name="Cumulative CF" stroke="#a78bfa" strokeWidth={2} dot={false} activeDot={{ r: 4, fill: '#a78bfa' }} />
         </ComposedChart>
@@ -520,8 +520,8 @@ function EquityGrowthChart({ data }) {
     <div className="card">
       <div className="flex flex-wrap items-start justify-between gap-3 mb-5">
         <div>
-          <h2 className="font-semibold text-slate-100">Equity Growth per Year</h2>
-          <p className="text-xs text-slate-400 mt-0.5">
+          <h2 className="font-semibold text-neo-text">Equity Growth per Year</h2>
+          <p className="text-xs text-neo-muted mt-0.5">
             Annual equity gain (appreciation + loan paydown) and total annual costs to own
           </p>
         </div>
@@ -534,12 +534,12 @@ function EquityGrowthChart({ data }) {
 
       <ResponsiveContainer width="100%" height={300}>
         <ComposedChart data={data.slice(1)} margin={{ top: 10, right: 8, left: 0, bottom: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
-          <XAxis dataKey="label" tick={{ fill: '#94a3b8', fontSize: 11 }} axisLine={{ stroke: '#1e293b' }} tickLine={false} />
+          <CartesianGrid strokeDasharray="3 3" stroke="#cbd5e1" vertical={false} />
+          <XAxis dataKey="label" tick={{ fill: '#94a3b8', fontSize: 11 }} axisLine={{ stroke: '#cbd5e1' }} tickLine={false} />
           <YAxis yAxisId="left"  tickFormatter={formatYAxis} tick={{ fill: '#94a3b8', fontSize: 10 }} axisLine={false} tickLine={false} width={68} />
           <YAxis yAxisId="right" tickFormatter={formatYAxis} tick={{ fill: '#94a3b8', fontSize: 10 }} axisLine={false} tickLine={false} width={68} orientation="right" />
           <Tooltip content={<CustomTooltip />} />
-          <ReferenceLine yAxisId="left" y={0} stroke="#475569" strokeDasharray="4 2" />
+          <ReferenceLine yAxisId="left" y={0} stroke="#94a3b8" strokeDasharray="4 2" />
           {/* Stacked bars: equity gain (positive) vs costs (negative) */}
           <Bar yAxisId="left" dataKey="equityGain"  name="Equity Gain"  fill="#10b981" radius={[4,4,0,0]} maxBarSize={32} />
           <Bar yAxisId="left" dataKey={(d) => -d.annualCosts} name="Annual Costs" fill="#f87171" radius={[4,4,0,0]} maxBarSize={32} />
@@ -556,13 +556,13 @@ function EquityGrowthChart({ data }) {
 function EmptyState() {
   return (
     <div className="flex flex-col items-center justify-center py-20 text-center">
-      <div className="w-16 h-16 rounded-2xl bg-slate-700 flex items-center justify-center mb-4">
-        <svg className="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div className="w-16 h-16 rounded-2xl bg-neo-sunken flex items-center justify-center mb-4">
+        <svg className="w-8 h-8 text-neo-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
         </svg>
       </div>
-      <p className="text-slate-300 font-medium">No data to project yet</p>
-      <p className="text-slate-500 text-sm mt-1">Add at least one property to see the 20-year chart.</p>
+      <p className="text-neo-muted font-medium">No data to project yet</p>
+      <p className="text-neo-subtle text-sm mt-1">Add at least one property to see the 20-year chart.</p>
     </div>
   )
 }
@@ -665,18 +665,18 @@ export default function ProjectionChart({ properties, profile, trades = [], trad
     <div className="space-y-6">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white">20-Year Projection</h1>
-          <p className="text-slate-400 text-sm mt-0.5">
+          <h1 className="text-2xl font-bold text-neo-text">20-Year Projection</h1>
+          <p className="text-neo-muted text-sm mt-0.5">
             Indexed rental income, inflation-adjusted costs, and amortization-based loan balance.
-            Click any <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-slate-600 text-[10px] font-bold text-slate-300 mx-0.5">?</span> for a detailed explanation.
+            Click any <span className="inline-flex items-center justify-center w-4 h-4 rounded-full bg-neo-sunken text-[10px] font-bold text-neo-muted mx-0.5">?</span> for a detailed explanation.
           </p>
         </div>
 
         <div className="flex flex-wrap items-center gap-3">
           {/* Stock return rate selector (shown only when trading data is present) */}
           {hasTradingProjection && (
-            <div className="flex items-center gap-2 bg-slate-800/50 px-4 py-2.5 rounded-lg border border-slate-700/50">
-              <label htmlFor="stock-return-rate" className="text-sm text-slate-300 font-medium whitespace-nowrap flex items-center gap-1">
+            <div className="flex items-center gap-2 bg-neo-sunken/60 px-4 py-2.5 rounded-lg border border-neo-border/50">
+              <label htmlFor="stock-return-rate" className="text-sm text-neo-muted font-medium whitespace-nowrap flex items-center gap-1">
                 Trading return rate
                 <InfoPopover>{INFO.tradingProjection}</InfoPopover>
               </label>
@@ -684,7 +684,7 @@ export default function ProjectionChart({ properties, profile, trades = [], trad
                 id="stock-return-rate"
                 value={stockReturnRate}
                 onChange={(e) => setStockReturnRate(Number(e.target.value))}
-                className="bg-slate-700 border border-slate-600 text-white text-sm rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                className="bg-neo-sunken border border-neo-border text-neo-text text-sm rounded-md px-2 py-1 focus:outline-none focus:ring-2 focus:ring-indigo-500"
               >
                 <option value={0.04}>4% (conservative)</option>
                 <option value={0.05}>5%</option>
@@ -698,11 +698,11 @@ export default function ProjectionChart({ properties, profile, trades = [], trad
           )}
 
           {/* Inflation Toggle */}
-          <div className="flex items-center gap-3 bg-slate-800/50 px-4 py-2.5 rounded-lg border border-slate-700/50">
+          <div className="flex items-center gap-3 bg-neo-sunken/60 px-4 py-2.5 rounded-lg border border-neo-border/50">
             <label htmlFor="inflation-toggle" className="flex items-center gap-2 cursor-pointer">
-              <span className="text-sm text-slate-300 font-medium">Adjust for Inflation</span>
+              <span className="text-sm text-neo-muted font-medium">Adjust for Inflation</span>
               <InfoPopover>
-                <strong className="text-white block mb-1">Inflation Adjustment</strong>
+                <strong className="text-neo-text block mb-1">Inflation Adjustment</strong>
                 When enabled, all future values are adjusted to today's purchasing power using a 2% annual inflation rate.
                 <br /><br />
                 This shows you the <strong>real value</strong> of your money, accounting for how inflation reduces purchasing power over time.
@@ -717,8 +717,8 @@ export default function ProjectionChart({ properties, profile, trades = [], trad
               role="switch"
               aria-checked={inflationAdjusted}
               onClick={() => setInflationAdjusted(!inflationAdjusted)}
-              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 focus:ring-offset-slate-900 ${
-                inflationAdjusted ? 'bg-brand-500' : 'bg-slate-600'
+              className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-brand-500 focus:ring-offset-2 focus:ring-offset-neo-bg ${
+                inflationAdjusted ? 'bg-brand-500' : 'bg-neo-sunken'
               }`}
             >
               <span
@@ -735,8 +735,8 @@ export default function ProjectionChart({ properties, profile, trades = [], trad
       <div className="card">
         <div className="flex flex-wrap items-start justify-between gap-3 mb-5">
           <div>
-            <h2 className="font-semibold text-slate-100">Portfolio Value vs. Debt</h2>
-            <p className="text-xs text-slate-400 mt-0.5">
+            <h2 className="font-semibold text-neo-text">Portfolio Value vs. Debt</h2>
+            <p className="text-xs text-neo-muted mt-0.5">
               Each bar = total wealth stack: debt (red) → real estate equity (green){hasInvestments ? ' → manual investments (purple)' : ''}{hasTradingProjection ? ' → trading portfolio (indigo)' : ''}.
               Dashed amber line = total return. Blue line = investment cash flow per month (excl. owner-occupied properties).
             </p>
@@ -757,8 +757,8 @@ export default function ProjectionChart({ properties, profile, trades = [], trad
 
         <ResponsiveContainer width="100%" height={340}>
           <ComposedChart data={displayData} margin={{ top: 10, right: 8, left: 0, bottom: 0 }} barCategoryGap="20%">
-            <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
-            <XAxis dataKey="label" tick={{ fill: '#94a3b8', fontSize: 11 }} axisLine={{ stroke: '#1e293b' }} tickLine={false} />
+            <CartesianGrid strokeDasharray="3 3" stroke="#cbd5e1" vertical={false} />
+            <XAxis dataKey="label" tick={{ fill: '#94a3b8', fontSize: 11 }} axisLine={{ stroke: '#cbd5e1' }} tickLine={false} />
             <YAxis yAxisId="left" tickFormatter={formatYAxis} tick={{ fill: '#94a3b8', fontSize: 10 }} axisLine={false} tickLine={false} width={68} />
             <YAxis yAxisId="right" orientation="right" tickFormatter={formatYAxis} tick={{ fill: '#94a3b8', fontSize: 10 }} axisLine={false} tickLine={false} width={68} />
             <Tooltip content={<CustomTooltip />} />

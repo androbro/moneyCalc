@@ -183,8 +183,8 @@ function ModelSelector({ apiKey, selectedModel, onSelect }) {
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="flex items-center gap-2 bg-slate-700 hover:bg-slate-600 border border-slate-600
-                   text-slate-200 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors
+        className="flex items-center gap-2 bg-neo-sunken hover:bg-neo-sunken border border-neo-border
+                   text-neo-text/95 text-xs font-medium px-3 py-1.5 rounded-lg transition-colors
                    max-w-[220px]"
         title="Change Gemini model"
       >
@@ -207,11 +207,11 @@ function ModelSelector({ apiKey, selectedModel, onSelect }) {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-1 z-50 w-72 bg-slate-800 border border-slate-700
-                        rounded-xl shadow-2xl overflow-hidden">
+        <div className="absolute right-0 top-full mt-1 z-50 w-72 bg-neo-raised border border-neo-border
+                        rounded-xl shadow-neo-lg overflow-hidden">
           {/* Refresh button */}
-          <div className="flex items-center justify-between px-3 py-2 border-b border-slate-700">
-            <span className="text-xs text-slate-400 font-medium">Available models</span>
+          <div className="flex items-center justify-between px-3 py-2 border-b border-neo-border">
+            <span className="text-xs text-neo-muted font-medium">Available models</span>
             <button
               onClick={fetchModels}
               disabled={loadingModels}
@@ -228,7 +228,7 @@ function ModelSelector({ apiKey, selectedModel, onSelect }) {
           {/* Model list */}
           <ul className="max-h-72 overflow-y-auto py-1">
             {models.length === 0 && !loadingModels && !modelError && (
-              <li className="text-xs text-slate-500 px-3 py-3 text-center">No models found</li>
+              <li className="text-xs text-neo-subtle px-3 py-3 text-center">No models found</li>
             )}
             {models.map((m) => (
               <li key={m.id}>
@@ -238,11 +238,11 @@ function ModelSelector({ apiKey, selectedModel, onSelect }) {
                   className={`w-full text-left px-3 py-2.5 transition-colors
                     ${selectedModel === m.id
                       ? 'bg-brand-600/20 text-brand-300'
-                      : 'text-slate-200 hover:bg-slate-700'
+                      : 'text-neo-text/95 hover:bg-neo-sunken'
                     }`}
                 >
                   <p className="text-xs font-medium">{m.displayName}</p>
-                  <p className="text-xs text-slate-500 font-mono truncate">{m.id}</p>
+                  <p className="text-xs text-neo-subtle font-mono truncate">{m.id}</p>
                 </button>
               </li>
             ))}
@@ -260,7 +260,7 @@ function Message({ role, content, loading }) {
     <div className={`flex gap-3 ${role === 'user' ? 'justify-end' : 'justify-start'}`}>
       {role === 'assistant' && (
         <div className="w-7 h-7 rounded-full bg-brand-600 flex items-center justify-center shrink-0 mt-0.5">
-          <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-4 h-4 text-neo-text" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
               d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
           </svg>
@@ -269,21 +269,21 @@ function Message({ role, content, loading }) {
       <div
         className={`max-w-[85%] rounded-2xl px-4 py-3 text-sm leading-relaxed whitespace-pre-wrap
           ${role === 'user'
-            ? 'bg-brand-600 text-white rounded-tr-sm'
-            : 'bg-slate-800 text-slate-200 rounded-tl-sm border border-slate-700'
+            ? 'bg-brand-600 text-white rounded-tr-sm shadow-neo-sm'
+            : 'bg-neo-raised text-neo-text/95 rounded-tl-sm border border-neo-border'
           }`}
       >
         {loading ? (
           <span className="flex items-center gap-2">
-            <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-            <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-            <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+            <span className="w-1.5 h-1.5 bg-neo-subtle rounded-full animate-bounce shadow-neo-inset-sm" style={{ animationDelay: '0ms' }} />
+            <span className="w-1.5 h-1.5 bg-neo-subtle rounded-full animate-bounce shadow-neo-inset-sm" style={{ animationDelay: '150ms' }} />
+            <span className="w-1.5 h-1.5 bg-neo-subtle rounded-full animate-bounce shadow-neo-inset-sm" style={{ animationDelay: '300ms' }} />
           </span>
         ) : content}
       </div>
       {role === 'user' && (
-        <div className="w-7 h-7 rounded-full bg-slate-700 flex items-center justify-center shrink-0 mt-0.5">
-          <svg className="w-4 h-4 text-slate-300" fill="currentColor" viewBox="0 0 24 24">
+        <div className="w-7 h-7 rounded-full bg-neo-sunken flex items-center justify-center shrink-0 mt-0.5">
+          <svg className="w-4 h-4 text-neo-muted" fill="currentColor" viewBox="0 0 24 24">
             <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z" />
           </svg>
         </div>
@@ -383,8 +383,8 @@ export default function AiInsights({ properties, profile }) {
       {/* Header */}
       <div className="flex items-start justify-between gap-4 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold text-white">AI Insights</h1>
-          <p className="text-slate-400 text-sm mt-0.5">
+          <h1 className="text-2xl font-bold text-neo-text">AI Insights</h1>
+          <p className="text-neo-muted text-sm mt-0.5">
             Ask questions about your portfolio and household finances. Powered by Google Gemini.
           </p>
         </div>
@@ -404,7 +404,7 @@ export default function AiInsights({ properties, profile }) {
 
       {/* No API key warning */}
       {!hasKey && (
-        <div className="card border border-amber-700/40 bg-amber-900/10 space-y-3">
+        <div className="card border border-amber-200/80 bg-amber-50 shadow-neo-inset-sm space-y-3">
           <p className="text-amber-300 text-sm font-semibold">API key not configured</p>
           <p className="text-amber-200/80 text-sm">
             This feature requires a free Google Gemini API key. To set it up:
@@ -413,7 +413,7 @@ export default function AiInsights({ properties, profile }) {
             <li>Go to <span className="font-mono text-amber-300">aistudio.google.com</span> and create a free API key</li>
             <li>Add it to your <span className="font-mono text-amber-300">.env</span> file:</li>
           </ol>
-          <pre className="text-xs bg-slate-900 text-emerald-300 rounded-lg px-4 py-3 font-mono">
+          <pre className="text-xs bg-neo-surface text-emerald-300 rounded-lg px-4 py-3 font-mono">
             VITE_GEMINI_API_KEY=your_key_here
           </pre>
           <p className="text-amber-200/60 text-xs">
@@ -428,9 +428,9 @@ export default function AiInsights({ properties, profile }) {
         const totalIncome = mems.reduce((s, m) => s + (m.netIncome || 0) + (m.investmentIncome || 0), 0)
         const totalCash   = mems.reduce((s, m) => s + (m.cash || 0), 0)
         return (
-          <div className="card bg-slate-800/50">
-            <p className="text-xs text-slate-400">
-              <span className="font-semibold text-slate-300">Context provided to AI: </span>
+          <div className="card bg-neo-sunken/60">
+            <p className="text-xs text-neo-muted">
+              <span className="font-semibold text-neo-muted">Context provided to AI: </span>
               {properties.length} propert{properties.length === 1 ? 'y' : 'ies'},{' '}
               {properties.reduce((s, p) => s + (p.loans?.length || 0), 0)} loan(s),{' '}
               {mems.length} household member{mems.length !== 1 ? 's' : ''},{' '}
@@ -459,8 +459,8 @@ export default function AiInsights({ properties, profile }) {
                 </svg>
               </div>
               <div className="text-center">
-                <p className="text-slate-300 font-medium">Ask anything about your finances</p>
-                <p className="text-slate-500 text-sm mt-1">
+                <p className="text-neo-muted font-medium">Ask anything about your finances</p>
+                <p className="text-neo-subtle text-sm mt-1">
                   The AI has full visibility into your portfolio and household profile.
                 </p>
                 {hasKey && !selectedModel && (
@@ -469,14 +469,14 @@ export default function AiInsights({ properties, profile }) {
               </div>
               {hasKey && selectedModel && (
                 <div className="w-full max-w-lg space-y-2">
-                  <p className="text-xs text-slate-500 text-center">Suggested questions</p>
+                  <p className="text-xs text-neo-subtle text-center">Suggested questions</p>
                   <div className="grid grid-cols-1 gap-2">
                     {SUGGESTIONS.slice(0, 4).map((s) => (
                       <button
                         key={s}
                         onClick={() => sendMessage(s)}
-                        className="text-left text-xs text-slate-300 bg-slate-800 hover:bg-slate-700
-                                   border border-slate-700 hover:border-brand-500/50 rounded-xl px-3 py-2
+                        className="text-left text-xs text-neo-muted bg-neo-raised hover:bg-neo-sunken
+                                   border border-neo-border hover:shadow-neo rounded-xl px-3 py-2
                                    transition-colors"
                       >
                         {s}
@@ -495,7 +495,7 @@ export default function AiInsights({ properties, profile }) {
           {loading && <Message role="assistant" loading />}
 
           {error && (
-            <div className="card border border-red-700/40 bg-red-900/10">
+            <div className="card border border-red-200/80 bg-red-50 shadow-neo-inset-sm">
               <p className="text-red-300 text-sm">
                 <span className="font-semibold">Error: </span>{error}
               </p>
@@ -507,14 +507,14 @@ export default function AiInsights({ properties, profile }) {
 
         {/* Suggestions bar (after first message) */}
         {messages.length > 0 && hasKey && selectedModel && (
-          <div className="border-t border-slate-700 px-4 py-2 flex gap-2 overflow-x-auto">
+          <div className="border-t border-neo-border px-4 py-2 flex gap-2 overflow-x-auto">
             {SUGGESTIONS.slice(4).map((s) => (
               <button
                 key={s}
                 onClick={() => sendMessage(s)}
                 disabled={loading}
-                className="shrink-0 text-xs text-slate-400 hover:text-slate-200 bg-slate-800 hover:bg-slate-700
-                           border border-slate-700 rounded-lg px-3 py-1.5 transition-colors whitespace-nowrap
+                className="shrink-0 text-xs text-neo-muted hover:text-neo-text/95 bg-neo-raised hover:bg-neo-sunken
+                           border border-neo-border rounded-lg px-3 py-1.5 transition-colors whitespace-nowrap
                            disabled:opacity-50"
               >
                 {s}
@@ -524,7 +524,7 @@ export default function AiInsights({ properties, profile }) {
         )}
 
         {/* Input */}
-        <form onSubmit={handleSubmit} className="border-t border-slate-700 p-3 flex gap-2">
+        <form onSubmit={handleSubmit} className="border-t border-neo-border p-3 flex gap-2">
           <input
             ref={inputRef}
             type="text"

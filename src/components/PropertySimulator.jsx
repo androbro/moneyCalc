@@ -33,11 +33,12 @@ function num(v, fallback = 0) {
 
 const AXIS_TICK = { fill: '#94a3b8', fontSize: 11 }
 const TOOLTIP_STYLE = {
-  backgroundColor: '#1e293b',
-  border: '1px solid #334155',
-  borderRadius: '8px',
-  color: '#e2e8f0',
+  backgroundColor: '#e8eef6',
+  border: '1px solid #b8c4d4',
+  borderRadius: '12px',
+  color: '#1e293b',
   fontSize: 12,
+  boxShadow: '8px 8px 18px rgba(163, 177, 198, 0.45), -6px -6px 14px rgba(255, 255, 255, 0.85)',
 }
 
 function kFmt(v) {
@@ -51,12 +52,12 @@ function kFmt(v) {
 function Field({ label, hint, info, children }) {
   return (
     <div className="space-y-1">
-      <label className="block text-xs font-medium text-slate-400 flex items-center">
+      <label className="block text-xs font-medium text-neo-muted flex items-center">
         {label}
         {info && <InfoPopover>{info}</InfoPopover>}
       </label>
       {children}
-      {hint && <p className="text-xs text-slate-500">{hint}</p>}
+      {hint && <p className="text-xs text-neo-subtle">{hint}</p>}
     </div>
   )
 }
@@ -64,7 +65,7 @@ function Field({ label, hint, info, children }) {
 function MoneyInput({ value, onChange, placeholder = '0' }) {
   return (
     <div className="relative">
-      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-sm">€</span>
+      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-neo-subtle text-sm">€</span>
       <input
         type="number"
         min="0"
@@ -94,7 +95,7 @@ function PctInput({ value, onChange, step = '0.1' }) {
         placeholder="0"
         className="input pr-7 w-full"
       />
-      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 text-sm">%</span>
+      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-neo-subtle text-sm">%</span>
     </div>
   )
 }
@@ -412,11 +413,11 @@ function SimTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null
   return (
     <div style={TOOLTIP_STYLE} className="p-3 space-y-1 min-w-[180px]">
-      <p className="font-semibold text-slate-200 mb-2">{label}</p>
+      <p className="font-semibold text-neo-text/95 mb-2">{label}</p>
       {payload.map((p) => (
         <div key={p.dataKey} className="flex justify-between gap-4 text-xs">
           <span style={{ color: p.color }}>{p.name}</span>
-          <span className="font-medium text-slate-200">{kFmt(p.value)}</span>
+          <span className="font-medium text-neo-text/95">{kFmt(p.value)}</span>
         </div>
       ))}
     </div>
@@ -519,8 +520,8 @@ export default function PropertySimulator({ properties, onSimChange, getSimulato
     <div className="space-y-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-white">Future Property Simulator</h1>
-        <p className="text-slate-400 text-sm mt-0.5">
+        <h1 className="text-2xl font-bold text-neo-text">Future Property Simulator</h1>
+        <p className="text-neo-muted text-sm mt-0.5">
           Model a hypothetical acquisition and see its 20-year impact on your total portfolio.
         </p>
       </div>
@@ -531,7 +532,7 @@ export default function PropertySimulator({ properties, onSimChange, getSimulato
 
           {/* Acquisition */}
           <div className="card space-y-4">
-            <h3 className="text-xs font-semibold text-slate-300 uppercase tracking-wider border-b border-slate-700 pb-2">
+            <h3 className="text-xs font-semibold text-neo-muted uppercase tracking-wider border-b border-neo-border pb-2">
               Acquisition
             </h3>
             <div className="space-y-3">
@@ -562,13 +563,13 @@ export default function PropertySimulator({ properties, onSimChange, getSimulato
 
           {/* Registration Tax */}
           <div className="card space-y-4">
-            <h3 className="text-xs font-semibold text-slate-300 uppercase tracking-wider border-b border-slate-700 pb-2">
+            <h3 className="text-xs font-semibold text-neo-muted uppercase tracking-wider border-b border-neo-border pb-2">
               Registration Tax (Registratierechten)
             </h3>
             <div className="space-y-3">
               {/* Co-buying toggle */}
               <div className="flex items-center justify-between">
-                <span className="text-xs font-medium text-slate-400 flex items-center">
+                <span className="text-xs font-medium text-neo-muted flex items-center">
                   Buying together with co-buyer?
                   <InfoPopover>{SIM_INFO.coBuying}</InfoPopover>
                 </span>
@@ -578,7 +579,7 @@ export default function PropertySimulator({ properties, onSimChange, getSimulato
                   aria-checked={sim.coBuying}
                   onClick={() => setSim((s) => ({ ...s, coBuying: !s.coBuying }))}
                   className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
-                    sim.coBuying ? 'bg-brand-500' : 'bg-slate-600'
+                    sim.coBuying ? 'bg-brand-500' : 'bg-neo-sunken'
                   }`}
                 >
                   <span
@@ -610,20 +611,20 @@ export default function PropertySimulator({ properties, onSimChange, getSimulato
                     <PctInput value={sim.partnerTaxRate} onChange={set('partnerTaxRate')} step="0.1" />
                   </Field>
                   {/* Breakdown */}
-                  <div className="rounded-lg bg-slate-800/60 p-3 space-y-1.5 text-xs">
-                    <div className="flex justify-between text-slate-400">
+                  <div className="rounded-lg bg-neo-sunken/70 p-3 space-y-1.5 text-xs">
+                    <div className="flex justify-between text-neo-muted">
                       <span>My share ({(sim.mySharePct * 100).toFixed(0)}% × {(sim.myTaxRate * 100).toFixed(1)}%)</span>
                       <span className="text-red-400 font-medium">{fmt(regTaxBreakdown.myTax)}</span>
                     </div>
-                    <div className="flex justify-between text-slate-400">
+                    <div className="flex justify-between text-neo-muted">
                       <span>Co-buyer ({((1 - sim.mySharePct) * 100).toFixed(0)}% × {(sim.partnerTaxRate * 100).toFixed(1)}%)</span>
                       <span className="text-amber-400 font-medium">{fmt(regTaxBreakdown.partnerTax)}</span>
                     </div>
-                    <div className="flex justify-between border-t border-slate-700 pt-1.5 text-slate-200 font-semibold">
+                    <div className="flex justify-between border-t border-neo-border pt-1.5 text-neo-text/95 font-semibold">
                       <span>Total tax</span>
                       <span className="text-red-300">{fmt(regTaxBreakdown.total)}</span>
                     </div>
-                    <p className="text-slate-500 text-xs pt-0.5">
+                    <p className="text-neo-subtle text-xs pt-0.5">
                       The full combined tax ({fmt(regTaxBreakdown.total)}) is counted as an upfront cash outflow in the simulation.
                     </p>
                   </div>
@@ -636,7 +637,7 @@ export default function PropertySimulator({ properties, onSimChange, getSimulato
                   >
                     <PctInput value={sim.soloTaxRate} onChange={set('soloTaxRate')} step="0.1" />
                   </Field>
-                  <div className="rounded-lg bg-slate-800/60 p-3 text-xs flex justify-between text-slate-300">
+                  <div className="rounded-lg bg-neo-sunken/70 p-3 text-xs flex justify-between text-neo-muted">
                     <span>Total registration tax</span>
                     <span className="text-red-300 font-semibold">{fmt(regTaxBreakdown.total)}</span>
                   </div>
@@ -647,7 +648,7 @@ export default function PropertySimulator({ properties, onSimChange, getSimulato
 
           {/* Rental income */}
           <div className="card space-y-4">
-            <h3 className="text-xs font-semibold text-slate-300 uppercase tracking-wider border-b border-slate-700 pb-2">
+            <h3 className="text-xs font-semibold text-neo-muted uppercase tracking-wider border-b border-neo-border pb-2">
               Rental Income
             </h3>
             <div className="space-y-3">
@@ -662,7 +663,7 @@ export default function PropertySimulator({ properties, onSimChange, getSimulato
 
           {/* Operating costs */}
           <div className="card space-y-4">
-            <h3 className="text-xs font-semibold text-slate-300 uppercase tracking-wider border-b border-slate-700 pb-2">
+            <h3 className="text-xs font-semibold text-neo-muted uppercase tracking-wider border-b border-neo-border pb-2">
               Operating Costs (Annual)
             </h3>
             <div className="space-y-3">
@@ -686,7 +687,7 @@ export default function PropertySimulator({ properties, onSimChange, getSimulato
 
           {/* Loan */}
           <div className="card space-y-4">
-            <h3 className="text-xs font-semibold text-slate-300 uppercase tracking-wider border-b border-slate-700 pb-2">
+            <h3 className="text-xs font-semibold text-neo-muted uppercase tracking-wider border-b border-neo-border pb-2">
               Financing
             </h3>
             <div className="space-y-3">
@@ -719,7 +720,7 @@ export default function PropertySimulator({ properties, onSimChange, getSimulato
           {/* Quick metrics */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
             <div className="card text-center space-y-1">
-              <p className="text-xs text-slate-400 flex items-center justify-center">
+              <p className="text-xs text-neo-muted flex items-center justify-center">
                 Gross Yield
                 <InfoPopover>{SIM_INFO.grossYield}</InfoPopover>
               </p>
@@ -728,7 +729,7 @@ export default function PropertySimulator({ properties, onSimChange, getSimulato
               </p>
             </div>
             <div className="card text-center space-y-1">
-              <p className="text-xs text-slate-400 flex items-center justify-center">
+              <p className="text-xs text-neo-muted flex items-center justify-center">
                 Year-1 Net CF
                 <InfoPopover>{SIM_INFO.netCF}</InfoPopover>
               </p>
@@ -737,7 +738,7 @@ export default function PropertySimulator({ properties, onSimChange, getSimulato
               </p>
             </div>
             <div className="card text-center space-y-1">
-              <p className="text-xs text-slate-400 flex items-center justify-center">
+              <p className="text-xs text-neo-muted flex items-center justify-center">
                 +20y Net Worth Boost
                 <InfoPopover>{SIM_INFO.netWorthBoost}</InfoPopover>
               </p>
@@ -746,7 +747,7 @@ export default function PropertySimulator({ properties, onSimChange, getSimulato
               </p>
             </div>
             <div className="card text-center space-y-1">
-              <p className="text-xs text-slate-400 flex items-center justify-center">
+              <p className="text-xs text-neo-muted flex items-center justify-center">
                 +20y Cumulative CF Boost
                 <InfoPopover>{SIM_INFO.cumulativeCFBoost}</InfoPopover>
               </p>
@@ -758,7 +759,7 @@ export default function PropertySimulator({ properties, onSimChange, getSimulato
 
           {/* Registration tax summary banner */}
           {regTaxBreakdown.total > 0 && (
-            <div className="rounded-lg border border-red-800/40 bg-red-900/10 px-4 py-3 text-xs text-slate-300 flex flex-wrap gap-x-6 gap-y-1 items-center">
+            <div className="rounded-2xl border border-red-200/80 bg-red-50 px-4 py-3 text-xs text-red-900 flex flex-wrap gap-x-6 gap-y-1 items-center shadow-neo-inset-sm">
               <span className="font-semibold text-red-300">Upfront registration tax</span>
               {sim.coBuying ? (
                 <>
@@ -774,12 +775,12 @@ export default function PropertySimulator({ properties, onSimChange, getSimulato
 
           {/* Net Worth chart */}
           <div className="card">
-            <h3 className="text-sm font-semibold text-white mb-4">
+            <h3 className="text-sm font-semibold text-neo-text mb-4">
               Net Worth: Baseline vs. With New Property
             </h3>
             <ResponsiveContainer width="100%" height={240}>
               <ComposedChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#cbd5e1" />
                 <XAxis dataKey="label" tick={AXIS_TICK} />
                 <YAxis tickFormatter={kFmt} tick={AXIS_TICK} />
                 <Tooltip content={<SimTooltip />} />
@@ -814,12 +815,12 @@ export default function PropertySimulator({ properties, onSimChange, getSimulato
 
           {/* Cumulative CF chart */}
           <div className="card">
-            <h3 className="text-sm font-semibold text-white mb-4">
+            <h3 className="text-sm font-semibold text-neo-text mb-4">
               Cumulative Cash Flow: Baseline vs. With New Property
             </h3>
             <ResponsiveContainer width="100%" height={240}>
               <ComposedChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#cbd5e1" />
                 <XAxis dataKey="label" tick={AXIS_TICK} />
                 <YAxis tickFormatter={kFmt} tick={AXIS_TICK} />
                 <Tooltip content={<SimTooltip />} />
@@ -853,15 +854,15 @@ export default function PropertySimulator({ properties, onSimChange, getSimulato
 
           {/* Delta chart — incremental impact */}
           <div className="card">
-            <h3 className="text-sm font-semibold text-white mb-1">
+            <h3 className="text-sm font-semibold text-neo-text mb-1">
               Incremental Impact (New Property Alone)
             </h3>
-            <p className="text-xs text-slate-500 mb-4">
+            <p className="text-xs text-neo-subtle mb-4">
               The isolated contribution of the simulated property to net worth and cumulative cash flow.
             </p>
             <ResponsiveContainer width="100%" height={220}>
               <ComposedChart data={chartData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#cbd5e1" />
                 <XAxis dataKey="label" tick={AXIS_TICK} />
                 <YAxis tickFormatter={kFmt} tick={AXIS_TICK} />
                 <Tooltip content={<SimTooltip />} />
@@ -884,10 +885,10 @@ export default function PropertySimulator({ properties, onSimChange, getSimulato
 
           {/* Snapshot table */}
           <div className="card overflow-x-auto">
-            <h3 className="text-sm font-semibold text-white mb-3">Year-by-Year Snapshot</h3>
+            <h3 className="text-sm font-semibold text-neo-text mb-3">Year-by-Year Snapshot</h3>
             <table className="w-full text-xs">
               <thead>
-                <tr className="text-slate-400 border-b border-slate-700">
+                <tr className="text-neo-muted border-b border-neo-border">
                   <th className="text-left pb-2 pr-3">Year</th>
                   <th className="text-right pb-2 pr-3">Baseline NW</th>
                   <th className="text-right pb-2 pr-3">With New NW</th>
@@ -902,10 +903,10 @@ export default function PropertySimulator({ properties, onSimChange, getSimulato
                   const d = delta[y]
                   if (!b) return null
                   return (
-                    <tr key={y} className={`border-b border-slate-700/50 ${y === acqYear ? 'bg-amber-900/10' : ''}`}>
-                      <td className="py-1.5 pr-3 text-slate-300 font-medium">{b.label}</td>
-                      <td className="py-1.5 pr-3 text-right text-slate-400">{fmt(b.netWorth)}</td>
-                      <td className="py-1.5 pr-3 text-right text-white">{fmt(w.netWorth)}</td>
+                    <tr key={y} className={`border-b border-neo-border/50 ${y === acqYear ? 'bg-amber-50 shadow-neo-inset-sm' : ''}`}>
+                      <td className="py-1.5 pr-3 text-neo-muted font-medium">{b.label}</td>
+                      <td className="py-1.5 pr-3 text-right text-neo-muted">{fmt(b.netWorth)}</td>
+                      <td className="py-1.5 pr-3 text-right text-neo-text">{fmt(w.netWorth)}</td>
                       <td className={`py-1.5 pr-3 text-right font-semibold ${d.netWorth >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                         {d.netWorth >= 0 ? '+' : ''}{fmt(d.netWorth)}
                       </td>

@@ -37,8 +37,8 @@ const fmtSigned = (n) => (n >= 0 ? `+${fmt(n)}` : fmt(n))
 function SectionHeader({ title, subtitle }) {
   return (
     <div className="mb-4">
-      <h2 className="text-base font-bold text-white">{title}</h2>
-      {subtitle && <p className="text-xs text-slate-500 mt-0.5">{subtitle}</p>}
+      <h2 className="text-base font-bold text-neo-text">{title}</h2>
+      {subtitle && <p className="text-xs text-neo-subtle mt-0.5">{subtitle}</p>}
     </div>
   )
 }
@@ -49,27 +49,27 @@ function FlowRow({ operator, label, sublabel, amount, dimmed = false, total = fa
     operator === '+' ? 'text-emerald-400' :
     operator === '−' ? 'text-red-400' :
     operator === '=' ? 'text-brand-400' :
-    operator === '↑' ? 'text-teal-400' : 'text-slate-500'
+    operator === '↑' ? 'text-teal-400' : 'text-neo-subtle'
 
   const amtColor =
     total ? (amount >= 0 ? 'text-brand-400' : 'text-red-400') :
     operator === '+' ? 'text-emerald-400' :
     operator === '−' ? 'text-red-400' :
     operator === '~' ? 'text-amber-400' :
-    operator === '↑' ? 'text-teal-400' : 'text-white'
+    operator === '↑' ? 'text-teal-400' : 'text-neo-text'
 
   return (
     <div
       className={`flex items-center justify-between py-2
-        ${total ? 'border-t-2 border-slate-500 mt-1 pt-3' : 'border-b border-slate-700/40 last:border-0'}
+        ${total ? 'border-t-2 border-neo-border mt-1 pt-3' : 'border-b border-neo-border/40 last:border-0'}
         ${indent ? 'pl-5' : ''}
         ${dimmed ? 'opacity-50' : ''}`}
     >
       <div className="flex items-start gap-2.5 min-w-0">
         <span className={`text-xs font-bold w-4 shrink-0 mt-0.5 ${opColor}`}>{operator}</span>
         <div className="min-w-0">
-          <span className={`text-sm ${total ? 'font-semibold text-white' : 'text-slate-300'}`}>{label}</span>
-          {sublabel && <p className="text-xs text-slate-500 mt-0.5 leading-snug">{sublabel}</p>}
+          <span className={`text-sm ${total ? 'font-semibold text-neo-text' : 'text-neo-muted'}`}>{label}</span>
+          {sublabel && <p className="text-xs text-neo-subtle mt-0.5 leading-snug">{sublabel}</p>}
         </div>
       </div>
       <span className={`text-sm font-semibold tabular-nums shrink-0 ml-4 ${amtColor}`}>
@@ -82,14 +82,14 @@ function FlowRow({ operator, label, sublabel, amount, dimmed = false, total = fa
 /** Net KPI badge */
 function NetBadge({ label, monthly, annual, positive }) {
   const color = positive ? 'text-emerald-400' : 'text-red-400'
-  const bg    = positive ? 'bg-emerald-900/20 border-emerald-700/30' : 'bg-red-900/20 border-red-700/30'
+  const bg    = positive ? 'bg-emerald-50 border-emerald-200/80 shadow-neo-inset-sm' : 'bg-red-50 border-red-200/80 shadow-neo-inset-sm'
   return (
     <div className={`card border ${bg} space-y-1 text-center`}>
-      <p className="text-xs text-slate-400">{label}</p>
+      <p className="text-xs text-neo-muted">{label}</p>
       <p className={`text-2xl font-bold tabular-nums ${color}`}>{fmtSigned(monthly)}</p>
-      <p className="text-xs text-slate-500">/month</p>
+      <p className="text-xs text-neo-subtle">/month</p>
       <p className={`text-sm font-semibold tabular-nums ${color}`}>{fmtSigned(annual)}</p>
-      <p className="text-xs text-slate-500">/year</p>
+      <p className="text-xs text-neo-subtle">/year</p>
     </div>
   )
 }
@@ -105,14 +105,14 @@ function YearTable({ projection, householdAnnualSurplus }) {
       <div className="overflow-x-auto">
         <table className="w-full text-xs">
           <thead>
-            <tr className="border-b border-slate-700 bg-slate-800/60">
-              <th className="text-left px-4 py-3 text-slate-400 font-semibold whitespace-nowrap">Year</th>
-              <th className="text-right px-3 py-3 text-slate-400 font-semibold whitespace-nowrap">Portfolio Value</th>
-              <th className="text-right px-3 py-3 text-slate-400 font-semibold whitespace-nowrap">Loan Balance</th>
-              <th className="text-right px-3 py-3 text-slate-400 font-semibold whitespace-nowrap">Equity</th>
+            <tr className="border-b border-neo-border bg-neo-sunken/70">
+              <th className="text-left px-4 py-3 text-neo-muted font-semibold whitespace-nowrap">Year</th>
+              <th className="text-right px-3 py-3 text-neo-muted font-semibold whitespace-nowrap">Portfolio Value</th>
+              <th className="text-right px-3 py-3 text-neo-muted font-semibold whitespace-nowrap">Loan Balance</th>
+              <th className="text-right px-3 py-3 text-neo-muted font-semibold whitespace-nowrap">Equity</th>
               <th className="text-right px-3 py-3 text-emerald-400/80 font-semibold whitespace-nowrap">Rental Income</th>
               <th className="text-right px-3 py-3 text-red-400/80 font-semibold whitespace-nowrap">Portfolio Costs</th>
-              <th className="text-right px-3 py-3 text-slate-400 font-semibold whitespace-nowrap">Portfolio CF</th>
+              <th className="text-right px-3 py-3 text-neo-muted font-semibold whitespace-nowrap">Portfolio CF</th>
               <th className="text-right px-3 py-3 text-brand-400/80 font-semibold whitespace-nowrap">Cumulative CF</th>
             </tr>
           </thead>
@@ -123,20 +123,20 @@ function YearTable({ projection, householdAnnualSurplus }) {
               return (
                 <tr
                   key={pt.year}
-                  className={`border-b border-slate-700/40 last:border-0 transition-colors
-                    ${isToday ? 'bg-brand-600/10' : i % 2 === 0 ? '' : 'bg-slate-800/20'}
-                    hover:bg-slate-700/20`}
+                  className={`border-b border-neo-border/40 last:border-0 transition-colors
+                    ${isToday ? 'bg-brand-600/10' : i % 2 === 0 ? '' : 'bg-neo-raised/20'}
+                    hover:bg-neo-sunken/20`}
                 >
-                  <td className="px-4 py-2.5 font-semibold text-white whitespace-nowrap">
+                  <td className="px-4 py-2.5 font-semibold text-neo-text whitespace-nowrap">
                     {isToday ? <span className="text-brand-300">Today</span> : pt.label}
                   </td>
-                  <td className="px-3 py-2.5 text-right tabular-nums text-slate-200 whitespace-nowrap">
+                  <td className="px-3 py-2.5 text-right tabular-nums text-neo-text/95 whitespace-nowrap">
                     {fmt(pt.propertyValue)}
                   </td>
                   <td className="px-3 py-2.5 text-right tabular-nums text-red-300/80 whitespace-nowrap">
                     {fmt(pt.loanBalance)}
                   </td>
-                  <td className="px-3 py-2.5 text-right tabular-nums font-semibold text-white whitespace-nowrap">
+                  <td className="px-3 py-2.5 text-right tabular-nums font-semibold text-neo-text whitespace-nowrap">
                     {fmt(pt.netWorth)}
                   </td>
                   <td className="px-3 py-2.5 text-right tabular-nums text-emerald-400 whitespace-nowrap">
@@ -162,8 +162,8 @@ function YearTable({ projection, householdAnnualSurplus }) {
       {projection.length > 6 && (
         <button
           onClick={() => setShowAll((s) => !s)}
-          className="w-full py-2.5 text-xs text-slate-400 hover:text-slate-200
-                     border-t border-slate-700 transition-colors hover:bg-slate-800/40"
+          className="w-full py-2.5 text-xs text-neo-muted hover:text-neo-text/95
+                     border-t border-neo-border transition-colors hover:bg-neo-sunken/50"
         >
           {showAll ? 'Show fewer years ↑' : `Show all ${projection.length} years ↓`}
         </button>
@@ -230,19 +230,19 @@ function InvTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null
   const total = payload.reduce((s, p) => s + (p.value || 0), 0)
   return (
-    <div className="bg-slate-800 border border-slate-600 rounded-xl p-3 shadow-xl text-xs min-w-[200px]">
-      <p className="font-semibold text-white mb-2 text-sm">{label}</p>
+    <div className="bg-neo-raised border border-neo-border rounded-xl p-3 shadow-xl text-xs min-w-[200px]">
+      <p className="font-semibold text-neo-text mb-2 text-sm">{label}</p>
       {[...payload].reverse().map((entry) => (
         <div key={entry.dataKey} className="flex items-center justify-between gap-4 mb-1">
           <span className="flex items-center gap-1.5 font-medium" style={{ color: entry.color }}>
             <span className="w-2 h-2 rounded-full inline-block" style={{ background: entry.color }} />
             {entry.name}
           </span>
-          <span className="text-white font-semibold">{fmt(entry.value)}</span>
+          <span className="text-neo-text font-semibold">{fmt(entry.value)}</span>
         </div>
       ))}
-      <div className="flex justify-between border-t border-slate-600 pt-1.5 mt-1.5 font-semibold">
-        <span className="text-slate-300">Total</span>
+      <div className="flex justify-between border-t border-neo-border pt-1.5 mt-1.5 font-semibold">
+        <span className="text-neo-muted">Total</span>
         <span className="text-brand-300">{fmt(total)}</span>
       </div>
     </div>
@@ -289,8 +289,8 @@ function InvestmentSection({ members }) {
   if (allPositions.length === 0) {
     return (
       <div className="card text-center py-10">
-        <p className="text-slate-400 text-sm font-medium">No investment positions configured.</p>
-        <p className="text-slate-500 text-xs mt-1">
+        <p className="text-neo-muted text-sm font-medium">No investment positions configured.</p>
+        <p className="text-neo-subtle text-xs mt-1">
           Add positions in the Household Profile → member cards to see your portfolio grow here.
         </p>
       </div>
@@ -307,26 +307,26 @@ function InvestmentSection({ members }) {
       {/* KPI strip */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div className="card text-center space-y-0.5">
-          <p className="text-xs text-slate-400">Monthly Invested</p>
+          <p className="text-xs text-neo-muted">Monthly Invested</p>
           <p className="text-xl font-bold text-emerald-400">{fmt(totalMonthly)}</p>
-          <p className="text-xs text-slate-500">{fmt(totalMonthly * 12)}/yr</p>
+          <p className="text-xs text-neo-subtle">{fmt(totalMonthly * 12)}/yr</p>
         </div>
         <div className="card text-center space-y-0.5">
-          <p className="text-xs text-slate-400">Positions</p>
-          <p className="text-xl font-bold text-white">{allPositions.length}</p>
-          <p className="text-xs text-slate-500">active</p>
+          <p className="text-xs text-neo-muted">Positions</p>
+          <p className="text-xl font-bold text-neo-text">{allPositions.length}</p>
+          <p className="text-xs text-neo-subtle">active</p>
         </div>
         <div className="card text-center space-y-0.5">
-          <p className="text-xs text-slate-400">+20y Portfolio Value</p>
+          <p className="text-xs text-neo-muted">+20y Portfolio Value</p>
           <p className="text-xl font-bold text-brand-400">{kFmt(final.total)}</p>
-          <p className="text-xs text-slate-500">projected</p>
+          <p className="text-xs text-neo-subtle">projected</p>
         </div>
         <div className="card text-center space-y-0.5">
-          <p className="text-xs text-slate-400">+20y Investment Gain</p>
+          <p className="text-xs text-neo-muted">+20y Investment Gain</p>
           <p className={`text-xl font-bold ${totalGrowth >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
             {kFmt(totalGrowth)}
           </p>
-          <p className="text-xs text-slate-500">vs {kFmt(totalContributed)} contributed</p>
+          <p className="text-xs text-neo-subtle">vs {kFmt(totalContributed)} contributed</p>
         </div>
       </div>
 
@@ -334,7 +334,7 @@ function InvestmentSection({ members }) {
       <div className="card overflow-x-auto">
         <table className="w-full text-xs">
           <thead>
-            <tr className="border-b border-slate-700 text-slate-400">
+            <tr className="border-b border-neo-border text-neo-muted">
               <th className="text-left py-2 pr-3 font-medium">Position</th>
               <th className="text-right py-2 pr-3 font-medium">Monthly</th>
               <th className="text-right py-2 pr-3 font-medium">Annual</th>
@@ -344,18 +344,18 @@ function InvestmentSection({ members }) {
           </thead>
           <tbody>
             {allPositions.map((pos, i) => (
-              <tr key={pos.id} className="border-b border-slate-700/40 last:border-0">
+              <tr key={pos.id} className="border-b border-neo-border/40 last:border-0">
                 <td className="py-2 pr-3">
                   <span className="flex items-center gap-2">
                     <span
                       className="w-2.5 h-2.5 rounded-full shrink-0"
                       style={{ background: POSITION_COLORS[i % POSITION_COLORS.length] }}
                     />
-                    <span className="text-slate-200 font-medium">{pos.displayName}</span>
+                    <span className="text-neo-text/95 font-medium">{pos.displayName}</span>
                   </span>
                 </td>
                 <td className="py-2 pr-3 text-right text-emerald-400 tabular-nums">{fmt(pos.monthlyAmount)}</td>
-                <td className="py-2 pr-3 text-right text-slate-300 tabular-nums">{fmt(pos.monthlyAmount * 12)}</td>
+                <td className="py-2 pr-3 text-right text-neo-muted tabular-nums">{fmt(pos.monthlyAmount * 12)}</td>
                 <td className="py-2 pr-3 text-right text-amber-400 tabular-nums">
                   {((pos.annualReturn || 0) * 100).toFixed(1)}%
                 </td>
@@ -365,10 +365,10 @@ function InvestmentSection({ members }) {
               </tr>
             ))}
             {/* Totals row */}
-            <tr className="border-t-2 border-slate-500 font-semibold">
-              <td className="py-2 pr-3 text-white">Total</td>
+            <tr className="border-t-2 border-neo-border font-semibold">
+              <td className="py-2 pr-3 text-neo-text">Total</td>
               <td className="py-2 pr-3 text-right text-emerald-400 tabular-nums">{fmt(totalMonthly)}</td>
-              <td className="py-2 pr-3 text-right text-slate-300 tabular-nums">{fmt(totalMonthly * 12)}</td>
+              <td className="py-2 pr-3 text-right text-neo-muted tabular-nums">{fmt(totalMonthly * 12)}</td>
               <td className="py-2 pr-3" />
               <td className="py-2 text-right text-brand-300 tabular-nums">{kFmt(final.total)}</td>
             </tr>
@@ -378,8 +378,8 @@ function InvestmentSection({ members }) {
 
       {/* Stacked area chart */}
       <div className="card">
-        <h3 className="text-sm font-semibold text-white mb-1">Portfolio Value Over Time</h3>
-        <p className="text-xs text-slate-500 mb-4">
+        <h3 className="text-sm font-semibold text-neo-text mb-1">Portfolio Value Over Time</h3>
+        <p className="text-xs text-neo-subtle mb-4">
           Compound growth of each position assuming constant monthly contributions and fixed annual return.
           Assumes dividends reinvested. Tax on gains not modelled.
         </p>
@@ -393,7 +393,7 @@ function InvestmentSection({ members }) {
                 </linearGradient>
               ))}
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+            <CartesianGrid strokeDasharray="3 3" stroke="#cbd5e1" />
             <XAxis dataKey="label" tick={{ fill: '#94a3b8', fontSize: 11 }} />
             <YAxis tickFormatter={kFmt} tick={{ fill: '#94a3b8', fontSize: 11 }} width={60} />
             <Tooltip content={<InvTooltip />} />
@@ -421,18 +421,18 @@ function InvestmentSection({ members }) {
       <div className="card overflow-hidden p-0">
         <button
           onClick={() => setShowTable((s) => !s)}
-          className="w-full flex items-center justify-between px-4 py-3 text-sm text-slate-300
-                     hover:text-white hover:bg-slate-800/40 transition-colors"
+          className="w-full flex items-center justify-between px-4 py-3 text-sm text-neo-muted
+                     hover:text-neo-text hover:bg-neo-sunken/50 transition-colors"
         >
           <span className="font-medium">Year-by-Year Breakdown</span>
-          <span className="text-slate-500 text-xs">{showTable ? '↑ hide' : '↓ show'}</span>
+          <span className="text-neo-subtle text-xs">{showTable ? '↑ hide' : '↓ show'}</span>
         </button>
 
         {showTable && (
-          <div className="overflow-x-auto border-t border-slate-700">
+          <div className="overflow-x-auto border-t border-neo-border">
             <table className="w-full text-xs">
               <thead>
-                <tr className="border-b border-slate-700 bg-slate-800/60 text-slate-400">
+                <tr className="border-b border-neo-border bg-neo-sunken/70 text-neo-muted">
                   <th className="text-left px-4 py-2.5 font-medium whitespace-nowrap">Year</th>
                   {active.map((pos, i) => (
                     <th key={pos.id} className="text-right px-3 py-2.5 font-medium whitespace-nowrap">
@@ -452,14 +452,14 @@ function InvestmentSection({ members }) {
                 {chartData.map((pt, i) => (
                   <tr
                     key={pt.year}
-                    className={`border-b border-slate-700/40 last:border-0 hover:bg-slate-700/20
-                      ${pt.year === 0 ? 'bg-brand-600/10' : i % 2 === 0 ? '' : 'bg-slate-800/20'}`}
+                    className={`border-b border-neo-border/40 last:border-0 hover:bg-neo-sunken/20
+                      ${pt.year === 0 ? 'bg-brand-600/10' : i % 2 === 0 ? '' : 'bg-neo-raised/20'}`}
                   >
-                    <td className="px-4 py-2 font-semibold text-white whitespace-nowrap">
+                    <td className="px-4 py-2 font-semibold text-neo-text whitespace-nowrap">
                       {pt.year === 0 ? <span className="text-brand-300">Today</span> : pt.label}
                     </td>
                     {active.map((pos) => (
-                      <td key={pos.id} className="px-3 py-2 text-right tabular-nums text-slate-200 whitespace-nowrap">
+                      <td key={pos.id} className="px-3 py-2 text-right tabular-nums text-neo-text/95 whitespace-nowrap">
                         {kFmt(pt[pos.id] || 0)}
                       </td>
                     ))}
@@ -601,8 +601,8 @@ export default function MoneyFlow({ properties, profile }) {
 
       {/* ── Header ── */}
       <div>
-        <h1 className="text-2xl font-bold text-white">Money Flow</h1>
-        <p className="text-slate-400 text-sm mt-0.5">
+        <h1 className="text-2xl font-bold text-neo-text">Money Flow</h1>
+        <p className="text-neo-muted text-sm mt-0.5">
           Every euro in and out — monthly snapshot and year-by-year projection.
         </p>
       </div>
@@ -634,7 +634,7 @@ export default function MoneyFlow({ properties, profile }) {
           />
 
           {properties.length === 0 ? (
-            <p className="text-slate-500 text-sm">No properties in your portfolio yet.</p>
+            <p className="text-neo-subtle text-sm">No properties in your portfolio yet.</p>
           ) : (
             <>
               {/* Per-property breakdown */}
@@ -738,7 +738,7 @@ export default function MoneyFlow({ properties, profile }) {
           })}
 
           {/* Divider */}
-          <div className="border-t border-slate-600/50 my-2" />
+          <div className="border-t border-neo-border/50 my-2" />
 
           {/* Outflows */}
           {monthlyPropertyOpex > 0 && (
@@ -785,22 +785,22 @@ export default function MoneyFlow({ properties, profile }) {
           <div className="flex flex-wrap gap-4">
             {members.map((m) => (
               <div key={m.id}
-                className="flex items-center gap-3 bg-slate-800 rounded-xl px-4 py-3 border border-slate-700">
+                className="flex items-center gap-3 bg-neo-raised rounded-xl px-4 py-3 border border-neo-border">
                 <div className="w-8 h-8 rounded-full bg-brand-600/30 border border-brand-500/40
                                 flex items-center justify-center text-brand-300 font-bold text-sm">
                   {(m.name || '?').charAt(0).toUpperCase()}
                 </div>
                 <div>
-                  <p className="text-xs text-slate-400">{m.name || 'Unnamed'}</p>
+                  <p className="text-xs text-neo-muted">{m.name || 'Unnamed'}</p>
                   <p className="text-base font-bold text-brand-300 tabular-nums">{fmt(m.cash || 0)}</p>
                 </div>
               </div>
             ))}
-            <div className="flex items-center gap-3 bg-slate-800/50 rounded-xl px-4 py-3
-                            border border-dashed border-slate-600">
+            <div className="flex items-center gap-3 bg-neo-sunken/60 rounded-xl px-4 py-3
+                            border border-dashed border-neo-border">
               <div>
-                <p className="text-xs text-slate-500">Total household cash</p>
-                <p className="text-base font-bold text-white tabular-nums">{fmt(totalMemberCash)}</p>
+                <p className="text-xs text-neo-subtle">Total household cash</p>
+                <p className="text-base font-bold text-neo-text tabular-nums">{fmt(totalMemberCash)}</p>
               </div>
             </div>
           </div>
@@ -815,7 +815,7 @@ export default function MoneyFlow({ properties, profile }) {
         />
         {properties.length === 0 ? (
           <div className="card text-center py-10">
-            <p className="text-slate-500 text-sm">Add properties to see the projection.</p>
+            <p className="text-neo-subtle text-sm">Add properties to see the projection.</p>
           </div>
         ) : (
           <YearTable projection={projection} householdAnnualSurplus={availableCash * 12} />
@@ -832,7 +832,7 @@ export default function MoneyFlow({ properties, profile }) {
       </div>
 
       {/* ── Legend ── */}
-      <div className="flex flex-wrap gap-4 text-xs text-slate-500">
+      <div className="flex flex-wrap gap-4 text-xs text-neo-subtle">
         <span><span className="text-emerald-400 font-semibold">Green</span> — income / positive flow</span>
         <span><span className="text-red-400 font-semibold">Red</span> — cost / negative flow</span>
         <span><span className="text-amber-400 font-semibold">Amber</span> — savings set-aside</span>

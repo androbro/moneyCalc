@@ -121,48 +121,48 @@ function Tooltip({ point, anchorPct, visible }) {
         width: 240,
       }}
     >
-      <div className="bg-slate-800 border border-slate-600 rounded-xl p-3 shadow-2xl text-xs">
-        <p className="font-bold text-white mb-2">{year}</p>
+      <div className="bg-neo-surface border border-white/60 rounded-2xl p-3 shadow-neo-lg text-xs">
+        <p className="font-bold text-neo-text mb-2">{year}</p>
         <div className="space-y-1">
           {point.annualRent > 0 && (
             <div className="flex justify-between">
-              <span className="text-slate-400">Rental income</span>
+              <span className="text-neo-muted">Rental income</span>
               <span className="text-emerald-400 font-semibold">{fmt(point.annualRent)}/yr</span>
             </div>
           )}
           {point.annualCosts > 0 && (
             <div className="flex justify-between">
-              <span className="text-slate-400">Operating costs</span>
+              <span className="text-neo-muted">Operating costs</span>
               <span className="text-red-400">−{fmt(point.annualCosts)}</span>
             </div>
           )}
           {point.annualInterest > 0 && (
             <div className="flex justify-between">
-              <span className="text-slate-400">Loan interest</span>
+              <span className="text-neo-muted">Loan interest</span>
               <span className="text-red-400">−{fmt(point.annualInterest)}</span>
             </div>
           )}
           {point.annualCapital > 0 && (
             <div className="flex justify-between">
-              <span className="text-slate-400">Capital repaid</span>
+              <span className="text-neo-muted">Capital repaid</span>
               <span className="text-teal-400">+{fmt(point.annualCapital)} equity</span>
             </div>
           )}
           {point.loanBalance > 0 && (
-            <div className="flex justify-between border-t border-slate-700 pt-1 mt-1">
-              <span className="text-slate-400">Remaining loan</span>
+            <div className="flex justify-between border-t border-neo-border pt-1 mt-1">
+              <span className="text-neo-muted">Remaining loan</span>
               <span className="text-amber-300">{fmt(point.loanBalance)}</span>
             </div>
           )}
-          <div className="flex justify-between border-t border-slate-700 pt-1 mt-1">
-            <span className="text-slate-300 font-medium">Annual CF</span>
+          <div className="flex justify-between border-t border-neo-border pt-1 mt-1">
+            <span className="text-neo-muted font-medium">Annual CF</span>
             <span className={`font-bold ${point.annualCF >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
               {fmtSigned(point.annualCF)}
             </span>
           </div>
           {point.y > 0 && (
             <div className="flex justify-between">
-              <span className="text-slate-400">Cumulative CF</span>
+              <span className="text-neo-muted">Cumulative CF</span>
               <span className={`font-semibold ${point.cumulativeCF >= 0 ? 'text-brand-400' : 'text-red-400'}`}>
                 {fmtSigned(point.cumulativeCF)}
               </span>
@@ -294,11 +294,11 @@ export default function PropertyTimeline({ property, compact = false }) {
   const hoveredPoint = hoveredY !== null ? points[hoveredY] : null
 
   const PHASE_STYLE = {
-    'loan-only':  'bg-red-900/50 border-red-700/50',
-    'loan+rent':  'bg-amber-900/40 border-amber-700/50',
-    'rent-only':  'bg-emerald-900/40 border-emerald-700/50',
-    'no-income':  'bg-slate-800/60 border-slate-700/40',
-    'profit':     'bg-emerald-900/50 border-emerald-700/60',
+    'loan-only':  'bg-red-100 border-red-200/80 shadow-neo-inset-sm',
+    'loan+rent':  'bg-amber-100 border-amber-200/80 shadow-neo-inset-sm',
+    'rent-only':  'bg-emerald-100 border-emerald-200/80 shadow-neo-inset-sm',
+    'no-income':  'bg-neo-bg border-neo-border/50 shadow-neo-inset-sm',
+    'profit':     'bg-emerald-100 border-emerald-300/70 shadow-neo-inset-sm',
   }
   const PHASE_LABEL = {
     'loan-only':  'Loan repayment',
@@ -332,8 +332,8 @@ export default function PropertyTimeline({ property, compact = false }) {
       {!compact && (
         <div className="flex items-center justify-between">
           <div>
-            <h4 className="text-sm font-semibold text-white">Property Timeline</h4>
-            <p className="text-xs text-slate-500 mt-0.5">
+            <h4 className="text-sm font-semibold text-neo-text">Property Timeline</h4>
+            <p className="text-xs text-neo-subtle mt-0.5">
               From purchase to loan payoff and beyond — hover any year for details
             </p>
           </div>
@@ -405,7 +405,7 @@ export default function PropertyTimeline({ property, compact = false }) {
           >
             <div className="absolute -top-1 -translate-x-1/2 w-2 h-2 rounded-full bg-white" />
             {!compact && (
-              <div className="absolute top-full mt-0.5 -translate-x-1/2 text-[9px] text-white font-bold whitespace-nowrap">
+              <div className="absolute top-full mt-0.5 -translate-x-1/2 text-[9px] text-neo-text font-bold whitespace-nowrap">
                 Today
               </div>
             )}
@@ -447,7 +447,7 @@ export default function PropertyTimeline({ property, compact = false }) {
           {tickYears.map(({ year, pct }) => (
             <div
               key={year}
-              className="absolute -translate-x-1/2 text-[9px] text-slate-500"
+              className="absolute -translate-x-1/2 text-[9px] text-neo-subtle"
               style={{ left: `${pct}%` }}
             >
               {year}
@@ -461,7 +461,7 @@ export default function PropertyTimeline({ property, compact = false }) {
         <div className="relative" style={{ height: barH * 2 + 12 }}>
           {/* Zero line */}
           <div
-            className="absolute w-full border-t border-slate-600/60"
+            className="absolute w-full border-t border-neo-border/60"
             style={{ top: barH }}
           />
           <div className="absolute flex items-end w-full gap-px" style={{ top: 0, height: barH * 2 }}>
@@ -516,18 +516,18 @@ export default function PropertyTimeline({ property, compact = false }) {
         <div className="flex flex-wrap gap-3 text-xs">
           <div className="flex items-center gap-1.5">
             <div className="w-2 h-2 rounded-full bg-white/80" />
-            <span className="text-slate-400">Today</span>
+            <span className="text-neo-muted">Today</span>
           </div>
           {loanEndDate > purchaseDate && (
             <div className="flex items-center gap-1.5">
               <div className="w-2 h-2 rounded-full bg-amber-400" />
-              <span className="text-slate-400">Loan ends <span className="text-amber-300">{loanEndDate.getFullYear()}</span></span>
+              <span className="text-neo-muted">Loan ends <span className="text-amber-300">{loanEndDate.getFullYear()}</span></span>
             </div>
           )}
           {rentalStartDate && (
             <div className="flex items-center gap-1.5">
               <div className="w-2 h-2 rounded-full bg-emerald-400" />
-              <span className="text-slate-400">Rental starts <span className="text-emerald-300">{rentalStartDate.toLocaleDateString('nl-BE', { month: 'short', year: 'numeric' })}</span></span>
+              <span className="text-neo-muted">Rental starts <span className="text-emerald-300">{rentalStartDate.toLocaleDateString('nl-BE', { month: 'short', year: 'numeric' })}</span></span>
             </div>
           )}
           {(() => {
@@ -536,9 +536,9 @@ export default function PropertyTimeline({ property, compact = false }) {
             return (
               <div className="flex items-center gap-1.5">
                 <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                <span className="text-slate-400">
+                <span className="text-neo-muted">
                   Pure profit from <span className="text-emerald-300">{profitPoint.date.getFullYear()}</span>
-                  <span className="text-slate-500 ml-1">({fmt(profitPoint.annualRent)}/yr rent)</span>
+                  <span className="text-neo-subtle ml-1">({fmt(profitPoint.annualRent)}/yr rent)</span>
                 </span>
               </div>
             )

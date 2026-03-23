@@ -26,15 +26,15 @@ function formatYAxis(value) {
 function CustomTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null
   return (
-    <div className="bg-slate-800 border border-slate-600 rounded-xl p-3 shadow-xl text-xs min-w-[200px]">
-      <p className="font-semibold text-white mb-2 text-sm">{label}</p>
+    <div className="bg-neo-raised border border-neo-border rounded-xl p-3 shadow-xl text-xs min-w-[200px]">
+      <p className="font-semibold text-neo-text mb-2 text-sm">{label}</p>
       {payload.map((entry) => (
         <div key={entry.dataKey} className="flex items-center justify-between gap-4 mb-1">
           <span className="font-medium flex items-center gap-1.5" style={{ color: entry.color }}>
             <span className="w-2 h-2 rounded-full inline-block" style={{ background: entry.color }} />
             {entry.name}
           </span>
-          <span className="text-white font-semibold">{formatEUR(entry.value)}</span>
+          <span className="text-neo-text font-semibold">{formatEUR(entry.value)}</span>
         </div>
       ))}
     </div>
@@ -64,25 +64,25 @@ function PropertyCard({ property, decision, onDecisionChange }) {
   const customRate = decision.investmentRate || INVESTMENT_TYPES[investmentType].rate
   
   return (
-    <div className="bg-slate-700/50 rounded-xl p-4 border border-slate-600 hover:border-slate-500 transition-colors">
+    <div className="bg-neo-sunken/55 rounded-xl p-4 border border-neo-border hover:border-neo-border transition-colors">
       {/* Property header */}
       <div className="mb-3">
-        <h3 className="font-semibold text-white text-sm">{property.name || 'Unnamed Property'}</h3>
-        <p className="text-xs text-slate-400 mt-0.5">{property.address || 'No address'}</p>
+        <h3 className="font-semibold text-neo-text text-sm">{property.name || 'Unnamed Property'}</h3>
+        <p className="text-xs text-neo-muted mt-0.5">{property.address || 'No address'}</p>
       </div>
       
       {/* Metrics */}
-      <div className="grid grid-cols-3 gap-2 mb-4 pb-3 border-b border-slate-600">
+      <div className="grid grid-cols-3 gap-2 mb-4 pb-3 border-b border-neo-border">
         <div>
-          <p className="text-[10px] text-slate-500 uppercase tracking-wide">Value</p>
-          <p className="text-xs font-semibold text-white">{formatEUR(property.currentValue || 0)}</p>
+          <p className="text-[10px] text-neo-subtle uppercase tracking-wide">Value</p>
+          <p className="text-xs font-semibold text-neo-text">{formatEUR(property.currentValue || 0)}</p>
         </div>
         <div>
-          <p className="text-[10px] text-slate-500 uppercase tracking-wide">Equity</p>
+          <p className="text-[10px] text-neo-subtle uppercase tracking-wide">Equity</p>
           <p className="text-xs font-semibold text-emerald-400">{formatEUR(equity)}</p>
         </div>
         <div>
-          <p className="text-[10px] text-slate-500 uppercase tracking-wide">Rent</p>
+          <p className="text-[10px] text-neo-subtle uppercase tracking-wide">Rent</p>
           <p className="text-xs font-semibold text-blue-400">
             {property.status === 'rented' 
               ? `€${Math.round((property.startRentalIncome || property.monthlyRentalIncome || 0))}/mo`
@@ -94,7 +94,7 @@ function PropertyCard({ property, decision, onDecisionChange }) {
       {/* Action selector */}
       <div className="space-y-3">
         <div>
-          <label className="text-xs text-slate-400 mb-1.5 block">Action</label>
+          <label className="text-xs text-neo-muted mb-1.5 block">Action</label>
           <select
             className="input text-sm"
             value={action}
@@ -110,7 +110,7 @@ function PropertyCard({ property, decision, onDecisionChange }) {
         {action === 'sell' && (
           <>
             <div>
-              <label className="text-xs text-slate-400 mb-1.5 block">Investment Type</label>
+              <label className="text-xs text-neo-muted mb-1.5 block">Investment Type</label>
               <select
                 className="input text-sm"
                 value={investmentType}
@@ -127,14 +127,14 @@ function PropertyCard({ property, decision, onDecisionChange }) {
                   <option key={key} value={key}>{info.label}</option>
                 ))}
               </select>
-              <p className="text-[10px] text-slate-500 mt-1">
+              <p className="text-[10px] text-neo-subtle mt-1">
                 {INVESTMENT_TYPES[investmentType].description}
               </p>
             </div>
             
             {investmentType === 'custom' && (
               <div>
-                <label className="text-xs text-slate-400 mb-1.5 block">Expected Return</label>
+                <label className="text-xs text-neo-muted mb-1.5 block">Expected Return</label>
                 <div className="relative">
                   <input
                     className="input text-sm pr-8"
@@ -148,14 +148,14 @@ function PropertyCard({ property, decision, onDecisionChange }) {
                       investmentRate: Number(e.target.value) / 100
                     })}
                   />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm">%</span>
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-neo-muted text-sm">%</span>
                 </div>
               </div>
             )}
             
             {/* Sale timing */}
             <div>
-              <label className="text-xs text-slate-400 mb-1.5 block">Sale Timing</label>
+              <label className="text-xs text-neo-muted mb-1.5 block">Sale Timing</label>
               <select
                 className="input text-sm"
                 value={decision.saleYear || 0}
@@ -181,12 +181,12 @@ function PropertyCard({ property, decision, onDecisionChange }) {
 function TaxConfigPanel({ config, onChange }) {
   return (
     <div className="card">
-      <h3 className="font-semibold text-slate-100 mb-4">Tax Configuration</h3>
+      <h3 className="font-semibold text-neo-text mb-4">Tax Configuration</h3>
       <div className="space-y-4">
         
         {/* Rental income tax */}
         <div>
-          <label className="text-sm text-slate-300 mb-2 block">Rental Income Tax</label>
+          <label className="text-sm text-neo-muted mb-2 block">Rental Income Tax</label>
           <div className="space-y-2">
             <label className="flex items-center gap-2 cursor-pointer">
               <input
@@ -196,7 +196,7 @@ function TaxConfigPanel({ config, onChange }) {
                 onChange={() => onChange({ ...config, useWithholding: true })}
                 className="text-brand-500"
               />
-              <span className="text-sm text-slate-300">
+              <span className="text-sm text-neo-muted">
                 30% withholding tax (simplified regime)
               </span>
             </label>
@@ -208,12 +208,12 @@ function TaxConfigPanel({ config, onChange }) {
                 onChange={() => onChange({ ...config, useWithholding: false })}
                 className="text-brand-500"
               />
-              <span className="text-sm text-slate-300">
+              <span className="text-sm text-neo-muted">
                 Personal income declaration (no withholding applied here)
               </span>
             </label>
           </div>
-          <p className="text-xs text-slate-500 mt-2">
+          <p className="text-xs text-neo-subtle mt-2">
             Belgian rental income can be taxed via 30% withholding or declared in personal income (marginal rate varies)
           </p>
         </div>
@@ -227,18 +227,18 @@ function TaxConfigPanel({ config, onChange }) {
               onChange={(e) => onChange({ ...config, capitalGainsApplies: e.target.checked })}
               className="text-brand-500"
             />
-            <span className="text-sm text-slate-300">
+            <span className="text-sm text-neo-muted">
               Apply 16.5% capital gains tax (if sold within 5 years of purchase)
             </span>
           </label>
-          <p className="text-xs text-slate-500 mt-1 ml-6">
+          <p className="text-xs text-neo-subtle mt-1 ml-6">
             Belgian speculation tax applies to properties sold within 5 years
           </p>
         </div>
         
         {/* ETF dividend tax */}
         <div>
-          <label className="text-sm text-slate-300 mb-2 block">ETF Dividend Taxation</label>
+          <label className="text-sm text-neo-muted mb-2 block">ETF Dividend Taxation</label>
           <div className="flex items-center gap-3">
             <input
               type="range"
@@ -249,11 +249,11 @@ function TaxConfigPanel({ config, onChange }) {
               onChange={(e) => onChange({ ...config, etfDividendPct: Number(e.target.value) / 100 })}
               className="flex-1"
             />
-            <span className="text-sm font-semibold text-white w-12 text-right">
+            <span className="text-sm font-semibold text-neo-text w-12 text-right">
               {((config.etfDividendPct || 0) * 100).toFixed(0)}%
             </span>
           </div>
-          <p className="text-xs text-slate-500 mt-1">
+          <p className="text-xs text-neo-subtle mt-1">
             Percentage of ETF returns from dividends (30% tax applies). Accumulating ETFs: 0%. Distributing ETFs: 20-40%.
           </p>
         </div>
@@ -276,7 +276,7 @@ function NetYieldRealityCard({ properties, decisions, taxConfig }) {
   return (
     <div className="card">
       <h3 className="section-title mb-4">Net Yield Reality Check</h3>
-      <p className="text-xs text-slate-400 mb-4">
+      <p className="text-xs text-neo-muted mb-4">
         True net yield after ALL costs (vacancy, maintenance, insurance, property tax, mortgage, taxes)
       </p>
       
@@ -322,11 +322,11 @@ function NetYieldRealityCard({ properties, decisions, taxConfig }) {
                            'text-emerald-400'
           
           return (
-            <div key={property.id} className="bg-slate-700/30 rounded-lg p-4 space-y-3">
+            <div key={property.id} className="bg-neo-sunken/30 rounded-lg p-4 space-y-3">
               <div className="flex items-center justify-between mb-2">
-                <h4 className="font-semibold text-white text-sm">{property.name}</h4>
+                <h4 className="font-semibold text-neo-text text-sm">{property.name}</h4>
                 <div className="text-right">
-                  <p className="text-xs text-slate-400">Net Yield</p>
+                  <p className="text-xs text-neo-muted">Net Yield</p>
                   <p className={`text-lg font-bold ${yieldColor}`}>
                     {netYield.toFixed(2)}%
                   </p>
@@ -336,21 +336,21 @@ function NetYieldRealityCard({ properties, decisions, taxConfig }) {
               {/* Income breakdown */}
               <div className="space-y-1.5 text-xs">
                 <div className="flex justify-between">
-                  <span className="text-slate-400">Gross annual rent</span>
+                  <span className="text-neo-muted">Gross annual rent</span>
                   <span className="text-emerald-400 font-medium">{formatEUR(grossAnnualRent)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-400">Vacancy ({(vacancyRate * 100).toFixed(0)}%)</span>
+                  <span className="text-neo-muted">Vacancy ({(vacancyRate * 100).toFixed(0)}%)</span>
                   <span className="text-orange-400 font-medium">-{formatEUR(grossAnnualRent * vacancyRate)}</span>
                 </div>
                 {taxConfig.useWithholding && (
                   <div className="flex justify-between">
-                    <span className="text-slate-400">Withholding tax (30%)</span>
+                    <span className="text-neo-muted">Withholding tax (30%)</span>
                     <span className="text-orange-400 font-medium">-{formatEUR(effectiveRent * 0.30)}</span>
                   </div>
                 )}
-                <div className="flex justify-between font-medium pt-1 border-t border-slate-600">
-                  <span className="text-slate-300">Net rental income</span>
+                <div className="flex justify-between font-medium pt-1 border-t border-neo-border">
+                  <span className="text-neo-muted">Net rental income</span>
                   <span className="text-emerald-400">{formatEUR(netRent)}</span>
                 </div>
               </div>
@@ -358,53 +358,53 @@ function NetYieldRealityCard({ properties, decisions, taxConfig }) {
               {/* Costs breakdown */}
               <div className="space-y-1.5 text-xs">
                 <div className="flex justify-between">
-                  <span className="text-slate-400">Maintenance</span>
+                  <span className="text-neo-muted">Maintenance</span>
                   <span className="text-red-400 font-medium">-{formatEUR(maintenance)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-400">Insurance</span>
+                  <span className="text-neo-muted">Insurance</span>
                   <span className="text-red-400 font-medium">-{formatEUR(insurance)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-400">Property tax</span>
+                  <span className="text-neo-muted">Property tax</span>
                   <span className="text-red-400 font-medium">-{formatEUR(propertyTax)}</span>
                 </div>
                 {monthlyExpenses > 0 && (
                   <div className="flex justify-between">
-                    <span className="text-slate-400">Other expenses (syndic, etc.)</span>
+                    <span className="text-neo-muted">Other expenses (syndic, etc.)</span>
                     <span className="text-red-400 font-medium">-{formatEUR(monthlyExpenses)}</span>
                   </div>
                 )}
                 {annualMortgage > 0 && (
                   <div className="flex justify-between">
-                    <span className="text-slate-400">Mortgage payments</span>
+                    <span className="text-neo-muted">Mortgage payments</span>
                     <span className="text-red-400 font-medium">-{formatEUR(annualMortgage)}</span>
                   </div>
                 )}
-                <div className="flex justify-between font-medium pt-1 border-t border-slate-600">
-                  <span className="text-slate-300">Total costs</span>
+                <div className="flex justify-between font-medium pt-1 border-t border-neo-border">
+                  <span className="text-neo-muted">Total costs</span>
                   <span className="text-red-400">{formatEUR(totalCosts)}</span>
                 </div>
               </div>
               
               {/* Final summary */}
-              <div className="bg-slate-800/50 rounded-lg p-3 space-y-2">
+              <div className="bg-neo-sunken/60 rounded-lg p-3 space-y-2">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm font-semibold text-slate-200">Net Annual Income</span>
+                  <span className="text-sm font-semibold text-neo-text/95">Net Annual Income</span>
                   <span className={`text-lg font-bold ${netIncome >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                     {formatEUR(netIncome)}
                   </span>
                 </div>
                 <div className="flex justify-between text-xs">
-                  <span className="text-slate-400">Gross yield</span>
-                  <span className="text-slate-300">{grossYield.toFixed(2)}%</span>
+                  <span className="text-neo-muted">Gross yield</span>
+                  <span className="text-neo-muted">{grossYield.toFixed(2)}%</span>
                 </div>
                 <div className="flex justify-between text-xs">
-                  <span className="text-slate-400">Net yield (after all costs)</span>
+                  <span className="text-neo-muted">Net yield (after all costs)</span>
                   <span className={`font-semibold ${yieldColor}`}>{netYield.toFixed(2)}%</span>
                 </div>
                 <div className="flex justify-between text-xs">
-                  <span className="text-slate-400">Monthly net cash flow</span>
+                  <span className="text-neo-muted">Monthly net cash flow</span>
                   <span className={`font-medium ${netIncome >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                     {formatEUR(netIncome / 12)}/mo
                   </span>
@@ -413,7 +413,7 @@ function NetYieldRealityCard({ properties, decisions, taxConfig }) {
               
               {/* Warning if net yield is low */}
               {netYield < 3 && (
-                <div className="bg-amber-900/20 border border-amber-700/50 rounded-lg p-2 flex items-start gap-2">
+                <div className="bg-amber-50 border border-amber-200/80 rounded-2xl p-2 flex items-start gap-2 shadow-neo-inset-sm">
                   <svg className="w-4 h-4 text-amber-400 mt-0.5 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                   </svg>
@@ -454,10 +454,10 @@ function SaleBreakdownCard({ properties, decisions, taxConfig, onDecisionChange 
           })
           
           return (
-            <div key={property.id} className="bg-slate-700/30 rounded-lg p-4 space-y-2">
+            <div key={property.id} className="bg-neo-sunken/30 rounded-lg p-4 space-y-2">
               <div className="flex items-center justify-between mb-3">
-                <h4 className="font-semibold text-white text-sm">{property.name}</h4>
-                <span className="text-xs text-slate-400">Year {saleYear}</span>
+                <h4 className="font-semibold text-neo-text text-sm">{property.name}</h4>
+                <span className="text-xs text-neo-muted">Year {saleYear}</span>
               </div>
               
               {/* Mortgage portability toggle */}
@@ -482,20 +482,20 @@ function SaleBreakdownCard({ properties, decisions, taxConfig, onDecisionChange 
               
               <div className="space-y-1.5 text-sm">
                 <div className="flex justify-between">
-                  <span className="text-slate-400">Projected sale value</span>
+                  <span className="text-neo-muted">Projected sale value</span>
                   <span className="text-emerald-400 font-medium">{formatEUR(proceeds.grossValue)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-400">Remaining loan</span>
+                  <span className="text-neo-muted">Remaining loan</span>
                   <span className="text-red-400 font-medium">-{formatEUR(proceeds.loanBalance)}</span>
                 </div>
                 <div className="flex justify-between">
-                  <span className="text-slate-400">Brokerage (3%)</span>
+                  <span className="text-neo-muted">Brokerage (3%)</span>
                   <span className="text-orange-400 font-medium">-{formatEUR(proceeds.brokerageFee)}</span>
                 </div>
                 {!willBuyAnother && proceeds.prepaymentPenalty > 0 && (
                   <div className="flex justify-between">
-                    <span className="text-slate-400">Prepayment penalty (1%)</span>
+                    <span className="text-neo-muted">Prepayment penalty (1%)</span>
                     <span className="text-orange-400 font-medium">-{formatEUR(proceeds.prepaymentPenalty)}</span>
                   </div>
                 )}
@@ -507,20 +507,20 @@ function SaleBreakdownCard({ properties, decisions, taxConfig, onDecisionChange 
                 )}
                 {proceeds.capitalGainsTax > 0 && (
                   <div className="flex justify-between">
-                    <span className="text-slate-400">Capital gains tax (16.5%)</span>
+                    <span className="text-neo-muted">Capital gains tax (16.5%)</span>
                     <span className="text-orange-400 font-medium">-{formatEUR(proceeds.capitalGainsTax)}</span>
                   </div>
                 )}
               </div>
               
-              <div className="border-t border-slate-600 pt-2 flex justify-between items-center">
-                <span className="font-semibold text-slate-200">Net Proceeds</span>
+              <div className="border-t border-neo-border pt-2 flex justify-between items-center">
+                <span className="font-semibold text-neo-text/95">Net Proceeds</span>
                 <span className="text-lg font-bold text-emerald-400">{formatEUR(proceeds.netProceeds)}</span>
               </div>
               
               {/* Show mortgage portability benefits */}
               {willBuyAnother && proceeds.loanBalance > 0 && (
-                <div className="bg-emerald-900/20 border border-emerald-700/50 rounded-lg p-3 space-y-2">
+                <div className="bg-emerald-50 border border-emerald-200/80 rounded-2xl p-3 space-y-2 shadow-neo-inset-sm">
                   <p className="text-xs font-semibold text-emerald-300">Mortgage Portability Benefits</p>
                   <div className="space-y-1 text-xs text-emerald-200">
                     <p>• No prepayment penalty: <strong>+{formatEUR(Math.round(proceeds.loanBalance * 0.01))}</strong></p>
@@ -532,7 +532,7 @@ function SaleBreakdownCard({ properties, decisions, taxConfig, onDecisionChange 
                 </div>
               )}
               
-              <div className="text-xs text-slate-500">
+              <div className="text-xs text-neo-subtle">
                 {willBuyAnother 
                   ? `Mortgage ported to new property. Additional funds invested in ${INVESTMENT_TYPES[decision.investmentType]?.label} at ${((decision.investmentRate || 0.07) * 100).toFixed(1)}%`
                   : `Invested in ${INVESTMENT_TYPES[decision.investmentType]?.label} at ${((decision.investmentRate || 0.07) * 100).toFixed(1)}% annual return`
@@ -566,42 +566,42 @@ function ComparisonTable({ data }) {
       
       <table className="w-full text-sm min-w-[600px]">
         <thead>
-          <tr className="border-b border-slate-700">
-            <th className="py-2 text-left pr-3 text-slate-400 font-medium text-xs">Year</th>
-            <th className="py-2 text-right px-2 text-slate-400 font-medium text-xs">Keep: Net Worth</th>
-            <th className="py-2 text-right px-2 text-slate-400 font-medium text-xs">Keep: Cash Flow</th>
-            <th className="py-2 text-right px-2 text-slate-400 font-medium text-xs">Custom: Net Worth</th>
-            <th className="py-2 text-right px-2 text-slate-400 font-medium text-xs">Custom: Cash Flow</th>
-            <th className="py-2 text-right pl-2 text-slate-400 font-medium text-xs">Better</th>
+          <tr className="border-b border-neo-border">
+            <th className="py-2 text-left pr-3 text-neo-muted font-medium text-xs">Year</th>
+            <th className="py-2 text-right px-2 text-neo-muted font-medium text-xs">Keep: Net Worth</th>
+            <th className="py-2 text-right px-2 text-neo-muted font-medium text-xs">Keep: Cash Flow</th>
+            <th className="py-2 text-right px-2 text-neo-muted font-medium text-xs">Custom: Net Worth</th>
+            <th className="py-2 text-right px-2 text-neo-muted font-medium text-xs">Custom: Cash Flow</th>
+            <th className="py-2 text-right pl-2 text-neo-muted font-medium text-xs">Better</th>
           </tr>
         </thead>
-        <tbody className="divide-y divide-slate-800">
+        <tbody className="divide-y divide-neo-border/50">
           {rows.map((row) => {
             const customBetter = row.customNetWorth > row.baselineNetWorth
             const diff = row.customNetWorth - row.baselineNetWorth
             
             return (
-              <tr key={row.year} className="hover:bg-slate-700/30 transition-colors">
-                <td className="py-2 pr-3 font-medium text-slate-200">{row.label}</td>
+              <tr key={row.year} className="hover:bg-neo-sunken/30 transition-colors">
+                <td className="py-2 pr-3 font-medium text-neo-text/95">{row.label}</td>
                 <td className="py-2 px-2 text-right text-emerald-400 font-medium">
                   {formatEUR(row.baselineNetWorth)}
                 </td>
-                <td className="py-2 px-2 text-right text-slate-400 text-xs">
+                <td className="py-2 px-2 text-right text-neo-muted text-xs">
                   {formatEUR(row.baselineCF)}
                 </td>
                 <td className="py-2 px-2 text-right text-violet-400 font-medium">
                   {formatEUR(row.customNetWorth)}
                 </td>
-                <td className="py-2 px-2 text-right text-slate-400 text-xs">
+                <td className="py-2 px-2 text-right text-neo-muted text-xs">
                   {formatEUR(row.customCF)}
                 </td>
                 <td className="py-2 pl-2 text-right">
                   <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${
                     Math.abs(diff) < 1000
-                      ? 'bg-slate-700 text-slate-300'
+                      ? 'bg-neo-sunken text-neo-muted'
                       : customBetter
-                        ? 'bg-violet-900/40 text-violet-400'
-                        : 'bg-emerald-900/40 text-emerald-400'
+                        ? 'bg-violet-100 text-violet-900 border border-violet-200/80 shadow-neo-inset-sm'
+                        : 'bg-emerald-100 text-emerald-900 border border-emerald-200/80 shadow-neo-inset-sm'
                   }`}>
                     {Math.abs(diff) < 1000 ? 'Neutral' : customBetter ? 'Custom' : 'Keep'}
                   </span>
@@ -635,13 +635,13 @@ function SummaryCards({ data }) {
       {/* Net Worth at Year 20 */}
       <div className="card">
         <div className="flex items-center gap-2 mb-2">
-          <h4 className="text-xs text-slate-400 uppercase tracking-wide">Net Worth (Year 20)</h4>
+          <h4 className="text-xs text-neo-muted uppercase tracking-wide">Net Worth (Year 20)</h4>
           <InfoTooltip
             content={
               <div>
                 <p className="font-semibold mb-1.5">Net Worth = Assets - Liabilities</p>
-                <p className="text-slate-300 mb-2">Your total equity after 20 years.</p>
-                <p className="text-xs text-slate-400">Includes property value appreciation minus remaining loan balances.</p>
+                <p className="text-neo-muted mb-2">Your total equity after 20 years.</p>
+                <p className="text-xs text-neo-muted">Includes property value appreciation minus remaining loan balances.</p>
               </div>
             }
           />
@@ -649,14 +649,14 @@ function SummaryCards({ data }) {
         <div className="space-y-2">
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-1.5">
-              <span className="text-sm text-slate-300">Keep All</span>
+              <span className="text-sm text-neo-muted">Keep All</span>
               <InfoTooltip
                 size="sm"
                 content={
                   <div>
                     <p className="font-semibold mb-1">Keep All Properties</p>
-                    <p className="text-slate-300 mb-2">If you keep all properties and continue renting them.</p>
-                    <p className="text-xs text-slate-400">Includes property appreciation, loan paydown, and rental cash flow.</p>
+                    <p className="text-neo-muted mb-2">If you keep all properties and continue renting them.</p>
+                    <p className="text-xs text-neo-muted">Includes property appreciation, loan paydown, and rental cash flow.</p>
                   </div>
                 }
               />
@@ -665,26 +665,26 @@ function SummaryCards({ data }) {
           </div>
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-1.5">
-              <span className="text-sm text-slate-300">Custom</span>
+              <span className="text-sm text-neo-muted">Custom</span>
               <InfoTooltip
                 size="sm"
                 content={
                   <div>
                     <p className="font-semibold mb-1">Custom Strategy</p>
-                    <p className="text-slate-300">Based on your per-property decisions (keep, sell, occupy).</p>
+                    <p className="text-neo-muted">Based on your per-property decisions (keep, sell, occupy).</p>
                   </div>
                 }
               />
             </div>
             <span className="text-lg font-bold text-violet-400">{formatEUR(customEnd)}</span>
           </div>
-          <div className="border-t border-slate-700 pt-2 flex justify-between items-center">
-            <span className="text-sm font-semibold text-slate-200">Difference</span>
+          <div className="border-t border-neo-border pt-2 flex justify-between items-center">
+            <span className="text-sm font-semibold text-neo-text/95">Difference</span>
             <span className={`text-lg font-bold ${netWorthDiff >= 0 ? 'text-violet-400' : 'text-emerald-400'}`}>
               {netWorthDiff >= 0 ? '+' : ''}{formatEUR(netWorthDiff)}
             </span>
           </div>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-neo-subtle">
             ({netWorthDiffPct >= 0 ? '+' : ''}{netWorthDiffPct.toFixed(1)}%)
           </p>
         </div>
@@ -693,14 +693,14 @@ function SummaryCards({ data }) {
       {/* Total Cash Flow */}
       <div className="card">
         <div className="flex items-center gap-2 mb-2">
-          <h4 className="text-xs text-slate-400 uppercase tracking-wide">Cumulative Cash Flow</h4>
+          <h4 className="text-xs text-neo-muted uppercase tracking-wide">Cumulative Cash Flow</h4>
           <InfoTooltip
             content={
               <div>
                 <p className="font-semibold mb-1.5">Total Cash Generated</p>
-                <p className="text-slate-300 mb-2">Sum of all annual cash flows over 20 years.</p>
-                <p className="text-xs text-slate-400 mb-2">Includes:</p>
-                <ul className="list-disc list-inside space-y-0.5 text-xs text-slate-400">
+                <p className="text-neo-muted mb-2">Sum of all annual cash flows over 20 years.</p>
+                <p className="text-xs text-neo-muted mb-2">Includes:</p>
+                <ul className="list-disc list-inside space-y-0.5 text-xs text-neo-muted">
                   <li>Rental income (indexed, after vacancy)</li>
                   <li>Operating expenses (maintenance, insurance, taxes)</li>
                   <li>Loan payments (principal + interest)</li>
@@ -712,15 +712,15 @@ function SummaryCards({ data }) {
         </div>
         <div className="space-y-2">
           <div className="flex justify-between items-center">
-            <span className="text-sm text-slate-300">Keep All</span>
+            <span className="text-sm text-neo-muted">Keep All</span>
             <span className="text-lg font-bold text-emerald-400">{formatEUR(baselineCFTotal)}</span>
           </div>
           <div className="flex justify-between items-center">
-            <span className="text-sm text-slate-300">Custom</span>
+            <span className="text-sm text-neo-muted">Custom</span>
             <span className="text-lg font-bold text-violet-400">{formatEUR(customCFTotal)}</span>
           </div>
-          <div className="border-t border-slate-700 pt-2 flex justify-between items-center">
-            <span className="text-sm font-semibold text-slate-200">Difference</span>
+          <div className="border-t border-neo-border pt-2 flex justify-between items-center">
+            <span className="text-sm font-semibold text-neo-text/95">Difference</span>
             <span className={`text-lg font-bold ${cfDiff >= 0 ? 'text-violet-400' : 'text-emerald-400'}`}>
               {cfDiff >= 0 ? '+' : ''}{formatEUR(cfDiff)}
             </span>
@@ -729,14 +729,14 @@ function SummaryCards({ data }) {
       </div>
       
       {/* Recommendation */}
-      <div className={`card ${customBetter ? 'bg-violet-900/20 border-violet-700' : 'bg-emerald-900/20 border-emerald-700'}`}>
+      <div className={`card ${customBetter ? 'bg-violet-50 border-violet-200/80 shadow-neo-inset-sm' : 'bg-emerald-50 border-emerald-200/80 shadow-neo-inset-sm'}`}>
         <div className="flex items-center gap-2 mb-2">
-          <h4 className="text-xs text-slate-400 uppercase tracking-wide">Recommendation</h4>
+          <h4 className="text-xs text-neo-muted uppercase tracking-wide">Recommendation</h4>
           <InfoTooltip
             content={
               <div>
                 <p className="font-semibold mb-1.5">Which Strategy is Better?</p>
-                <p className="text-slate-300">Based on net worth at year 20. The strategy with higher net worth is recommended.</p>
+                <p className="text-neo-muted">Based on net worth at year 20. The strategy with higher net worth is recommended.</p>
               </div>
             }
           />
@@ -773,14 +773,14 @@ function SummaryCards({ data }) {
 function EmptyState() {
   return (
     <div className="flex flex-col items-center justify-center py-20 text-center">
-      <div className="w-16 h-16 rounded-2xl bg-slate-700 flex items-center justify-center mb-4">
-        <svg className="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div className="w-16 h-16 rounded-2xl bg-neo-sunken flex items-center justify-center mb-4">
+        <svg className="w-8 h-8 text-neo-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
             d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
         </svg>
       </div>
-      <p className="text-slate-300 font-medium">No properties to analyze</p>
-      <p className="text-slate-500 text-sm mt-1">Add at least one property to compare scenarios.</p>
+      <p className="text-neo-muted font-medium">No properties to analyze</p>
+      <p className="text-neo-subtle text-sm mt-1">Add at least one property to compare scenarios.</p>
     </div>
   )
 }
@@ -837,22 +837,22 @@ export default function ScenarioPlanner({ properties }) {
     <div className="space-y-6">
       {/* Page header */}
       <div>
-        <h1 className="text-2xl font-bold text-white">Scenario Planner</h1>
-        <p className="text-slate-400 text-sm mt-0.5">
+        <h1 className="text-2xl font-bold text-neo-text">Scenario Planner</h1>
+        <p className="text-neo-muted text-sm mt-0.5">
           Compare property-by-property decisions: keep & rent vs sell & invest
         </p>
       </div>
       
       {/* Scenario summary */}
-      <div className="bg-brand-900/20 border border-brand-700 rounded-xl px-4 py-3">
-        <p className="text-sm text-brand-200">
+      <div className="bg-sky-50 border border-sky-200/80 rounded-2xl px-4 py-3 shadow-neo-inset-sm">
+        <p className="text-sm text-sky-900">
           <strong>Current scenario:</strong> {keepCount} propert{keepCount === 1 ? 'y' : 'ies'} kept, {sellCount} sold
         </p>
       </div>
       
       {/* Property cards grid */}
       <div>
-        <h2 className="font-semibold text-slate-100 mb-4">Your Properties</h2>
+        <h2 className="font-semibold text-neo-text mb-4">Your Properties</h2>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {properties.map(property => (
             <PropertyCard
@@ -885,7 +885,7 @@ export default function ScenarioPlanner({ properties }) {
       
       {/* Crossover insight */}
       {crossover ? (
-        <div className="bg-violet-900/20 border border-violet-700 rounded-xl px-4 py-3 flex items-start gap-3">
+        <div className="bg-violet-50 border border-violet-200/80 rounded-2xl px-4 py-3 flex items-start gap-3 shadow-neo-inset-sm">
           <span className="text-violet-400 mt-0.5">
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -898,7 +898,7 @@ export default function ScenarioPlanner({ properties }) {
         </div>
       ) : (
         comparisonData.length > 0 && comparisonData[comparisonData.length - 1].customNetWorth > comparisonData[comparisonData.length - 1].baselineNetWorth ? (
-          <div className="bg-violet-900/20 border border-violet-700 rounded-xl px-4 py-3 flex items-start gap-3">
+          <div className="bg-violet-50 border border-violet-200/80 rounded-2xl px-4 py-3 flex items-start gap-3 shadow-neo-inset-sm">
             <span className="text-violet-400 mt-0.5">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -910,7 +910,7 @@ export default function ScenarioPlanner({ properties }) {
             </p>
           </div>
         ) : (
-          <div className="bg-emerald-900/20 border border-emerald-700 rounded-xl px-4 py-3 flex items-start gap-3">
+          <div className="bg-emerald-50 border border-emerald-200/80 rounded-2xl px-4 py-3 flex items-start gap-3 shadow-neo-inset-sm">
             <span className="text-emerald-400 mt-0.5">
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -927,8 +927,8 @@ export default function ScenarioPlanner({ properties }) {
       {/* Comparison chart */}
       <div className="card">
         <div className="mb-5">
-          <h2 className="font-semibold text-slate-100">Keep All vs Custom Strategy</h2>
-          <p className="text-xs text-slate-400 mt-0.5">20-year net worth projection</p>
+          <h2 className="font-semibold text-neo-text">Keep All vs Custom Strategy</h2>
+          <p className="text-xs text-neo-muted mt-0.5">20-year net worth projection</p>
         </div>
         
         <ResponsiveContainer width="100%" height={360}>
@@ -944,9 +944,9 @@ export default function ScenarioPlanner({ properties }) {
               </linearGradient>
             </defs>
             
-            <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+            <CartesianGrid strokeDasharray="3 3" stroke="#cbd5e1" vertical={false} />
             <XAxis dataKey="label" tick={{ fill: '#94a3b8', fontSize: 11 }}
-              axisLine={{ stroke: '#1e293b' }} tickLine={false} />
+              axisLine={{ stroke: '#cbd5e1' }} tickLine={false} />
             <YAxis tickFormatter={formatYAxis} tick={{ fill: '#94a3b8', fontSize: 10 }}
               axisLine={false} tickLine={false} width={68} />
             <Tooltip content={<CustomTooltip />} />

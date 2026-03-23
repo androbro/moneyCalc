@@ -8,37 +8,37 @@ import PropertyTimeline from './PropertyTimeline'
 const INFO = {
   totalPortfolioValue: (
     <>
-      <strong className="text-white">Total Portfolio Value</strong>
+      <strong className="text-neo-text">Total Portfolio Value</strong>
       <p className="mt-1">The sum of the current market values of all your properties as entered in each property's settings.</p>
-      <p className="mt-1 text-slate-400">This is what you estimate the properties are worth today — not what you paid for them.</p>
+      <p className="mt-1 text-neo-muted">This is what you estimate the properties are worth today — not what you paid for them.</p>
     </>
   ),
   totalDebt: (
     <>
-      <strong className="text-white">Total Debt</strong>
+      <strong className="text-neo-text">Total Debt</strong>
       <p className="mt-1">The total outstanding loan balances across all properties today.</p>
-      <p className="mt-1 text-slate-400">If you uploaded an amortization schedule (CSV), the exact balance at today's date is used. Otherwise the original loan amount is shown.</p>
+      <p className="mt-1 text-neo-muted">If you uploaded an amortization schedule (CSV), the exact balance at today's date is used. Otherwise the original loan amount is shown.</p>
     </>
   ),
   netWorth: (
     <>
-      <strong className="text-white">Net Worth (Real Estate)</strong>
-      <p className="mt-1 font-mono text-slate-300">= Portfolio Value − Total Debt</p>
+      <strong className="text-neo-text">Net Worth (Real Estate)</strong>
+      <p className="mt-1 font-mono text-neo-muted">= Portfolio Value − Total Debt</p>
       <p className="mt-1">The equity you own across your entire portfolio. This is what you'd pocket (before taxes and fees) if you sold everything and paid off all loans today.</p>
     </>
   ),
   netCashFlow: (
     <>
-      <strong className="text-white">Net Cash Flow</strong>
-      <p className="mt-1 font-mono text-slate-300">= Rent − Operating Costs − Loan Interest</p>
+      <strong className="text-neo-text">Net Cash Flow</strong>
+      <p className="mt-1 font-mono text-neo-muted">= Rent − Operating Costs − Loan Interest</p>
       <p className="mt-1">Monthly cash your portfolio generates after costs. Loan <em>capital repayment</em> is not counted as a cost — it builds equity.</p>
-      <ul className="mt-1.5 space-y-0.5 text-slate-400 list-disc list-inside">
+      <ul className="mt-1.5 space-y-0.5 text-neo-muted list-disc list-inside">
         <li>Only includes rent from <strong>active</strong> rentals (respects rental start date)</li>
         <li>Includes maintenance, insurance, property tax, syndic</li>
         <li>Interest = true cost; capital = equity investment</li>
       </ul>
       <p className="mt-2 text-amber-300 text-xs font-semibold">⚠ Belgian income tax not included</p>
-      <p className="mt-0.5 text-slate-400 text-xs">
+      <p className="mt-0.5 text-neo-muted text-xs">
         Rental income for private lettings is taxed via your personal income tax on{' '}
         <em>indexed KI × 1.4</em> — not on actual rent. Loan interest is not deductible.
         Your real after-tax cash flow is lower than shown here.
@@ -47,8 +47,8 @@ const INFO = {
   ),
   ltv: (
     <>
-      <strong className="text-white">Loan-to-Value (LTV)</strong>
-      <p className="mt-1 font-mono text-slate-300">= Total Debt / Portfolio Value × 100</p>
+      <strong className="text-neo-text">Loan-to-Value (LTV)</strong>
+      <p className="mt-1 font-mono text-neo-muted">= Total Debt / Portfolio Value × 100</p>
       <p className="mt-1">The percentage of your portfolio that is financed by debt.</p>
       <ul className="mt-1.5 space-y-0.5 list-disc list-inside">
         <li className="text-emerald-400">&lt; 60% — low risk</li>
@@ -59,44 +59,44 @@ const INFO = {
   ),
   roeSecondary: (
     <>
-      <strong className="text-white">Return on Equity (ROE)</strong>
-      <p className="mt-1 font-mono text-slate-300">= Annual Net CF / Equity × 100</p>
+      <strong className="text-neo-text">Return on Equity (ROE)</strong>
+      <p className="mt-1 font-mono text-neo-muted">= Annual Net CF / Equity × 100</p>
       <p className="mt-1">Annual net cash flow divided by the total equity in your portfolio.</p>
-      <p className="mt-1 text-slate-400">Measures how productively your equity is working. Rule of thumb: above 4–5% is solid for Belgian residential real estate.</p>
+      <p className="mt-1 text-neo-muted">Measures how productively your equity is working. Rule of thumb: above 4–5% is solid for Belgian residential real estate.</p>
     </>
   ),
   netYield: (
     <>
-      <strong className="text-white">Net Yield</strong>
-      <p className="mt-1 font-mono text-slate-300">= Annual Net CF / Portfolio Value × 100</p>
+      <strong className="text-neo-text">Net Yield</strong>
+      <p className="mt-1 font-mono text-neo-muted">= Annual Net CF / Portfolio Value × 100</p>
       <p className="mt-1">Annual net cash flow as a percentage of total portfolio value — independent of leverage. Useful for comparing properties with other asset classes.</p>
     </>
   ),
   marketValue: (
     <>
-      <strong className="text-white">Market Value</strong>
+      <strong className="text-neo-text">Market Value</strong>
       <p className="mt-1">Your estimate of what this property is worth today. Update it as prices change.</p>
     </>
   ),
   equity: (
     <>
-      <strong className="text-white">Equity</strong>
-      <p className="mt-1 font-mono text-slate-300">= Market Value − Loan Balance(s)</p>
+      <strong className="text-neo-text">Equity</strong>
+      <p className="mt-1 font-mono text-neo-muted">= Market Value − Loan Balance(s)</p>
       <p className="mt-1">How much of the property you actually own outright. Grows as the value appreciates and as you repay loans.</p>
     </>
   ),
   monthlyCF: (
     <>
-      <strong className="text-white">Monthly Cash Flow</strong>
-      <p className="mt-1 font-mono text-slate-300">= Rent − Operating Costs − Loan Interest</p>
-      <p className="mt-1 text-slate-400">Capital repayment is excluded — it builds equity rather than leaving your hands.</p>
-      <ul className="mt-1.5 space-y-0.5 text-slate-400 list-disc list-inside">
+      <strong className="text-neo-text">Monthly Cash Flow</strong>
+      <p className="mt-1 font-mono text-neo-muted">= Rent − Operating Costs − Loan Interest</p>
+      <p className="mt-1 text-neo-muted">Capital repayment is excluded — it builds equity rather than leaving your hands.</p>
+      <ul className="mt-1.5 space-y-0.5 text-neo-muted list-disc list-inside">
         <li>€0 rent if rental hasn't started yet</li>
         <li>Includes maintenance, insurance, syndic ÷ 12</li>
         <li>Interest only from loans (not full payment)</li>
       </ul>
       <p className="mt-2 text-amber-300 text-xs font-semibold">⚠ Belgian income tax not modelled</p>
-      <p className="mt-0.5 text-slate-400 text-xs">
+      <p className="mt-0.5 text-neo-muted text-xs">
         Rental income is taxed via personal income tax on indexed KI × 1.4.
         Subtract this from your actual net cash flow.
       </p>
@@ -104,38 +104,38 @@ const INFO = {
   ),
   appreciation: (
     <>
-      <strong className="text-white">Appreciation Rate</strong>
+      <strong className="text-neo-text">Appreciation Rate</strong>
       <p className="mt-1">Annual rate at which you expect this property's value to grow. Used in projection charts. Belgian residential real estate: ~3–4% in urban areas historically.</p>
     </>
   ),
   rent: (
     <>
-      <strong className="text-white">Rent / Month</strong>
+      <strong className="text-neo-text">Rent / Month</strong>
       <p className="mt-1">The gross monthly rental income (starting rent). In projections, this is indexed upward each year at the rent indexation rate.</p>
     </>
   ),
   rentIndex: (
     <>
-      <strong className="text-white">Rent Indexation Rate</strong>
+      <strong className="text-neo-text">Rent Indexation Rate</strong>
       <p className="mt-1">Annual rate at which rent is increased. In Belgium, residential rent is legally indexed to the health index (≈ 2% on average).</p>
     </>
   ),
   loanInterest: (
     <>
-      <strong className="text-white">Loan Interest (monthly)</strong>
+      <strong className="text-neo-text">Loan Interest (monthly)</strong>
       <p className="mt-1">The interest portion of your monthly loan payments — this is the true cost of borrowing that flows out each month.</p>
-      <p className="mt-1 text-slate-400">The capital repayment portion is not shown here — it reduces your debt and builds equity.</p>
+      <p className="mt-1 text-neo-muted">The capital repayment portion is not shown here — it reduces your debt and builds equity.</p>
     </>
   ),
 }
 
 // ─── KPI card ─────────────────────────────────────────────────────────────────
 
-function KpiCard({ label, value, sub, valueColor = 'text-white', icon, trend, info }) {
+function KpiCard({ label, value, sub, valueColor = 'text-neo-text', icon, trend, info }) {
   return (
     <div className="card flex items-start gap-4">
       {icon && (
-        <div className="shrink-0 w-11 h-11 rounded-xl bg-slate-700/80 flex items-center justify-center text-brand-400">
+        <div className="shrink-0 w-11 h-11 rounded-xl bg-neo-bg shadow-neo-inset-sm flex items-center justify-center text-brand-600">
           {icon}
         </div>
       )}
@@ -145,7 +145,7 @@ function KpiCard({ label, value, sub, valueColor = 'text-white', icon, trend, in
           {info && <InfoPopover>{info}</InfoPopover>}
         </p>
         <p className={`stat-value leading-tight ${valueColor}`}>{value}</p>
-        {sub && <p className="text-xs text-slate-500 mt-1">{sub}</p>}
+        {sub && <p className="text-xs text-neo-subtle mt-1">{sub}</p>}
         {trend !== undefined && (
           <div className={`flex items-center gap-1 mt-1 text-xs font-medium ${trend >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
             {trend >= 0
@@ -165,12 +165,12 @@ function KpiCard({ label, value, sub, valueColor = 'text-white', icon, trend, in
 function SecondaryMetric({ label, value, valueColor, sub, info }) {
   return (
     <div className="card text-center py-4">
-      <p className="text-xs text-slate-400 mb-1 flex items-center justify-center">
+      <p className="text-xs text-neo-muted mb-1 flex items-center justify-center">
         {label}
         {info && <InfoPopover>{info}</InfoPopover>}
       </p>
       <p className={`text-xl font-bold ${valueColor}`}>{value}</p>
-      <p className="text-xs text-slate-500 mt-1">{sub}</p>
+      <p className="text-xs text-neo-subtle mt-1">{sub}</p>
     </div>
   )
 }
@@ -230,16 +230,16 @@ function PropertyCard({ property, onEdit, onDelete }) {
       <div className="flex items-start justify-between gap-2">
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2 flex-wrap">
-            <h3 className="font-semibold text-white truncate">{property.name}</h3>
+            <h3 className="font-semibold text-neo-text truncate">{property.name}</h3>
             {isHome && (
               <span className="shrink-0 text-[10px] font-bold px-1.5 py-0.5 rounded-full
-                               bg-brand-900/50 border border-brand-700/50 text-brand-300">
+                               bg-sky-100 border border-sky-200/80 text-sky-900 shadow-neo-inset-sm">
                 🏠 Home
               </span>
             )}
           </div>
           {property.address && (
-            <p className="text-xs text-slate-400 truncate mt-0.5">{property.address}</p>
+            <p className="text-xs text-neo-muted truncate mt-0.5">{property.address}</p>
           )}
         </div>
         <div className="flex items-center gap-2 shrink-0">
@@ -248,11 +248,11 @@ function PropertyCard({ property, onEdit, onDelete }) {
             {statusMeta.label}
           </span>
           <button onClick={() => onEdit(property)}
-            className="text-slate-400 hover:text-brand-400 transition-colors" title="Edit">
+            className="text-neo-muted hover:text-brand-400 transition-colors" title="Edit">
             <EditIcon />
           </button>
           <button onClick={() => onDelete(property.id)}
-            className="text-slate-400 hover:text-red-400 transition-colors" title="Delete">
+            className="text-neo-muted hover:text-red-400 transition-colors" title="Delete">
             <TrashIcon />
           </button>
         </div>
@@ -260,7 +260,7 @@ function PropertyCard({ property, onEdit, onDelete }) {
 
       {/* Planned / simulated property notice */}
       {property.status === 'planned' && (
-        <div className="flex items-center gap-2 bg-sky-900/20 border border-sky-700/30 rounded-lg px-2.5 py-1.5 text-xs text-sky-300">
+        <div className="flex items-center gap-2 bg-sky-50 border border-sky-200/80 rounded-xl px-2.5 py-1.5 text-xs text-sky-900 shadow-neo-inset-sm">
           <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
           </svg>
@@ -270,7 +270,7 @@ function PropertyCard({ property, onEdit, onDelete }) {
 
       {/* Future rental notice */}
       {rentalStartsIn !== null && (
-        <div className="flex items-center gap-2 bg-amber-900/20 border border-amber-700/30 rounded-lg px-2.5 py-1.5 text-xs text-amber-300">
+        <div className="flex items-center gap-2 bg-amber-50 border border-amber-200/80 rounded-xl px-2.5 py-1.5 text-xs text-amber-900 shadow-neo-inset-sm">
           <svg className="w-3.5 h-3.5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
           </svg>
@@ -294,13 +294,13 @@ function PropertyCard({ property, onEdit, onDelete }) {
           <Metric
             label={rentalActive ? 'Rent / mo' : 'Future rent / mo'}
             value={formatEUR(monthlyIncomeFull)}
-            color={rentalActive ? 'text-white' : 'text-slate-500'}
+            color={rentalActive ? 'text-neo-text' : 'text-neo-subtle'}
             info={INFO.rent}
           />
         )}
         {monthlyIncomeFull > 0 && (
           <Metric label="Rent index"  value={`${((property.indexationRate ?? 0.02) * 100).toFixed(1)}% / yr`}
-            color="text-slate-300"                                                info={INFO.rentIndex} />
+            color="text-neo-muted"                                                info={INFO.rentIndex} />
         )}
         {monthlyInterest > 0 && (
           <Metric label="Loan interest / mo" value={formatEUR(monthlyInterest)}
@@ -310,8 +310,8 @@ function PropertyCard({ property, onEdit, onDelete }) {
 
       {/* Loans */}
       {(property.loans || []).length > 0 && (
-        <div className="border-t border-slate-700 pt-3">
-          <p className="text-xs font-medium text-slate-400 mb-2">
+        <div className="border-t border-neo-border pt-3">
+          <p className="text-xs font-medium text-neo-muted mb-2">
             Loans ({property.loans.length})
           </p>
           <div className="space-y-1.5">
@@ -320,19 +320,19 @@ function PropertyCard({ property, onEdit, onDelete }) {
               return (
                 <div key={loan.id} className="text-sm space-y-0.5">
                   <div className="flex justify-between gap-2">
-                    <span className="text-slate-300 truncate">{loan.lender}</span>
-                    <span className="text-slate-400 whitespace-nowrap shrink-0">
+                    <span className="text-neo-muted truncate">{loan.lender}</span>
+                    <span className="text-neo-muted whitespace-nowrap shrink-0">
                       {formatEUR(loan.originalAmount)} @ {(loan.interestRate * 100).toFixed(2)}%
                       {loan.amortizationSchedule?.length > 0 && (
-                        <span className="ml-1.5 text-[10px] bg-emerald-900/40 text-emerald-400 px-1.5 py-0.5 rounded-full">
+                        <span className="ml-1.5 text-[10px] bg-emerald-100 text-emerald-800 px-1.5 py-0.5 rounded-full shadow-neo-inset-sm border border-emerald-200/60">
                           CSV
                         </span>
                       )}
                     </span>
                   </div>
                   {split.monthlyTotal > 0 && (
-                    <div className="flex gap-3 text-[11px] text-slate-500 pl-0.5">
-                      <span>Payment: <span className="text-slate-300">{formatEUR(split.monthlyTotal)}/mo</span></span>
+                    <div className="flex gap-3 text-[11px] text-neo-subtle pl-0.5">
+                      <span>Payment: <span className="text-neo-muted">{formatEUR(split.monthlyTotal)}/mo</span></span>
                       <span>Interest: <span className="text-red-400">{formatEUR(split.monthlyInterest)}</span></span>
                       <span>Capital: <span className="text-emerald-400">{formatEUR(split.monthlyCapital)}</span></span>
                     </div>
@@ -346,7 +346,7 @@ function PropertyCard({ property, onEdit, onDelete }) {
 
       {/* Compact timeline */}
       {(property.loans?.length > 0 || property.rentalStartDate || property.purchaseDate) && (
-        <div className="border-t border-slate-700 pt-3">
+        <div className="border-t border-neo-border pt-3">
           <PropertyTimeline property={property} compact />
         </div>
       )}
@@ -354,10 +354,10 @@ function PropertyCard({ property, onEdit, onDelete }) {
   )
 }
 
-function Metric({ label, value, color = 'text-white', info }) {
+function Metric({ label, value, color = 'text-neo-text', info }) {
   return (
     <div>
-      <p className="text-xs text-slate-400 flex items-center">
+      <p className="text-xs text-neo-muted flex items-center">
         {label}
         {info && <InfoPopover>{info}</InfoPopover>}
       </p>
@@ -382,13 +382,13 @@ function ResidenceBanner({ properties }) {
   return (
     <div className="flex flex-wrap gap-3">
       {home && (
-        <div className="flex items-center gap-3 bg-brand-900/30 border border-brand-700/40
-                        rounded-xl px-4 py-3 text-sm flex-1 min-w-0">
+        <div className="flex items-center gap-3 bg-sky-50 border border-sky-200/80 shadow-neo-inset-sm
+                        rounded-2xl px-4 py-3 text-sm flex-1 min-w-0">
           <span className="text-xl shrink-0">🏠</span>
           <div className="min-w-0">
-            <p className="text-xs text-slate-400 mb-0.5">You currently live at</p>
-            <p className="font-semibold text-brand-300 truncate">{home.name}</p>
-            {home.address && <p className="text-xs text-slate-500 truncate">{home.address}</p>}
+            <p className="text-xs text-neo-muted mb-0.5">You currently live at</p>
+            <p className="font-semibold text-brand-700 truncate">{home.name}</p>
+            {home.address && <p className="text-xs text-neo-subtle truncate">{home.address}</p>}
             {home.residenceEndDate && (
               <p className="text-xs text-amber-400 mt-0.5">
                 Moving out: {new Date(home.residenceEndDate).toLocaleDateString('nl-BE', { day: 'numeric', month: 'long', year: 'numeric' })}
@@ -398,13 +398,13 @@ function ResidenceBanner({ properties }) {
         </div>
       )}
       {upcoming && (
-        <div className="flex items-center gap-3 bg-slate-800/60 border border-slate-700
-                        rounded-xl px-4 py-3 text-sm flex-1 min-w-0">
+        <div className="flex items-center gap-3 bg-neo-surface border border-white/60 shadow-neo-sm
+                        rounded-2xl px-4 py-3 text-sm flex-1 min-w-0">
           <span className="text-xl shrink-0">📦</span>
           <div className="min-w-0">
-            <p className="text-xs text-slate-400 mb-0.5">Moving to</p>
-            <p className="font-semibold text-white truncate">{upcoming.name}</p>
-            <p className="text-xs text-slate-400 mt-0.5">
+            <p className="text-xs text-neo-muted mb-0.5">Moving to</p>
+            <p className="font-semibold text-neo-text truncate">{upcoming.name}</p>
+            <p className="text-xs text-neo-muted mt-0.5">
               {new Date(upcoming.residenceStartDate).toLocaleDateString('nl-BE', { day: 'numeric', month: 'long', year: 'numeric' })}
               {' '}({Math.ceil((new Date(upcoming.residenceStartDate) - today) / (1000 * 60 * 60 * 24))} days)
             </p>
@@ -420,14 +420,14 @@ function ResidenceBanner({ properties }) {
 function EmptyState({ onAdd }) {
   return (
     <div className="card flex flex-col items-center justify-center py-12 text-center">
-      <div className="w-16 h-16 rounded-2xl bg-slate-700 flex items-center justify-center mb-4">
-        <svg className="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <div className="w-16 h-16 rounded-2xl bg-neo-sunken flex items-center justify-center mb-4">
+        <svg className="w-8 h-8 text-neo-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
             d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
         </svg>
       </div>
-      <p className="text-slate-300 font-medium">No properties yet</p>
-      <p className="text-slate-500 text-sm mt-1 mb-4">Add your first property to get started</p>
+      <p className="text-neo-muted font-medium">No properties yet</p>
+      <p className="text-neo-subtle text-sm mt-1 mb-4">Add your first property to get started</p>
       <button onClick={onAdd} className="btn-primary">
         <PlusIcon />
         Add Property
@@ -450,8 +450,8 @@ export default function Dashboard({ properties, profile, onAddProperty, onEditPr
       {/* Page header */}
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-white">Dashboard</h1>
-          <p className="text-slate-400 text-sm mt-0.5">Real estate portfolio overview</p>
+          <h1 className="text-2xl font-bold text-neo-text">Dashboard</h1>
+          <p className="text-neo-muted text-sm mt-0.5">Real estate portfolio overview</p>
         </div>
         <button onClick={onAddProperty} className="btn-primary">
           <PlusIcon />
@@ -464,33 +464,33 @@ export default function Dashboard({ properties, profile, onAddProperty, onEditPr
 
       {/* ── Personal net worth banner ── */}
       {properties.length > 0 && (
-        <div className="card bg-gradient-to-r from-brand-900/40 to-slate-800/60 border-brand-700/40">
+        <div className="card bg-gradient-to-br from-sky-50 via-neo-surface to-brand-50/80 border-white/70 shadow-neo">
           <div className="flex flex-wrap items-center justify-between gap-4">
             <div>
-              <p className="text-xs text-brand-300 font-semibold uppercase tracking-wider mb-1 flex items-center gap-1">
+              <p className="text-xs text-brand-700 font-semibold uppercase tracking-wider mb-1 flex items-center gap-1">
                 Your Personal Net Worth
                 <InfoPopover>{INFO.netWorth}</InfoPopover>
               </p>
-              <p className={`text-4xl font-bold tabular-nums ${s.personalNetWorth >= 0 ? 'text-white' : 'text-red-400'}`}>
+              <p className={`text-4xl font-bold tabular-nums ${s.personalNetWorth >= 0 ? 'text-neo-text' : 'text-red-400'}`}>
                 {formatEUR(s.personalNetWorth)}
               </p>
             </div>
             <div className="flex flex-wrap gap-4 text-sm">
               <div className="text-center">
-                <p className="text-xs text-slate-400 mb-0.5">Real estate equity (my share)</p>
+                <p className="text-xs text-neo-muted mb-0.5">Real estate equity (my share)</p>
                 <p className={`font-bold tabular-nums ${s.personalRealEstateNetWorth >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                   {formatEUR(s.personalRealEstateNetWorth)}
                 </p>
               </div>
               {s.personalCash > 0 && (
                 <div className="text-center">
-                  <p className="text-xs text-slate-400 mb-0.5">Cash on hand</p>
-                  <p className="font-bold tabular-nums text-brand-300">{formatEUR(s.personalCash)}</p>
+                  <p className="text-xs text-neo-muted mb-0.5">Cash on hand</p>
+                  <p className="font-bold tabular-nums text-brand-600">{formatEUR(s.personalCash)}</p>
                 </div>
               )}
               {s.personalTradingValue > 0 && (
                 <div className="text-center">
-                  <p className="text-xs text-slate-400 mb-0.5">Investment portfolio</p>
+                  <p className="text-xs text-neo-muted mb-0.5">Investment portfolio</p>
                   <p className="font-bold tabular-nums text-violet-400">{formatEUR(s.personalTradingValue)}</p>
                 </div>
               )}
@@ -502,7 +502,7 @@ export default function Dashboard({ properties, profile, onAddProperty, onEditPr
             const myOwner = owners.find((o) => /^me$/i.test(o.name?.trim())) ?? owners[0]
             return myOwner && Number(myOwner.share) < 0.999
           }) && (
-            <p className="text-xs text-slate-500 mt-2">
+            <p className="text-xs text-neo-subtle mt-2">
               Includes only your ownership share per property. Portfolio total (all owners) is {formatEUR(s.totalNetWorth)}.
             </p>
           )}
@@ -551,22 +551,22 @@ export default function Dashboard({ properties, profile, onAddProperty, onEditPr
       {s.loanCount > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           <div className="card py-3 text-center">
-            <p className="text-xs text-slate-400 mb-0.5 flex items-center justify-center">
+            <p className="text-xs text-neo-muted mb-0.5 flex items-center justify-center">
               Loan Interest / mo
               <InfoPopover>{INFO.loanInterest}</InfoPopover>
             </p>
             <p className="text-lg font-bold text-red-400">{formatEUR(s.monthlyInterest)}</p>
-            <p className="text-[11px] text-slate-500 mt-0.5">true cost — leaves your pocket</p>
+            <p className="text-[11px] text-neo-subtle mt-0.5">true cost — leaves your pocket</p>
           </div>
           <div className="card py-3 text-center">
-            <p className="text-xs text-slate-400 mb-0.5">Capital Repayment / mo</p>
+            <p className="text-xs text-neo-muted mb-0.5">Capital Repayment / mo</p>
             <p className="text-lg font-bold text-emerald-400">{formatEUR(s.monthlyCapital)}</p>
-            <p className="text-[11px] text-slate-500 mt-0.5">equity building — yours to keep</p>
+            <p className="text-[11px] text-neo-subtle mt-0.5">equity building — yours to keep</p>
           </div>
           <div className="card py-3 text-center">
-            <p className="text-xs text-slate-400 mb-0.5">Total Loan Payment / mo</p>
-            <p className="text-lg font-bold text-white">{formatEUR(s.monthlyInterest + s.monthlyCapital)}</p>
-            <p className="text-[11px] text-slate-500 mt-0.5">
+            <p className="text-xs text-neo-muted mb-0.5">Total Loan Payment / mo</p>
+            <p className="text-lg font-bold text-neo-text">{formatEUR(s.monthlyInterest + s.monthlyCapital)}</p>
+            <p className="text-[11px] text-neo-subtle mt-0.5">
               {s.monthlyInterest + s.monthlyCapital > 0
                 ? `${Math.round(s.monthlyInterest / (s.monthlyInterest + s.monthlyCapital) * 100)}% interest · ${Math.round(s.monthlyCapital / (s.monthlyInterest + s.monthlyCapital) * 100)}% capital`
                 : '—'}
@@ -582,7 +582,7 @@ export default function Dashboard({ properties, profile, onAddProperty, onEditPr
             label="Loan-to-Value (LTV)"
             value={ltv !== null ? `${ltv.toFixed(1)}%` : '—'}
             valueColor={
-              ltv === null ? 'text-slate-400'
+              ltv === null ? 'text-neo-muted'
               : ltv > 80   ? 'text-red-400'
               : ltv > 60   ? 'text-orange-400'
               : 'text-emerald-400'
@@ -601,7 +601,7 @@ export default function Dashboard({ properties, profile, onAddProperty, onEditPr
             label="Net Yield"
             value={grossYield !== null ? `${grossYield.toFixed(1)}%` : '—'}
             valueColor={
-              grossYield === null ? 'text-slate-400'
+              grossYield === null ? 'text-neo-muted'
               : grossYield >= 0   ? 'text-brand-400'
               : 'text-red-400'
             }
@@ -613,8 +613,8 @@ export default function Dashboard({ properties, profile, onAddProperty, onEditPr
 
       {/* ── Belgian rental tax notice ── */}
       {properties.some((p) => isRentalActiveOn(p)) && (
-        <div className="rounded-xl border border-amber-700/40 bg-amber-950/30 p-4 text-xs text-amber-300 space-y-1.5">
-          <p className="font-semibold text-amber-200 text-sm">Belgian Rental Income Tax — not modelled here</p>
+        <div className="rounded-2xl border border-amber-200/80 bg-amber-50 shadow-neo-inset-sm p-4 text-xs text-amber-900 space-y-1.5">
+          <p className="font-semibold text-amber-900 text-sm">Belgian Rental Income Tax — not modelled here</p>
           <p>
             When you rent to a private person for residential use, Belgian tax law (FOD Financiën) taxes you on the
             {' '}<strong>indexed cadastral income (KI) × 1.4</strong> — <em>not</em> on the actual rent you receive.

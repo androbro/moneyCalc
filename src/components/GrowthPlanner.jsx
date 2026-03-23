@@ -112,13 +112,13 @@ function monthYearFromNow(monthsFromNow) {
 }
 
 const COLOR_MAP = {
-  brand:   { border: 'border-brand-500/50',   badge: 'bg-brand-900/40 text-brand-300',   dot: '#3b82f6' },
-  amber:   { border: 'border-amber-500/50',   badge: 'bg-amber-900/40 text-amber-300',   dot: '#f59e0b' },
-  red:     { border: 'border-red-500/50',     badge: 'bg-red-900/40 text-red-300',       dot: '#ef4444' },
-  emerald: { border: 'border-emerald-500/50', badge: 'bg-emerald-900/40 text-emerald-300', dot: '#10b981' },
-  violet:  { border: 'border-violet-500/50',  badge: 'bg-violet-900/40 text-violet-300', dot: '#8b5cf6' },
-  cyan:    { border: 'border-cyan-500/50',    badge: 'bg-cyan-900/40 text-cyan-300',     dot: '#06b6d4' },
-  rose:    { border: 'border-rose-500/50',    badge: 'bg-rose-900/40 text-rose-300',     dot: '#f43f5e' },
+  brand:   { border: 'border-sky-300/60',   badge: 'bg-sky-100 text-sky-900 shadow-neo-inset-sm',   dot: '#3b82f6' },
+  amber:   { border: 'border-amber-300/60',   badge: 'bg-amber-100 text-amber-950 shadow-neo-inset-sm',   dot: '#f59e0b' },
+  red:     { border: 'border-red-300/60',     badge: 'bg-red-100 text-red-900 shadow-neo-inset-sm',       dot: '#ef4444' },
+  emerald: { border: 'border-emerald-300/60', badge: 'bg-emerald-100 text-emerald-900 shadow-neo-inset-sm', dot: '#10b981' },
+  violet:  { border: 'border-violet-300/60',  badge: 'bg-violet-100 text-violet-900 shadow-neo-inset-sm', dot: '#8b5cf6' },
+  cyan:    { border: 'border-cyan-300/60',    badge: 'bg-cyan-100 text-cyan-900 shadow-neo-inset-sm',     dot: '#06b6d4' },
+  rose:    { border: 'border-rose-300/60',    badge: 'bg-rose-100 text-rose-900 shadow-neo-inset-sm',     dot: '#f43f5e' },
 }
 
 function getBadgeClass(color) {
@@ -130,9 +130,9 @@ function getBadgeClass(color) {
 function Field({ label, hint, children }) {
   return (
     <div className="space-y-1">
-      <label className="block text-xs font-medium text-slate-400">{label}</label>
+      <label className="block text-xs font-medium text-neo-muted">{label}</label>
       {children}
-      {hint && <p className="text-xs text-slate-500">{hint}</p>}
+      {hint && <p className="text-xs text-neo-subtle">{hint}</p>}
     </div>
   )
 }
@@ -140,7 +140,7 @@ function Field({ label, hint, children }) {
 function MoneyInput({ value, onChange, placeholder = '0', disabled = false }) {
   return (
     <div className="relative">
-      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-sm">€</span>
+      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-neo-subtle text-sm">€</span>
       <input
         type="number"
         min="0"
@@ -171,7 +171,7 @@ function PctInput({ value, onChange, step = '0.1', min = 0, max = 100 }) {
         placeholder="0"
         className="input pr-7 w-full"
       />
-      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 text-sm">%</span>
+      <span className="absolute right-3 top-1/2 -translate-y-1/2 text-neo-subtle text-sm">%</span>
     </div>
   )
 }
@@ -280,16 +280,16 @@ function LoanTypeRecommendationModal({ currentType, onSelect, onClose }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl max-w-2xl w-full max-h-[85vh] overflow-y-auto">
-        <div className="sticky top-0 bg-slate-900 border-b border-slate-700/50 px-5 py-4 flex items-start justify-between z-10">
+      <div className="absolute inset-0 bg-neo-text/25 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-neo-surface border border-white/60 rounded-3xl shadow-neo-lg max-w-2xl w-full max-h-[85vh] overflow-y-auto">
+        <div className="sticky top-0 bg-neo-surface border-b border-neo-border/50 px-5 py-4 flex items-start justify-between z-10">
           <div>
-            <h2 className="text-base font-bold text-white">Choose Your Loan Type</h2>
-            <p className="text-xs text-slate-400 mt-0.5">
+            <h2 className="text-base font-bold text-neo-text">Choose Your Loan Type</h2>
+            <p className="text-xs text-neo-muted mt-0.5">
               Ranked for <span className="text-emerald-400 font-medium">passive income &amp; early retirement</span>. Bullet loans maximize monthly cash flow — the key to snowballing quickly.
             </p>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-white ml-4 text-xl leading-none">×</button>
+          <button onClick={onClose} className="text-neo-muted hover:text-neo-text ml-4 text-xl leading-none">×</button>
         </div>
         <div className="p-4 space-y-3">
           {sorted.map((lt) => {
@@ -299,23 +299,23 @@ function LoanTypeRecommendationModal({ currentType, onSelect, onClose }) {
             return (
               <div
                 key={lt.id}
-                className={`rounded-xl border p-3 cursor-pointer transition-all ${
+                className={`rounded-2xl border p-3 cursor-pointer transition-all shadow-neo-sm ${
                   isSelected
-                    ? 'border-brand-500 bg-brand-900/20'
+                    ? 'border-brand-400 bg-sky-50 shadow-neo'
                     : isTop
-                    ? 'border-emerald-500/40 bg-emerald-900/10 hover:border-emerald-500/70'
-                    : 'border-slate-700/50 hover:border-slate-500'
+                    ? 'border-emerald-300 bg-emerald-50 hover:border-emerald-400 shadow-neo-inset-sm'
+                    : 'border-neo-border/50 hover:border-neo-border hover:shadow-neo'
                 }`}
                 onClick={() => { onSelect(lt.id); onClose() }}
               >
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-semibold text-white text-sm">{lt.nameEN}</span>
+                      <span className="font-semibold text-neo-text text-sm">{lt.nameEN}</span>
                       <span className={`text-xs px-2 py-0.5 rounded-full ${getBadgeClass(lt.color)}`}>{lt.rateLabel}</span>
-                      {isTop && <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-900/50 text-emerald-300 font-medium">Best for passive income</span>}
+                      {isTop && <span className="text-xs px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-900 font-medium shadow-neo-inset-sm border border-emerald-200/60">Best for passive income</span>}
                     </div>
-                    <p className="text-xs text-slate-400 mt-1">{note?.verdict}</p>
+                    <p className="text-xs text-neo-muted mt-1">{note?.verdict}</p>
                     <div className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-x-4 gap-y-0.5">
                       {lt.prosEN.slice(0, 2).map((p, i) => (
                         <p key={i} className="text-xs text-emerald-400/80">✓ {p}</p>
@@ -334,10 +334,10 @@ function LoanTypeRecommendationModal({ currentType, onSelect, onClose }) {
                   <div className="shrink-0 text-right">
                     <div className="flex gap-0.5 justify-end">
                       {Array.from({ length: 5 }).map((_, i) => (
-                        <span key={i} className={`w-2 h-2 rounded-full ${i < note?.score ? 'bg-emerald-400' : 'bg-slate-700'}`} />
+                        <span key={i} className={`w-2 h-2 rounded-full ${i < note?.score ? 'bg-emerald-400' : 'bg-neo-sunken'}`} />
                       ))}
                     </div>
-                    <p className="text-xs text-slate-500 mt-1">{lt.typicalTermYears}yr typical</p>
+                    <p className="text-xs text-neo-subtle mt-1">{lt.typicalTermYears}yr typical</p>
                   </div>
                 </div>
               </div>
@@ -363,23 +363,23 @@ function AutoGenerateModal({ onGenerate, onClose, profile }) {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" onClick={onClose} />
-      <div className="relative bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl max-w-md w-full">
-        <div className="border-b border-slate-700/50 px-5 py-4 flex items-start justify-between">
+      <div className="absolute inset-0 bg-neo-text/25 backdrop-blur-sm" onClick={onClose} />
+      <div className="relative bg-neo-surface border border-white/60 rounded-3xl shadow-neo-lg max-w-md w-full">
+        <div className="border-b border-neo-border/50 px-5 py-4 flex items-start justify-between">
           <div>
-            <h2 className="text-base font-bold text-white">Auto-Generate Acquisitions</h2>
-            <p className="text-xs text-slate-400 mt-0.5">Fills your plan with every achievable acquisition over 25 years.</p>
+            <h2 className="text-base font-bold text-neo-text">Auto-Generate Acquisitions</h2>
+            <p className="text-xs text-neo-muted mt-0.5">Fills your plan with every achievable acquisition over 25 years.</p>
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-white ml-4 text-xl leading-none">×</button>
+          <button onClick={onClose} className="text-neo-muted hover:text-neo-text ml-4 text-xl leading-none">×</button>
         </div>
         <div className="p-5 space-y-4">
           {/* Base price */}
           <div className="space-y-1">
-            <label className="block text-xs font-medium text-slate-400">
-              Base property price <span className="text-slate-500">(today, {currentYear})</span>
+            <label className="block text-xs font-medium text-neo-muted">
+              Base property price <span className="text-neo-subtle">(today, {currentYear})</span>
             </label>
             <div className="relative">
-              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500 text-sm">€</span>
+              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-neo-subtle text-sm">€</span>
               <input
                 type="number"
                 min="50000"
@@ -393,7 +393,7 @@ function AutoGenerateModal({ onGenerate, onClose, profile }) {
 
           {/* Price appreciation */}
           <div className="space-y-1">
-            <label className="block text-xs font-medium text-slate-400">Annual property price increase</label>
+            <label className="block text-xs font-medium text-neo-muted">Annual property price increase</label>
             <div className="relative">
               <input
                 type="number"
@@ -404,11 +404,11 @@ function AutoGenerateModal({ onGenerate, onClose, profile }) {
                 onChange={(e) => setPriceAppreciation(num(e.target.value))}
                 className="input pr-7 w-full"
               />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 text-sm">%</span>
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-neo-subtle text-sm">%</span>
             </div>
-            <div className="flex gap-2 text-xs text-slate-500 mt-1">
+            <div className="flex gap-2 text-xs text-neo-subtle mt-1">
               {exampleYears.map((y) => (
-                <span key={y} className="bg-slate-800 px-2 py-0.5 rounded">
+                <span key={y} className="bg-neo-raised px-2 py-0.5 rounded">
                   +{y}y: {fmt(Math.round(basePriceToday * Math.pow(1 + priceAppreciation / 100, y) / 5000) * 5000)}
                 </span>
               ))}
@@ -417,7 +417,7 @@ function AutoGenerateModal({ onGenerate, onClose, profile }) {
 
           {/* Monthly yield */}
           <div className="space-y-1">
-            <label className="block text-xs font-medium text-slate-400">Monthly rent (% of purchase price)</label>
+            <label className="block text-xs font-medium text-neo-muted">Monthly rent (% of purchase price)</label>
             <div className="relative">
               <input
                 type="number"
@@ -428,27 +428,27 @@ function AutoGenerateModal({ onGenerate, onClose, profile }) {
                 onChange={(e) => setMonthlyYield(num(e.target.value))}
                 className="input pr-7 w-full"
               />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 text-sm">%</span>
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-neo-subtle text-sm">%</span>
             </div>
-            <p className="text-xs text-slate-500">
+            <p className="text-xs text-neo-subtle">
               = {fmt(Math.round(basePriceToday * monthlyYield / 100))}/mo today · {fmt(Math.round(basePriceToday * Math.pow(1 + priceAppreciation / 100, 10) * monthlyYield / 100))}/mo in 10y
             </p>
           </div>
 
           {/* My share */}
           <div className="space-y-1">
-            <label className="block text-xs font-medium text-slate-400">My ownership share</label>
+            <label className="block text-xs font-medium text-neo-muted">My ownership share</label>
             <div className="relative">
               <input type="number" min="1" max="100" step="1" value={myShare}
                 onChange={(e) => setMyShare(num(e.target.value))}
                 className="input pr-7 w-full" />
-              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 text-sm">%</span>
+              <span className="absolute right-3 top-1/2 -translate-y-1/2 text-neo-subtle text-sm">%</span>
             </div>
           </div>
 
           {/* Strategy */}
           <div className="space-y-2">
-            <label className="block text-xs font-medium text-slate-400">Loan strategy</label>
+            <label className="block text-xs font-medium text-neo-muted">Loan strategy</label>
             <div className="grid grid-cols-2 gap-2">
               {[
                 { id: 'balanced', label: 'Balanced', sub: 'Standard Mortgage · equity building', color: 'brand' },
@@ -459,29 +459,29 @@ function AutoGenerateModal({ onGenerate, onClose, profile }) {
                   onClick={() => setStrategy(s.id)}
                   className={`rounded-lg border p-2.5 text-left transition-all ${
                     strategy === s.id
-                      ? s.id === 'cashflow' ? 'border-emerald-500 bg-emerald-900/20' : 'border-brand-500 bg-brand-900/20'
-                      : 'border-slate-700 hover:border-slate-500'
+                      ? s.id === 'cashflow' ? 'border-emerald-400 bg-emerald-50 shadow-neo-inset-sm' : 'border-sky-400 bg-sky-50 shadow-neo-inset-sm'
+                      : 'border-neo-border hover:border-neo-border'
                   }`}
                 >
-                  <p className={`text-xs font-semibold ${strategy === s.id ? (s.id === 'cashflow' ? 'text-emerald-400' : 'text-brand-400') : 'text-white'}`}>{s.label}</p>
-                  <p className="text-xs text-slate-500 mt-0.5">{s.sub}</p>
+                  <p className={`text-xs font-semibold ${strategy === s.id ? (s.id === 'cashflow' ? 'text-emerald-400' : 'text-brand-400') : 'text-neo-text'}`}>{s.label}</p>
+                  <p className="text-xs text-neo-subtle mt-0.5">{s.sub}</p>
                 </button>
               ))}
             </div>
             {strategy === 'cashflow' && (
-              <p className="text-xs text-emerald-400/80 bg-emerald-900/20 border border-emerald-500/20 rounded-lg p-2">
+              <p className="text-xs text-emerald-800 bg-emerald-50 border border-emerald-200/60 rounded-xl p-2 shadow-neo-inset-sm">
                 Bullet loans pay interest-only — monthly payments ~4× lower, freeing maximum cash to snowball faster. You repay the principal at loan maturity (typically via sale or refinance).
               </p>
             )}
           </div>
 
           {/* Interest rate note */}
-          <div className="rounded-lg bg-slate-800/50 p-3 text-xs text-slate-400 space-y-1">
-            <p className="font-medium text-slate-300">Interest rates: ECB forward curve</p>
+          <div className="rounded-lg bg-neo-sunken/60 p-3 text-xs text-neo-muted space-y-1">
+            <p className="font-medium text-neo-muted">Interest rates: ECB forward curve</p>
             <p>Today: 3.5% → converges to 3.0% over 7 years as ECB normalizes rates.</p>
             <div className="flex gap-3 mt-1">
               {[0, 36, 84, 180].map((mo) => (
-                <span key={mo} className="text-slate-300">
+                <span key={mo} className="text-neo-muted">
                   +{mo === 0 ? 'now' : `${mo/12}y`}: {(predictInterestRate(mo) * 100).toFixed(2)}%
                 </span>
               ))}
@@ -540,9 +540,9 @@ function buildPlanSnapshot(acquisitions, horizonYears, maxLTV) {
 function MetricTile({ label, value, color, subtitle }) {
   return (
     <div className="text-center p-1">
-      <p className="text-xs text-slate-400 leading-tight">{label}</p>
+      <p className="text-xs text-neo-muted leading-tight">{label}</p>
       <p className={`text-lg font-bold tabular-nums ${color}`}>{fmt(value)}</p>
-      {subtitle && <p className="text-xs text-slate-500 mt-0.5">{subtitle}</p>}
+      {subtitle && <p className="text-xs text-neo-subtle mt-0.5">{subtitle}</p>}
     </div>
   )
 }
@@ -644,7 +644,7 @@ function AcquisitionConfigCard({ acquisition, index, milestone, isExpanded, onTo
   }
 
   return (
-    <div className="card border border-slate-700/50">
+    <div className="card border border-neo-border/50">
       {/* Header (always visible) */}
       <button
         onClick={onToggle}
@@ -655,9 +655,9 @@ function AcquisitionConfigCard({ acquisition, index, milestone, isExpanded, onTo
             {index + 1}
           </span>
           <div className="min-w-0">
-            <p className="font-semibold text-white text-sm truncate">{acquisition.label || 'Unnamed'}</p>
-            <p className="text-xs text-slate-400">
-              {fmt(acquisition.targetPrice)} · <span className={milestone ? 'text-amber-400' : 'text-slate-500'}>{milestoneLabel}</span>
+            <p className="font-semibold text-neo-text text-sm truncate">{acquisition.label || 'Unnamed'}</p>
+            <p className="text-xs text-neo-muted">
+              {fmt(acquisition.targetPrice)} · <span className={milestone ? 'text-amber-400' : 'text-neo-subtle'}>{milestoneLabel}</span>
             </p>
           </div>
         </div>
@@ -669,7 +669,7 @@ function AcquisitionConfigCard({ acquisition, index, milestone, isExpanded, onTo
 
       {/* Expanded form */}
       {isExpanded && (
-        <div className="mt-4 space-y-4 border-t border-slate-700/50 pt-4">
+        <div className="mt-4 space-y-4 border-t border-neo-border/50 pt-4">
           {/* Label */}
           <Field label="Label">
             <input
@@ -683,11 +683,11 @@ function AcquisitionConfigCard({ acquisition, index, milestone, isExpanded, onTo
 
           {/* Primary residence toggle */}
           <div className="flex items-center justify-between">
-            <label className="text-xs font-medium text-slate-400">Primary Residence</label>
+            <label className="text-xs font-medium text-neo-muted">Primary Residence</label>
             <button
               onClick={() => update('isPrimaryResidence', !acquisition.isPrimaryResidence)}
               className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
-                acquisition.isPrimaryResidence ? 'bg-brand-500' : 'bg-slate-600'
+                acquisition.isPrimaryResidence ? 'bg-brand-500' : 'bg-neo-sunken'
               }`}
             >
               <span
@@ -699,7 +699,7 @@ function AcquisitionConfigCard({ acquisition, index, milestone, isExpanded, onTo
           </div>
           {acquisition.isPrimaryResidence && (
             <p className="text-xs text-amber-400/80 -mt-2">
-              Primary residence: 90% LTV, ~4% acquisition costs (verlaagd tarief) · <span className="text-slate-500">loan excluded from CF chart</span>
+              Primary residence: 90% LTV, ~4% acquisition costs (verlaagd tarief) · <span className="text-neo-subtle">loan excluded from CF chart</span>
             </p>
           )}
 
@@ -719,7 +719,7 @@ function AcquisitionConfigCard({ acquisition, index, milestone, isExpanded, onTo
                   onChange={(e) => update('myShare', Math.max(0.01, Math.min(1, num(e.target.value) / 100)))}
                   className="input pr-7 w-full"
                 />
-                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 text-sm">%</span>
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-neo-subtle text-sm">%</span>
               </div>
             </Field>
           </div>
@@ -751,7 +751,7 @@ function AcquisitionConfigCard({ acquisition, index, milestone, isExpanded, onTo
           {/* Loan type */}
           <div className="space-y-1">
             <div className="flex items-center justify-between">
-              <label className="block text-xs font-medium text-slate-400">Loan Type</label>
+              <label className="block text-xs font-medium text-neo-muted">Loan Type</label>
               <button
                 onClick={() => onOpenLoanModal && onOpenLoanModal()}
                 className="text-xs text-brand-400 hover:text-brand-300 transition-colors"
@@ -802,29 +802,29 @@ function AcquisitionConfigCard({ acquisition, index, milestone, isExpanded, onTo
             const acqCosts = acquisition.targetPrice * acquisition.acquisitionCostRate * acquisition.myShare
             const requiredOwn = Math.max(0, downPayment + acqCosts)
             return (
-              <div className="rounded-lg bg-slate-800/50 p-3 space-y-1">
-                <p className="text-xs text-slate-400 font-medium">Loan summary</p>
+              <div className="rounded-lg bg-neo-sunken/60 p-3 space-y-1">
+                <p className="text-xs text-neo-muted font-medium">Loan summary</p>
                 <div className="flex justify-between text-xs">
-                  <span className="text-slate-400">Loan amount ({Math.round(ltv * acquisition.myShare * 100)}% LTV)</span>
-                  <span className="text-white font-semibold">{fmt(loanAmount)}</span>
+                  <span className="text-neo-muted">Loan amount ({Math.round(ltv * acquisition.myShare * 100)}% LTV)</span>
+                  <span className="text-neo-text font-semibold">{fmt(loanAmount)}</span>
                 </div>
                 <div className="flex justify-between text-xs">
-                  <span className="text-slate-400">Monthly payment</span>
+                  <span className="text-neo-muted">Monthly payment</span>
                   <span className="text-emerald-400 font-semibold">{fmt(monthlyPayment)}/mo</span>
                 </div>
-                <div className="flex justify-between text-xs border-t border-slate-700/50 pt-1 mt-1">
-                  <span className="text-slate-500">Own funds breakdown:</span>
+                <div className="flex justify-between text-xs border-t border-neo-border/50 pt-1 mt-1">
+                  <span className="text-neo-subtle">Own funds breakdown:</span>
                 </div>
                 <div className="flex justify-between text-xs pl-2">
-                  <span className="text-slate-400">↳ Down payment ({Math.round((1 - ltv) * 100)}%)</span>
-                  <span className="text-white">{fmt(downPayment)}</span>
+                  <span className="text-neo-muted">↳ Down payment ({Math.round((1 - ltv) * 100)}%)</span>
+                  <span className="text-neo-text">{fmt(downPayment)}</span>
                 </div>
                 <div className="flex justify-between text-xs pl-2">
-                  <span className="text-slate-400">↳ Acquisition costs ({Math.round(acquisition.acquisitionCostRate * 100)}%)</span>
-                  <span className="text-white">{fmt(acqCosts)}</span>
+                  <span className="text-neo-muted">↳ Acquisition costs ({Math.round(acquisition.acquisitionCostRate * 100)}%)</span>
+                  <span className="text-neo-text">{fmt(acqCosts)}</span>
                 </div>
-                <div className="flex justify-between text-xs border-t border-slate-700/50 pt-1 mt-1">
-                  <span className="text-slate-400 font-medium">Required own funds</span>
+                <div className="flex justify-between text-xs border-t border-neo-border/50 pt-1 mt-1">
+                  <span className="text-neo-muted font-medium">Required own funds</span>
                   <span className="text-amber-400 font-semibold">{fmt(requiredOwn)}</span>
                 </div>
               </div>
@@ -850,32 +850,32 @@ function SnowballTooltip({ active, payload, label, milestones }) {
   if (!active || !payload?.length) return null
   const matchingMilestones = milestones.filter((m) => `+${m.year}y` === label || (label === 'Today' && m.year === 0))
   return (
-    <div className="bg-slate-800 border border-slate-600 rounded-xl p-3 shadow-xl text-xs min-w-[200px]">
-      <p className="font-semibold text-white mb-2 text-sm">{label}</p>
+    <div className="bg-neo-raised border border-neo-border rounded-xl p-3 shadow-xl text-xs min-w-[200px]">
+      <p className="font-semibold text-neo-text mb-2 text-sm">{label}</p>
       {payload.map((entry) => (
         <div key={entry.dataKey} className="flex items-center justify-between gap-4 mb-1">
           <span className="font-medium flex items-center gap-1.5" style={{ color: entry.color }}>
             <span className="w-2 h-2 rounded-full inline-block" style={{ background: entry.color }} />
             {entry.name}
           </span>
-          <span className="text-white font-semibold">
+          <span className="text-neo-text font-semibold">
             {entry.dataKey === 'monthlyCashFlow' ? `€${Math.round(entry.value)}/mo` : kFmt(entry.value)}
           </span>
         </div>
       ))}
       {matchingMilestones.length > 0 && (
-        <div className="mt-2 pt-2 border-t border-slate-600">
+        <div className="mt-2 pt-2 border-t border-neo-border">
           {matchingMilestones.length === 1 ? (
             <>
               <p className="text-amber-400 font-semibold">🏠 {matchingMilestones[0].label}</p>
-              <p className="text-slate-400">Own funds: {fmt(matchingMilestones[0].cashUsed)}</p>
-              <p className="text-slate-400">New loan: {fmt(matchingMilestones[0].newLoanAmount)}</p>
+              <p className="text-neo-muted">Own funds: {fmt(matchingMilestones[0].cashUsed)}</p>
+              <p className="text-neo-muted">New loan: {fmt(matchingMilestones[0].newLoanAmount)}</p>
             </>
           ) : (
             <>
               <p className="text-amber-400 font-semibold">🏠 {matchingMilestones.length} acquisitions this year</p>
               {matchingMilestones.map((m, idx) => (
-                <p key={`${m.monthIndex}_${idx}`} className="text-slate-400 truncate">
+                <p key={`${m.monthIndex}_${idx}`} className="text-neo-muted truncate">
                   #{idx + 1}: {m.label} ({monthYearFromNow(m.monthIndex)})
                 </p>
               ))}
@@ -924,12 +924,12 @@ function SnowballChart({ yearlyData, milestones, historicalData, properties }) {
 
   return (
     <div>
-      <h3 className="text-sm font-semibold text-slate-300 mb-3">
+      <h3 className="text-sm font-semibold text-neo-muted mb-3">
         Portfolio Growth ({firstYear} → +{horizonY}y)
       </h3>
       <ResponsiveContainer width="100%" height={300}>
         <ComposedChart data={combinedData} margin={{ top: 10, right: 60, left: 0, bottom: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" />
+          <CartesianGrid strokeDasharray="3 3" stroke="#cbd5e1" />
           <XAxis dataKey="label" tick={AXIS_TICK} interval={0} ticks={xTicks} />
           <YAxis yAxisId="left" tickFormatter={kFmt} tick={AXIS_TICK} width={60} />
           <YAxis yAxisId="cf" orientation="right" tickFormatter={(v) => `€${Math.round(v)}`} tick={AXIS_TICK} width={60} />
@@ -1044,7 +1044,7 @@ function MilestoneCard({ milestone, index }) {
       className={`card space-y-3 border-l-4 ${(COLOR_MAP[color] || COLOR_MAP.brand).border}`}
     >
       <div className="flex items-center justify-between">
-        <span className="text-xs text-slate-500">Acquisition {index + 1}</span>
+        <span className="text-xs text-neo-subtle">Acquisition {index + 1}</span>
         <span className="text-xs font-semibold text-amber-400">
           {(() => {
             if (milestone.monthIndex === 0) return `Now (${monthYearFromNow(0)})`
@@ -1052,38 +1052,38 @@ function MilestoneCard({ milestone, index }) {
           })()}
         </span>
       </div>
-      <p className="font-semibold text-white text-sm leading-tight">{milestone.label}</p>
+      <p className="font-semibold text-neo-text text-sm leading-tight">{milestone.label}</p>
       <div className="space-y-1">
         <div className="flex justify-between text-xs">
-          <span className="text-slate-400">Property (my share)</span>
-          <span className="text-white font-semibold">{fmt(milestone.mySharePrice)}</span>
+          <span className="text-neo-muted">Property (my share)</span>
+          <span className="text-neo-text font-semibold">{fmt(milestone.mySharePrice)}</span>
         </div>
         <div className="flex justify-between text-xs">
-          <span className="text-slate-400">Own funds needed</span>
+          <span className="text-neo-muted">Own funds needed</span>
           <span className="text-amber-400 font-semibold">{fmt(milestone.cashUsed)}</span>
         </div>
         <div className="flex justify-between text-xs">
-          <span className="text-slate-400">New loan</span>
-          <span className="text-slate-300">{fmt(milestone.newLoanAmount)}</span>
+          <span className="text-neo-muted">New loan</span>
+          <span className="text-neo-muted">{fmt(milestone.newLoanAmount)}</span>
         </div>
         <div className="flex justify-between text-xs">
-          <span className="text-slate-400">Monthly payment</span>
-          <span className={milestone.isBullet ? 'text-emerald-400' : 'text-slate-300'}>
+          <span className="text-neo-muted">Monthly payment</span>
+          <span className={milestone.isBullet ? 'text-emerald-400' : 'text-neo-muted'}>
             {fmt(milestone.monthlyPayment)}/mo
             {milestone.isBullet && ' (interest only)'}
           </span>
         </div>
       </div>
       {/* Portfolio after acquisition */}
-      <div className="rounded bg-slate-800/50 p-2 space-y-0.5">
-        <p className="text-xs text-slate-500 font-medium">After acquisition</p>
+      <div className="rounded bg-neo-sunken/60 p-2 space-y-0.5">
+        <p className="text-xs text-neo-subtle font-medium">After acquisition</p>
         <div className="flex justify-between text-xs">
-          <span className="text-slate-400">Net worth</span>
+          <span className="text-neo-muted">Net worth</span>
           <span className="text-emerald-400 font-semibold">{fmt(milestone.portfolioSnapshot.netWorth)}</span>
         </div>
         <div className="flex justify-between text-xs">
-          <span className="text-slate-400">Properties</span>
-          <span className="text-white">{milestone.portfolioSnapshot.propertyCount}</span>
+          <span className="text-neo-muted">Properties</span>
+          <span className="text-neo-text">{milestone.portfolioSnapshot.propertyCount}</span>
         </div>
       </div>
       <LoanTypePill loanTypeId={milestone.recommendedLoanType} />
@@ -1109,42 +1109,42 @@ function ExistingPropertyCard({ property }) {
     property.status === 'rented' ? 'Rented out' :
     property.status === 'owner_occupied' ? 'Owner-occupied' :
     property.isRented ? 'Rented' : 'Owned'
-  const statusColor = isPlanned ? 'text-amber-400' : isRented ? 'text-brand-400' : 'text-slate-400'
-  const borderColor = isPlanned ? 'border-amber-500/50' : isRented ? 'border-brand-500/50' : 'border-slate-600/50'
+  const statusColor = isPlanned ? 'text-amber-400' : isRented ? 'text-brand-400' : 'text-neo-muted'
+  const borderColor = isPlanned ? 'border-amber-500/50' : isRented ? 'border-brand-500/50' : 'border-neo-border/50'
 
   return (
     <div className={`card space-y-3 border-l-4 ${borderColor}`}>
       <div className="flex items-center justify-between">
-        <span className="text-xs text-slate-500">
+        <span className="text-xs text-neo-subtle">
           {isPlanned ? `Planned ${purchaseYear}` : `Purchased ${purchaseYear}`}
         </span>
         <div className="flex items-center gap-2">
           <span className={`text-xs font-semibold ${statusColor}`}>{statusLabel}</span>
           {!isRented && debt > 0 && (
-            <span className="text-xs text-slate-600 bg-slate-800 px-1.5 py-0.5 rounded">loan excluded from CF</span>
+            <span className="text-xs text-neo-subtle bg-neo-raised px-1.5 py-0.5 rounded">loan excluded from CF</span>
           )}
         </div>
       </div>
-      <p className="font-semibold text-white text-sm leading-tight">
+      <p className="font-semibold text-neo-text text-sm leading-tight">
         {property.name || property.address || 'Property'}
       </p>
       <div className="space-y-1">
         {property.purchasePrice > 0 && (
           <div className="flex justify-between text-xs">
-            <span className="text-slate-400">Purchase price</span>
-            <span className="text-slate-300">{fmt(property.purchasePrice)}</span>
+            <span className="text-neo-muted">Purchase price</span>
+            <span className="text-neo-muted">{fmt(property.purchasePrice)}</span>
           </div>
         )}
         <div className="flex justify-between text-xs">
-          <span className="text-slate-400">Current value</span>
-          <span className="text-white font-semibold">{fmt(property.currentValue)}</span>
+          <span className="text-neo-muted">Current value</span>
+          <span className="text-neo-text font-semibold">{fmt(property.currentValue)}</span>
         </div>
         <div className="flex justify-between text-xs">
-          <span className="text-slate-400">Remaining debt</span>
+          <span className="text-neo-muted">Remaining debt</span>
           <span className="text-red-400">{fmt(debt)}</span>
         </div>
-        <div className="flex justify-between text-xs border-t border-slate-700/40 pt-1">
-          <span className="text-slate-400 font-medium">Equity</span>
+        <div className="flex justify-between text-xs border-t border-neo-border/40 pt-1">
+          <span className="text-neo-muted font-medium">Equity</span>
           <span className="text-emerald-400 font-semibold">{fmt(equity)}</span>
         </div>
       </div>
@@ -1156,11 +1156,11 @@ function ExistingPropertyCard({ property }) {
 // ─── Acceleration Advice ──────────────────────────────────────────────────────
 
 const ADVICE_COLOR_CLASSES = {
-  emerald: 'border-emerald-500/50 bg-emerald-900/10',
-  brand:   'border-brand-500/50 bg-brand-900/10',
-  amber:   'border-amber-500/50 bg-amber-900/10',
-  violet:  'border-violet-500/50 bg-violet-900/10',
-  cyan:    'border-cyan-500/50 bg-cyan-900/10',
+  emerald: 'border-emerald-200/80 bg-emerald-50 shadow-neo-inset-sm',
+  brand:   'border-sky-200/80 bg-sky-50 shadow-neo-inset-sm',
+  amber:   'border-amber-200/80 bg-amber-50 shadow-neo-inset-sm',
+  violet:  'border-violet-200/80 bg-violet-50 shadow-neo-inset-sm',
+  cyan:    'border-cyan-200/80 bg-cyan-50 shadow-neo-inset-sm',
 }
 
 function AdviceCard({ item }) {
@@ -1169,8 +1169,8 @@ function AdviceCard({ item }) {
     <div className={`rounded-xl border p-4 flex items-start gap-3 ${colorClass}`}>
       <span className="text-xl shrink-0">{item.icon}</span>
       <div className="min-w-0">
-        <p className="font-semibold text-white text-sm">{item.title}</p>
-        <p className="text-xs text-slate-400 mt-1 leading-relaxed">{item.description}</p>
+        <p className="font-semibold text-neo-text text-sm">{item.title}</p>
+        <p className="text-xs text-neo-muted mt-1 leading-relaxed">{item.description}</p>
         {item.isImmediate && (
           <p className="text-xs text-emerald-400 font-semibold mt-1.5">→ You can buy right now</p>
         )}
@@ -1192,19 +1192,19 @@ function AccelerationAdvice({ advice, baseReadyInMonths }) {
   return (
     <div className="card space-y-4">
       <div>
-        <h2 className="text-lg font-semibold text-white">Ways to Accelerate</h2>
+        <h2 className="text-lg font-semibold text-neo-text">Ways to Accelerate</h2>
         {canBuyNow ? (
           <p className="text-emerald-400 text-sm mt-1 font-medium">
             You have enough to start your first acquisition right now.
           </p>
         ) : baseReadyInMonths !== null ? (
-          <p className="text-slate-400 text-sm mt-1">
+          <p className="text-neo-muted text-sm mt-1">
             Your first acquisition is ready in{' '}
-            <span className="text-white font-semibold">{monthsToText(baseReadyInMonths)}</span>.
+            <span className="text-neo-text font-semibold">{monthsToText(baseReadyInMonths)}</span>.
             Here are concrete ways to get there sooner:
           </p>
         ) : (
-          <p className="text-slate-400 text-sm mt-1">
+          <p className="text-neo-muted text-sm mt-1">
             No acquisition is reachable in the current horizon. These steps could change that:
           </p>
         )}
@@ -1216,7 +1216,7 @@ function AccelerationAdvice({ advice, baseReadyInMonths }) {
           ))}
         </div>
       ) : (
-        <p className="text-slate-500 text-sm">
+        <p className="text-neo-subtle text-sm">
           No specific recommendations available. Add a planned acquisition above to see opportunities.
         </p>
       )}
@@ -1229,19 +1229,19 @@ function AccelerationAdvice({ advice, baseReadyInMonths }) {
 function LoanGuideCard({ loanType, expanded, onToggle }) {
   const colors = COLOR_MAP[loanType.color] || COLOR_MAP.brand
   return (
-    <div className={`rounded-xl border p-4 space-y-3 cursor-pointer transition-colors hover:border-slate-500 ${colors.border}`}>
+    <div className={`rounded-xl border p-4 space-y-3 cursor-pointer transition-colors hover:border-neo-border ${colors.border}`}>
       <button onClick={onToggle} className="w-full text-left space-y-2">
         <div className="flex items-start justify-between gap-2">
           <div>
-            <p className="font-semibold text-white text-sm">{loanType.nameEN}</p>
-            <p className="text-xs text-slate-400">{loanType.nameNL}</p>
+            <p className="font-semibold text-neo-text text-sm">{loanType.nameEN}</p>
+            <p className="text-xs text-neo-muted">{loanType.nameNL}</p>
           </div>
           <span className={`text-xs px-2 py-0.5 rounded-full font-semibold shrink-0 ${colors.badge}`}>
             {loanType.rateLabel}
           </span>
         </div>
-        <p className="text-xs text-slate-400 leading-relaxed line-clamp-2">{loanType.summaryEN}</p>
-        <div className="flex items-center gap-2 text-xs text-slate-500">
+        <p className="text-xs text-neo-muted leading-relaxed line-clamp-2">{loanType.summaryEN}</p>
+        <div className="flex items-center gap-2 text-xs text-neo-subtle">
           <span>{expanded ? '▲ Less' : '▼ More'}</span>
           {loanType.taxDeductible && (
             <span className="text-violet-400 font-medium">★ Tax deductible</span>
@@ -1253,13 +1253,13 @@ function LoanGuideCard({ loanType, expanded, onToggle }) {
       </button>
 
       {expanded && (
-        <div className="space-y-3 border-t border-slate-700/50 pt-3">
+        <div className="space-y-3 border-t border-neo-border/50 pt-3">
           {/* Pros */}
           <div>
             <p className="text-xs font-semibold text-emerald-400 mb-1">Advantages</p>
             <ul className="space-y-0.5">
               {loanType.prosEN.map((p) => (
-                <li key={p} className="text-xs text-slate-300 flex gap-1.5">
+                <li key={p} className="text-xs text-neo-muted flex gap-1.5">
                   <span className="text-emerald-500 shrink-0">✓</span>
                   {p}
                 </li>
@@ -1271,7 +1271,7 @@ function LoanGuideCard({ loanType, expanded, onToggle }) {
             <p className="text-xs font-semibold text-red-400 mb-1">Disadvantages</p>
             <ul className="space-y-0.5">
               {loanType.consEN.map((c) => (
-                <li key={c} className="text-xs text-slate-300 flex gap-1.5">
+                <li key={c} className="text-xs text-neo-muted flex gap-1.5">
                   <span className="text-red-500 shrink-0">✗</span>
                   {c}
                 </li>
@@ -1279,21 +1279,21 @@ function LoanGuideCard({ loanType, expanded, onToggle }) {
             </ul>
           </div>
           {/* 2025 tax note */}
-          <div className="rounded bg-amber-950/40 border border-amber-700/30 p-2">
-            <p className="text-xs text-amber-300 font-semibold">2025 Tax Note</p>
-            <p className="text-xs text-amber-200/80 mt-0.5 leading-relaxed">{loanType.taxNote2025}</p>
+          <div className="rounded-xl bg-amber-50 border border-amber-200/80 p-2 shadow-neo-inset-sm">
+            <p className="text-xs text-amber-900 font-semibold">2025 Tax Note</p>
+            <p className="text-xs text-amber-800/90 mt-0.5 leading-relaxed">{loanType.taxNote2025}</p>
           </div>
           {/* Details */}
           <div className="flex flex-wrap gap-2 text-xs">
             {loanType.typicalLTV && (
-              <span className="bg-slate-700/50 px-2 py-0.5 rounded text-slate-300">
+              <span className="bg-neo-sunken/55 px-2 py-0.5 rounded text-neo-muted">
                 LTV: {Math.round(loanType.typicalLTV * 100)}%
               </span>
             )}
-            <span className="bg-slate-700/50 px-2 py-0.5 rounded text-slate-300">
+            <span className="bg-neo-sunken/55 px-2 py-0.5 rounded text-neo-muted">
               Term: {loanType.typicalTermYears}y typical
             </span>
-            <span className="bg-slate-700/50 px-2 py-0.5 rounded text-slate-300">
+            <span className="bg-neo-sunken/55 px-2 py-0.5 rounded text-neo-muted">
               {loanType.monthlyPaymentStyle === 'interest_only' ? 'Interest only' : 'Annuity (capital + interest)'}
             </span>
           </div>
@@ -1313,8 +1313,8 @@ function LoanGuide({ expandedCard, onToggleCard }) {
         className="w-full flex items-center justify-between gap-2"
       >
         <div className="text-left">
-          <h2 className="text-lg font-semibold text-white">Belgian Loan Guide</h2>
-          <p className="text-xs text-slate-400 mt-0.5">
+          <h2 className="text-lg font-semibold text-neo-text">Belgian Loan Guide</h2>
+          <p className="text-xs text-neo-muted mt-0.5">
             7 financing options for Belgian real estate — including 2025 tax changes
           </p>
         </div>
@@ -1341,7 +1341,7 @@ function LoanGuide({ expandedCard, onToggleCard }) {
 function ChevronIcon({ open }) {
   return (
     <svg
-      className={`w-4 h-4 text-slate-400 transition-transform shrink-0 ${open ? 'rotate-180' : ''}`}
+      className={`w-4 h-4 text-neo-muted transition-transform shrink-0 ${open ? 'rotate-180' : ''}`}
       fill="none"
       stroke="currentColor"
       viewBox="0 0 24 24"
@@ -1496,8 +1496,8 @@ export default function GrowthPlanner({ properties, profile, initialPlan, onSave
     <div className="space-y-5">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-bold text-white">Growth Planner</h1>
-        <p className="text-slate-400 text-sm mt-0.5">
+        <h1 className="text-2xl font-bold text-neo-text">Growth Planner</h1>
+        <p className="text-neo-muted text-sm mt-0.5">
           Simulate your property snowball over {horizonYears} years — and discover how to accelerate it.
         </p>
       </div>
@@ -1509,22 +1509,22 @@ export default function GrowthPlanner({ properties, profile, initialPlan, onSave
       {summary.totalProperties > properties.length && (
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
           <div className="card text-center">
-            <p className="text-xs text-slate-400">First acquisition ready</p>
+            <p className="text-xs text-neo-muted">First acquisition ready</p>
             <p className="text-base font-bold text-amber-400">{monthsToText(summary.readyInMonths)}</p>
             {summary.readyInMonths !== null && (
-              <p className="text-xs text-slate-500">{monthYearFromNow(summary.readyInMonths)}</p>
+              <p className="text-xs text-neo-subtle">{monthYearFromNow(summary.readyInMonths)}</p>
             )}
           </div>
           <div className="card text-center">
-            <p className="text-xs text-slate-400">Properties in {horizonYears}y</p>
-            <p className="text-base font-bold text-white">{summary.totalProperties}</p>
+            <p className="text-xs text-neo-muted">Properties in {horizonYears}y</p>
+            <p className="text-base font-bold text-neo-text">{summary.totalProperties}</p>
           </div>
           <div className="card text-center">
-            <p className="text-xs text-slate-400">Final net worth</p>
+            <p className="text-xs text-neo-muted">Final net worth</p>
             <p className="text-base font-bold text-emerald-400">{fmt(summary.finalNetWorth)}</p>
           </div>
           <div className="card text-center">
-            <p className="text-xs text-slate-400">Monthly CF at year {horizonYears}</p>
+            <p className="text-xs text-neo-muted">Monthly CF at year {horizonYears}</p>
             <p className="text-base font-bold text-emerald-400">{fmt(summary.finalMonthlyCF)}/mo</p>
           </div>
         </div>
@@ -1543,11 +1543,11 @@ export default function GrowthPlanner({ properties, profile, initialPlan, onSave
       {/* Unified property journey */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-base font-semibold text-white">Property Journey</h2>
+          <h2 className="text-base font-semibold text-neo-text">Property Journey</h2>
           <div className="flex items-center gap-2">
             <button
               onClick={() => setShowAutoModal(true)}
-              className="text-xs px-3 py-1.5 rounded-lg bg-emerald-900/30 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-900/50 transition-colors font-medium"
+              className="text-xs px-3 py-1.5 rounded-xl bg-emerald-100 border border-emerald-300/70 text-emerald-900 hover:bg-emerald-200/60 shadow-neo-sm hover:shadow-neo transition-all font-medium"
             >
               ✨ Auto-generate
             </button>
@@ -1568,15 +1568,15 @@ export default function GrowthPlanner({ properties, profile, initialPlan, onSave
         {/* Divider between existing and planned */}
         {properties.length > 0 && (
           <div className="flex items-center gap-3">
-            <div className="flex-1 h-px bg-slate-700" />
-            <span className="text-xs text-slate-500">planned acquisitions ↓</span>
-            <div className="flex-1 h-px bg-slate-700" />
+            <div className="flex-1 h-px bg-neo-sunken" />
+            <span className="text-xs text-neo-subtle">planned acquisitions ↓</span>
+            <div className="flex-1 h-px bg-neo-sunken" />
           </div>
         )}
 
         {/* Planned acquisition config cards */}
         {acquisitions.length === 0 ? (
-          <div className="card text-center py-8 text-slate-500 text-sm">
+          <div className="card text-center py-8 text-neo-subtle text-sm">
             No planned acquisitions yet. Add one to see the snowball.
           </div>
         ) : (
@@ -1597,7 +1597,7 @@ export default function GrowthPlanner({ properties, profile, initialPlan, onSave
 
         {/* Simulation settings */}
         <div className="card space-y-3">
-          <p className="text-xs font-semibold text-slate-400 uppercase tracking-wider">Simulation Settings</p>
+          <p className="text-xs font-semibold text-neo-muted uppercase tracking-wider">Simulation Settings</p>
           <div className="grid grid-cols-2 gap-3">
             <Field label="Horizon (years)">
               <input

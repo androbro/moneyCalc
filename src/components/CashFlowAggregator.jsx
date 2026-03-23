@@ -41,20 +41,20 @@ function sign(n) {
 
 // ─── Row component ────────────────────────────────────────────────────────────
 
-function FormulaRow({ label, value, color = 'text-white', sublabel, operator = '+', indent = false }) {
+function FormulaRow({ label, value, color = 'text-neo-text', sublabel, operator = '+', indent = false }) {
   return (
-    <div className={`flex items-center justify-between py-2 border-b border-slate-700/50 last:border-0 ${indent ? 'pl-4' : ''}`}>
+    <div className={`flex items-center justify-between py-2 border-b border-neo-border/50 last:border-0 ${indent ? 'pl-4' : ''}`}>
       <div className="flex items-center gap-2">
         <span className={`text-xs font-bold w-4 shrink-0 ${
           operator === '+' ? 'text-emerald-400' :
           operator === '−' ? 'text-red-400' :
-          operator === '=' ? 'text-brand-400' : 'text-slate-500'
+          operator === '=' ? 'text-brand-400' : 'text-neo-subtle'
         }`}>
           {operator}
         </span>
         <div>
-          <span className="text-sm text-slate-300">{label}</span>
-          {sublabel && <p className="text-xs text-slate-500 mt-0.5">{sublabel}</p>}
+          <span className="text-sm text-neo-muted">{label}</span>
+          {sublabel && <p className="text-xs text-neo-subtle mt-0.5">{sublabel}</p>}
         </div>
       </div>
       <span className={`text-sm font-semibold tabular-nums ${color}`}>{fmt(value)}</span>
@@ -62,12 +62,12 @@ function FormulaRow({ label, value, color = 'text-white', sublabel, operator = '
   )
 }
 
-function KpiCard({ label, value, color = 'text-white', sub }) {
+function KpiCard({ label, value, color = 'text-neo-text', sub }) {
   return (
     <div className="card text-center space-y-1">
-      <p className="text-xs text-slate-400">{label}</p>
+      <p className="text-xs text-neo-muted">{label}</p>
       <p className={`text-xl font-bold tabular-nums ${color}`}>{value}</p>
-      {sub && <p className="text-xs text-slate-500">{sub}</p>}
+      {sub && <p className="text-xs text-neo-subtle">{sub}</p>}
     </div>
   )
 }
@@ -176,8 +176,8 @@ export default function CashFlowAggregator({ properties, profile, onEditProfile 
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1 className="text-2xl font-bold text-white">Cash-Flow Aggregator</h1>
-          <p className="text-slate-400 text-sm mt-0.5">
+          <h1 className="text-2xl font-bold text-neo-text">Cash-Flow Aggregator</h1>
+          <p className="text-neo-muted text-sm mt-0.5">
             Combined household cash flow — rental income + all members' income minus all obligations.
           </p>
         </div>
@@ -188,7 +188,7 @@ export default function CashFlowAggregator({ properties, profile, onEditProfile 
 
       {/* Warning if profile not set */}
       {hasMissingProfile && (
-        <div className="card border border-amber-700/40 bg-amber-900/10">
+        <div className="card border border-amber-200/80 bg-amber-50 shadow-neo-inset-sm">
           <p className="text-amber-300 text-sm">
             No household members configured yet.{' '}
             <button onClick={onEditProfile} className="underline hover:text-amber-200">
@@ -212,7 +212,7 @@ export default function CashFlowAggregator({ properties, profile, onEditProfile 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Formula breakdown */}
         <div className="card space-y-1">
-          <h3 className="text-sm font-semibold text-slate-300 uppercase tracking-wider mb-3">
+          <h3 className="text-sm font-semibold text-neo-muted uppercase tracking-wider mb-3">
             Formula Breakdown (Monthly)
           </h3>
 
@@ -244,7 +244,7 @@ export default function CashFlowAggregator({ properties, profile, onEditProfile 
           })}
 
           {/* Separator */}
-          <div className="border-t border-slate-600 my-1" />
+          <div className="border-t border-neo-border my-1" />
 
           {/* Outflows */}
           <FormulaRow operator="−" label="Property Operating Costs"  value={monthlyPropertyOpex}  color="text-red-400" sublabel="maintenance + insurance + tax + other" />
@@ -259,7 +259,7 @@ export default function CashFlowAggregator({ properties, profile, onEditProfile 
           />
 
           {/* Result */}
-          <div className="border-t-2 border-slate-500 mt-1 pt-2">
+          <div className="border-t-2 border-neo-border mt-1 pt-2">
             <FormulaRow
               operator="="
               label="Available for New Investments"
@@ -275,7 +275,7 @@ export default function CashFlowAggregator({ properties, profile, onEditProfile 
           {/* Members cash summary */}
           {members.length > 0 && (
             <div className="card space-y-3">
-              <h3 className="text-sm font-semibold text-slate-300 uppercase tracking-wider">
+              <h3 className="text-sm font-semibold text-neo-muted uppercase tracking-wider">
                 Household Members
               </h3>
               <div className="space-y-2">
@@ -286,32 +286,32 @@ export default function CashFlowAggregator({ properties, profile, onEditProfile 
                                       flex items-center justify-center text-brand-300 font-bold text-xs">
                         {(m.name || '?').charAt(0).toUpperCase()}
                       </div>
-                      <span className="text-slate-300">{m.name || 'Unnamed'}</span>
+                      <span className="text-neo-muted">{m.name || 'Unnamed'}</span>
                     </div>
                     <div className="flex gap-4 text-right text-xs">
                       <div>
-                        <p className="text-slate-500">Income/mo</p>
+                        <p className="text-neo-subtle">Income/mo</p>
                         <p className="text-emerald-400 font-semibold">
                           {fmt((m.netIncome || 0) + (m.investmentIncome || 0))}
                         </p>
                       </div>
                       <div>
-                        <p className="text-slate-500">Cash</p>
+                        <p className="text-neo-subtle">Cash</p>
                         <p className="text-brand-400 font-semibold">{fmt(m.cash || 0)}</p>
                       </div>
                     </div>
                   </div>
                 ))}
-                <div className="border-t border-slate-700 pt-2 flex justify-between text-xs font-semibold">
-                  <span className="text-slate-400">Household totals</span>
+                <div className="border-t border-neo-border pt-2 flex justify-between text-xs font-semibold">
+                  <span className="text-neo-muted">Household totals</span>
                   <div className="flex gap-4 text-right">
                     <div>
                       <span className="text-emerald-400">{fmt(totalMemberSalary + totalMemberInvestment)}</span>
-                      <span className="text-slate-500">/mo</span>
+                      <span className="text-neo-subtle">/mo</span>
                     </div>
                     <div>
                       <span className="text-brand-400">{fmt(totalMemberCash)}</span>
-                      <span className="text-slate-500"> cash</span>
+                      <span className="text-neo-subtle"> cash</span>
                     </div>
                   </div>
                 </div>

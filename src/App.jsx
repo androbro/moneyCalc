@@ -63,10 +63,10 @@ import GrowthPlanner from "./components/GrowthPlanner";
 
 function LoadingScreen() {
 	return (
-		<div className="min-h-screen bg-slate-950 flex items-center justify-center">
+		<div className="min-h-screen bg-neo-bg flex items-center justify-center">
 			<div className="text-center space-y-4">
 				<div className="w-10 h-10 border-2 border-brand-500 border-t-transparent rounded-full animate-spin mx-auto" />
-				<p className="text-slate-400 text-sm">Loading portfolio…</p>
+				<p className="text-neo-muted text-sm">Loading portfolio…</p>
 			</div>
 		</div>
 	);
@@ -76,11 +76,11 @@ function LoadingScreen() {
 
 function ErrorScreen({ message, onRetry }) {
 	return (
-		<div className="min-h-screen bg-slate-950 flex items-center justify-center p-6">
+		<div className="min-h-screen bg-neo-bg flex items-center justify-center p-6">
 			<div className="card max-w-md w-full text-center space-y-4">
-				<div className="w-12 h-12 rounded-2xl bg-red-900/40 flex items-center justify-center mx-auto">
+				<div className="w-12 h-12 rounded-2xl bg-red-100 shadow-neo-inset-sm flex items-center justify-center mx-auto border border-red-200/60">
 					<svg
-						className="w-6 h-6 text-red-400"
+						className="w-6 h-6 text-red-600"
 						fill="none"
 						stroke="currentColor"
 						viewBox="0 0 24 24"
@@ -94,10 +94,10 @@ function ErrorScreen({ message, onRetry }) {
 					</svg>
 				</div>
 				<div>
-					<p className="font-semibold text-white">
+					<p className="font-semibold text-neo-text">
 						Failed to connect to Supabase
 					</p>
-					<p className="text-slate-400 text-sm mt-1 break-all">{message}</p>
+					<p className="text-neo-muted text-sm mt-1 break-all">{message}</p>
 				</div>
 				<button onClick={onRetry} className="btn-primary mx-auto">
 					Retry
@@ -117,12 +117,12 @@ function Toast({ message, type = "error", onDismiss }) {
 
 	return (
 		<div
-			className={`fixed bottom-5 right-5 z-50 flex items-center gap-3 px-4 py-3 rounded-xl shadow-xl
-                     text-sm font-medium border
+			className={`fixed bottom-5 right-5 z-50 flex items-center gap-3 px-4 py-3 rounded-2xl shadow-neo-lg
+                     text-sm font-medium border border-white/60
                      ${
 												type === "error"
-													? "bg-red-900/90 border-red-700 text-red-100"
-													: "bg-emerald-900/90 border-emerald-700 text-emerald-100"
+													? "bg-red-50 text-red-800 shadow-neo"
+													: "bg-emerald-50 text-emerald-800 shadow-neo"
 											}`}
 		>
 			{message}
@@ -152,15 +152,15 @@ function MigrationBanner({ onClaim, onDismiss }) {
 
 	return (
 		<div className="fixed top-0 inset-x-0 z-40 flex justify-center px-4 pt-3 pointer-events-none">
-			<div className="pointer-events-auto max-w-xl w-full bg-amber-900/95 border border-amber-600/60 rounded-2xl shadow-2xl px-5 py-4 flex items-start gap-4">
-				<div className="w-9 h-9 shrink-0 rounded-xl bg-amber-700/50 flex items-center justify-center mt-0.5">
-					<svg className="w-4 h-4 text-amber-200" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+			<div className="pointer-events-auto max-w-xl w-full bg-amber-50 border border-amber-200/80 rounded-3xl shadow-neo-lg px-5 py-4 flex items-start gap-4">
+				<div className="w-9 h-9 shrink-0 rounded-xl bg-amber-100 shadow-neo-inset-sm flex items-center justify-center mt-0.5 border border-amber-200/60">
+					<svg className="w-4 h-4 text-amber-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 						<path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
 							d="M4 7v10c0 2.21 3.582 4 8 4s8-1.79 8-4V7M4 7c0 2.21 3.582 4 8 4s8-1.79 8-4M4 7c0-2.21 3.582-4 8-4s8 1.79 8 4" />
 					</svg>
 				</div>
 				<div className="flex-1 min-w-0">
-					<p className="font-semibold text-amber-100 text-sm">
+					<p className="font-semibold text-amber-900 text-sm">
 						{done ? "Data claimed successfully!" : "Unclaimed data found"}
 					</p>
 					<p className="text-amber-300/80 text-xs mt-0.5 leading-relaxed">
@@ -174,14 +174,14 @@ function MigrationBanner({ onClaim, onDismiss }) {
 						<button
 							onClick={handleClaim}
 							disabled={claiming}
-							className="px-3 py-1.5 rounded-lg bg-amber-500 hover:bg-amber-400 text-slate-900
-                             text-xs font-semibold transition-colors disabled:opacity-60"
+							className="px-3 py-1.5 rounded-xl bg-amber-500 hover:bg-amber-400 text-white shadow-neo-sm
+                             text-xs font-semibold transition-all disabled:opacity-60 active:shadow-neo-inset-sm"
 						>
 							{claiming ? "Claiming…" : "Claim data"}
 						</button>
 						<button
 							onClick={onDismiss}
-							className="text-amber-400/60 hover:text-amber-300 transition-colors"
+							className="text-amber-600/70 hover:text-amber-800 transition-colors"
 							title="Dismiss"
 						>
 							<svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -561,8 +561,8 @@ export default function App() {
 					<div className="space-y-4">
 						<div className="flex items-center justify-between">
 							<div>
-								<h1 className="text-2xl font-bold text-white">Properties</h1>
-								<p className="text-slate-400 text-sm mt-0.5">
+								<h1 className="text-2xl font-bold text-neo-text">Properties</h1>
+								<p className="text-neo-muted text-sm mt-0.5">
 									Manage your real estate portfolio
 								</p>
 							</div>
@@ -574,8 +574,8 @@ export default function App() {
 
 						{properties.length === 0 ? (
 							<div className="card flex flex-col items-center justify-center py-16 text-center">
-								<p className="text-slate-300 font-medium">No properties yet</p>
-								<p className="text-slate-500 text-sm mt-1 mb-4">
+								<p className="text-neo-muted font-medium">No properties yet</p>
+								<p className="text-neo-subtle text-sm mt-1 mb-4">
 									Add your first property to start tracking your portfolio
 								</p>
 								<button onClick={handleAddProperty} className="btn-primary">
@@ -603,7 +603,7 @@ export default function App() {
 				{activeTab === "properties" && showForm && (
 					<div className="relative">
 						{saving && (
-							<div className="absolute inset-0 z-10 bg-slate-900/60 rounded-2xl flex items-center justify-center">
+							<div className="absolute inset-0 z-10 bg-neo-bg/65 rounded-2xl flex items-center justify-center">
 								<div className="w-8 h-8 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
 							</div>
 						)}
@@ -629,7 +629,7 @@ export default function App() {
 				{activeTab === "investments" && showInvestmentForm && (
 					<div className="relative">
 						{saving && (
-							<div className="absolute inset-0 z-10 bg-slate-900/60 rounded-2xl flex items-center justify-center">
+							<div className="absolute inset-0 z-10 bg-neo-bg/65 rounded-2xl flex items-center justify-center">
 								<div className="w-8 h-8 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
 							</div>
 						)}
@@ -665,14 +665,14 @@ export default function App() {
 				{activeTab === "cashflow" && showHouseholdForm && (
 					<div className="relative">
 						{saving && (
-							<div className="absolute inset-0 z-10 bg-slate-900/60 rounded-2xl flex items-center justify-center">
+							<div className="absolute inset-0 z-10 bg-neo-bg/65 rounded-2xl flex items-center justify-center">
 								<div className="w-8 h-8 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
 							</div>
 						)}
 						<div className="flex items-center gap-3 mb-4">
 							<button
 								onClick={() => setShowHouseholdForm(false)}
-								className="text-slate-400 hover:text-slate-100 transition-colors"
+								className="text-neo-muted hover:text-neo-text transition-colors"
 							>
 								<svg
 									className="w-5 h-5"
@@ -688,7 +688,7 @@ export default function App() {
 									/>
 								</svg>
 							</button>
-							<span className="text-slate-400 text-sm">
+							<span className="text-neo-muted text-sm">
 								Back to Cash-Flow Aggregator
 							</span>
 						</div>
@@ -706,7 +706,7 @@ export default function App() {
 			{activeTab === "household" && (
 				<div className="relative">
 					{saving && (
-						<div className="absolute inset-0 z-10 bg-slate-900/60 rounded-2xl flex items-center justify-center">
+						<div className="absolute inset-0 z-10 bg-neo-bg/65 rounded-2xl flex items-center justify-center">
 							<div className="w-8 h-8 border-2 border-brand-500 border-t-transparent rounded-full animate-spin" />
 						</div>
 					)}
@@ -821,8 +821,8 @@ function InvestmentsPage({ properties, onAdd, onEdit, onDelete }) {
 		<div className="space-y-6">
 			<div className="flex items-center justify-between">
 				<div>
-					<h1 className="text-2xl font-bold text-white">Planned Investments</h1>
-					<p className="text-slate-400 text-sm mt-0.5">
+					<h1 className="text-2xl font-bold text-neo-text">Planned Investments</h1>
+					<p className="text-neo-muted text-sm mt-0.5">
 						One-off capital outlays that increase a property's value from a
 						specific date.
 					</p>
@@ -839,7 +839,7 @@ function InvestmentsPage({ properties, onAdd, onEdit, onDelete }) {
 
 			{properties.length === 0 && (
 				<div className="card text-center py-12">
-					<p className="text-slate-400">
+					<p className="text-neo-muted">
 						Add at least one property before planning investments.
 					</p>
 				</div>
@@ -847,9 +847,9 @@ function InvestmentsPage({ properties, onAdd, onEdit, onDelete }) {
 
 			{properties.length > 0 && allInvestments.length === 0 && (
 				<div className="card flex flex-col items-center justify-center py-16 text-center">
-					<div className="w-12 h-12 rounded-2xl bg-slate-700 flex items-center justify-center mb-4">
+					<div className="w-12 h-12 rounded-2xl bg-neo-sunken flex items-center justify-center mb-4">
 						<svg
-							className="w-6 h-6 text-slate-400"
+							className="w-6 h-6 text-neo-muted"
 							fill="none"
 							stroke="currentColor"
 							viewBox="0 0 24 24"
@@ -862,10 +862,10 @@ function InvestmentsPage({ properties, onAdd, onEdit, onDelete }) {
 							/>
 						</svg>
 					</div>
-					<p className="text-slate-300 font-medium">
+					<p className="text-neo-muted font-medium">
 						No planned investments yet
 					</p>
-					<p className="text-slate-500 text-sm mt-1 mb-4">
+					<p className="text-neo-subtle text-sm mt-1 mb-4">
 						Add a renovation, upgrade, or any capital outlay you plan to make.
 					</p>
 					<button onClick={onAdd} className="btn-primary">
@@ -892,16 +892,16 @@ function InvestmentsPage({ properties, onAdd, onEdit, onDelete }) {
 							>
 								<div
 									className={`shrink-0 rounded-xl px-3 py-2 text-center min-w-[72px]
-                                  ${isPast ? "bg-slate-700/50" : "bg-amber-900/30 border border-amber-700/40"}`}
+                                  ${isPast ? "bg-neo-bg shadow-neo-inset-sm" : "bg-amber-50 border border-amber-200/80 shadow-neo-inset-sm"}`}
 								>
-									<p className="text-xs text-slate-400 leading-tight">
+									<p className="text-xs text-neo-muted leading-tight">
 										{date.toLocaleDateString("nl-BE", {
 											month: "short",
 											year: "numeric",
 										})}
 									</p>
 									<p
-										className={`text-sm font-bold ${isPast ? "text-slate-400" : "text-amber-300"}`}
+										className={`text-sm font-bold ${isPast ? "text-neo-muted" : "text-amber-900"}`}
 									>
 										{isPast
 											? "Past"
@@ -912,29 +912,29 @@ function InvestmentsPage({ properties, onAdd, onEdit, onDelete }) {
 								</div>
 
 								<div className="flex-1 min-w-0">
-									<p className="font-semibold text-white truncate">
+									<p className="font-semibold text-neo-text truncate">
 										{inv.description || "Unnamed investment"}
 									</p>
-									<p className="text-xs text-slate-400 mt-0.5">
+									<p className="text-xs text-neo-muted mt-0.5">
 										{inv.propertyName}
 									</p>
 								</div>
 
 								<div className="flex gap-6 shrink-0 text-right">
 									<div>
-										<p className="text-xs text-slate-500">Cost</p>
+										<p className="text-xs text-neo-subtle">Cost</p>
 										<p className="text-sm font-semibold text-red-400">
 											-{fmt(inv.cost)}
 										</p>
 									</div>
 									<div>
-										<p className="text-xs text-slate-500">Value +</p>
+										<p className="text-xs text-neo-subtle">Value +</p>
 										<p className="text-sm font-semibold text-emerald-400">
 											+{fmt(inv.valueIncrease)}
 										</p>
 									</div>
 									<div>
-										<p className="text-xs text-slate-500">Net</p>
+										<p className="text-xs text-neo-subtle">Net</p>
 										<p
 											className={`text-sm font-bold ${net >= 0 ? "text-emerald-400" : "text-red-400"}`}
 										>
@@ -947,13 +947,13 @@ function InvestmentsPage({ properties, onAdd, onEdit, onDelete }) {
 								<div className="flex gap-2 shrink-0">
 									<button
 										onClick={() => onEdit(inv)}
-										className="text-slate-400 hover:text-brand-400 transition-colors"
+										className="text-neo-muted hover:text-brand-400 transition-colors"
 									>
 										<EditIcon />
 									</button>
 									<button
 										onClick={() => onDelete(inv.id)}
-										className="text-slate-400 hover:text-red-400 transition-colors"
+										className="text-neo-muted hover:text-red-400 transition-colors"
 									>
 										<TrashIcon />
 									</button>
@@ -978,11 +978,11 @@ function PropertyListCard({ property, onView, onEdit, onDelete }) {
 		}).format(n);
 
 	const STATUS_COLORS = {
-		owner_occupied: "bg-brand-800/50 text-brand-300 border-brand-700/50",
-		rented: "bg-emerald-900/40 text-emerald-300 border-emerald-700/40",
-		vacant: "bg-slate-700/60 text-slate-300 border-slate-600/60",
-		for_sale: "bg-amber-900/40 text-amber-300 border-amber-700/40",
-		renovation: "bg-orange-900/40 text-orange-300 border-orange-700/40",
+		owner_occupied: "bg-sky-100 text-sky-800 border-sky-200/80 shadow-neo-inset-sm",
+		rented: "bg-emerald-100 text-emerald-800 border-emerald-200/80 shadow-neo-inset-sm",
+		vacant: "bg-neo-bg text-neo-muted border-neo-border shadow-neo-inset-sm",
+		for_sale: "bg-amber-100 text-amber-900 border-amber-200/80 shadow-neo-inset-sm",
+		renovation: "bg-orange-100 text-orange-900 border-orange-200/80 shadow-neo-inset-sm",
 	};
 	const STATUS_LABELS = {
 		owner_occupied: "Owner-occupied",
@@ -996,7 +996,7 @@ function PropertyListCard({ property, onView, onEdit, onDelete }) {
 
 	return (
 		<div
-			className="card space-y-3 cursor-pointer hover:border-brand-500/50 hover:bg-slate-800/80 transition-all group"
+			className="card space-y-3 cursor-pointer hover:shadow-neo hover:bg-neo-raised/90 transition-all group"
 			onClick={onView}
 			role="button"
 			tabIndex={0}
@@ -1005,7 +1005,7 @@ function PropertyListCard({ property, onView, onEdit, onDelete }) {
 			<div className="flex items-start justify-between gap-2">
 				<div className="min-w-0 flex-1">
 					<div className="flex items-center gap-2 flex-wrap">
-						<h3 className="font-semibold text-white truncate group-hover:text-brand-300 transition-colors">
+						<h3 className="font-semibold text-neo-text truncate group-hover:text-brand-600 transition-colors">
 							{property.name}
 						</h3>
 						<span
@@ -1015,7 +1015,7 @@ function PropertyListCard({ property, onView, onEdit, onDelete }) {
 						</span>
 					</div>
 					{property.address && (
-						<p className="text-xs text-slate-400 truncate mt-0.5">
+						<p className="text-xs text-neo-muted truncate mt-0.5">
 							{property.address}
 						</p>
 					)}
@@ -1026,7 +1026,7 @@ function PropertyListCard({ property, onView, onEdit, onDelete }) {
 							e.stopPropagation();
 							onEdit();
 						}}
-						className="text-slate-400 hover:text-brand-400 transition-colors"
+						className="text-neo-muted hover:text-brand-400 transition-colors"
 						title="Edit"
 					>
 						<EditIcon />
@@ -1036,7 +1036,7 @@ function PropertyListCard({ property, onView, onEdit, onDelete }) {
 							e.stopPropagation();
 							onDelete();
 						}}
-						className="text-slate-400 hover:text-red-400 transition-colors"
+						className="text-neo-muted hover:text-red-400 transition-colors"
 						title="Delete"
 					>
 						<TrashIcon />
@@ -1045,26 +1045,26 @@ function PropertyListCard({ property, onView, onEdit, onDelete }) {
 			</div>
 			<div className="grid grid-cols-2 gap-2 text-sm">
 				<div>
-					<span className="text-slate-400">Value </span>
-					<span className="text-white font-medium">
+					<span className="text-neo-muted">Value </span>
+					<span className="text-neo-text font-medium">
 						{fmt(property.currentValue)}
 					</span>
 				</div>
 				<div>
-					<span className="text-slate-400">Loans </span>
-					<span className="text-white font-medium">
+					<span className="text-neo-muted">Loans </span>
+					<span className="text-neo-text font-medium">
 						{property.loans?.length || 0}
 					</span>
 				</div>
 				<div>
-					<span className="text-slate-400">Appreciation </span>
-					<span className="text-white font-medium">
+					<span className="text-neo-muted">Appreciation </span>
+					<span className="text-neo-text font-medium">
 						{((property.appreciationRate || 0.02) * 100).toFixed(1)}%
 					</span>
 				</div>
 				<div>
-					<span className="text-slate-400">Renovations </span>
-					<span className="text-white font-medium">
+					<span className="text-neo-muted">Renovations </span>
+					<span className="text-neo-text font-medium">
 						{property.plannedInvestments?.length || 0}
 					</span>
 				</div>

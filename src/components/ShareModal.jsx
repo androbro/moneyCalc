@@ -130,20 +130,20 @@ export default function ShareModal({ onClose }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-      <div className="w-full max-w-md bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-neo-text/25 backdrop-blur-sm">
+      <div className="w-full max-w-md bg-neo-surface border border-neo-border rounded-2xl shadow-neo-lg">
 
         {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-800">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-neo-border/50">
           <div>
-            <h2 className="text-base font-semibold text-white">Share portfolio</h2>
-            <p className="text-xs text-slate-400 mt-0.5">
+            <h2 className="text-base font-semibold text-neo-text">Share portfolio</h2>
+            <p className="text-xs text-neo-muted mt-0.5">
               Anyone with the link can view — but not edit — your data.
             </p>
           </div>
           <button
             onClick={onClose}
-            className="text-slate-400 hover:text-white transition-colors p-1 rounded-lg hover:bg-slate-800"
+            className="text-neo-muted hover:text-neo-text transition-colors p-1 rounded-lg hover:bg-neo-raised"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -155,14 +155,14 @@ export default function ShareModal({ onClose }) {
 
           {/* Error */}
           {error && (
-            <div className="rounded-xl bg-red-900/30 border border-red-700/50 px-3 py-2.5 text-sm text-red-300">
+            <div className="rounded-2xl bg-red-50 border border-red-200/80 px-3 py-2.5 text-sm text-red-800 shadow-neo-inset-sm">
               {error}
             </div>
           )}
 
           {/* Permission toggles */}
           <div>
-            <p className="text-xs font-medium text-slate-400 uppercase tracking-wider mb-3">
+            <p className="text-xs font-medium text-neo-muted uppercase tracking-wider mb-3">
               What viewers can see
             </p>
             <div className="space-y-2">
@@ -171,16 +171,16 @@ export default function ShareModal({ onClose }) {
                   key={group.key}
                   onClick={() => handleToggle(group.key)}
                   className="w-full flex items-center justify-between px-4 py-3 rounded-xl
-                             bg-slate-800 hover:bg-slate-750 border border-slate-700
+                             bg-neo-raised hover:bg-neo-raised border border-neo-border
                              transition-colors text-left"
                 >
                   <div>
-                    <span className="text-sm font-medium text-white">{group.label}</span>
-                    <p className="text-xs text-slate-400 mt-0.5">{group.description}</p>
+                    <span className="text-sm font-medium text-neo-text">{group.label}</span>
+                    <p className="text-xs text-neo-muted mt-0.5">{group.description}</p>
                   </div>
                   {/* Toggle pill */}
                   <div className={`relative w-10 h-5.5 rounded-full transition-colors shrink-0 ml-4
-                                  ${perms[group.key] ? 'bg-brand-600' : 'bg-slate-600'}`}
+                                  ${perms[group.key] ? 'bg-brand-600' : 'bg-neo-sunken'}`}
                        style={{ height: '1.375rem', width: '2.5rem' }}>
                     <span className={`absolute top-0.5 w-4 h-4 bg-white rounded-full shadow
                                       transition-transform duration-200
@@ -198,26 +198,26 @@ export default function ShareModal({ onClose }) {
             </div>
           ) : tokenRow ? (
             <div className="space-y-3">
-              <p className="text-xs font-medium text-slate-400 uppercase tracking-wider">
+              <p className="text-xs font-medium text-neo-muted uppercase tracking-wider">
                 Your share link
               </p>
               {/* URL display + copy */}
               <div className="flex items-center gap-2">
-                <div className="flex-1 min-w-0 px-3 py-2 bg-slate-800 border border-slate-700
-                                rounded-xl text-xs text-slate-300 font-mono truncate">
+                <div className="flex-1 min-w-0 px-3 py-2 bg-neo-raised border border-neo-border
+                                rounded-xl text-xs text-neo-muted font-mono truncate">
                   {shareUrl}
                 </div>
                 <button
                   onClick={handleCopy}
                   className={`shrink-0 px-3 py-2 rounded-xl text-xs font-medium transition-colors
                               ${copied
-                                ? 'bg-emerald-700 text-white'
-                                : 'bg-slate-700 hover:bg-slate-600 text-slate-200'}`}
+                                ? 'bg-emerald-700 text-neo-text'
+                                : 'bg-neo-sunken hover:bg-neo-sunken text-neo-text/95'}`}
                 >
                   {copied ? 'Copied!' : 'Copy'}
                 </button>
               </div>
-              <p className="text-xs text-slate-500">
+              <p className="text-xs text-neo-subtle">
                 Permission changes above take effect immediately — no need to regenerate.
               </p>
               {/* Revoke */}
@@ -225,8 +225,8 @@ export default function ShareModal({ onClose }) {
                 onClick={handleRevoke}
                 disabled={revoking}
                 className="w-full py-2 rounded-xl text-sm font-medium
-                           text-red-400 hover:text-red-300 hover:bg-red-900/20
-                           border border-red-900/40 transition-colors
+                           text-red-700 hover:text-red-900 hover:bg-red-100/80
+                           border border-red-200/80 transition-colors shadow-neo-sm
                            disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {revoking ? 'Revoking…' : 'Revoke link'}

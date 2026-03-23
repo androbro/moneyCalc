@@ -470,10 +470,10 @@ function ModelSelector({ apiKey, selectedModel, onSelect }) {
     <div
       ref={dropdownRef}
       style={{ position: 'fixed', bottom: dropdownPos.bottom, right: dropdownPos.right, zIndex: 9999 }}
-      className="w-64 bg-slate-800 border border-slate-700 rounded-xl shadow-2xl overflow-hidden"
+      className="w-64 bg-neo-surface border border-white/60 rounded-2xl shadow-neo-lg overflow-hidden"
     >
-      <div className="flex items-center justify-between px-3 py-2 border-b border-slate-700">
-        <span className="text-xs text-slate-400 font-medium">Available models</span>
+      <div className="flex items-center justify-between px-3 py-2 border-b border-neo-border">
+        <span className="text-xs text-neo-muted font-medium">Available models</span>
         <button onClick={fetchModels} disabled={loadingModels}
           className="text-xs text-brand-400 hover:text-brand-300 disabled:opacity-50">
           {loadingModels ? 'Refreshing…' : 'Refresh'}
@@ -482,7 +482,7 @@ function ModelSelector({ apiKey, selectedModel, onSelect }) {
       {modelError && <p className="text-xs text-red-400 px-3 py-2">{modelError}</p>}
       <ul className="max-h-60 overflow-y-auto py-1">
         {models.length === 0 && !loadingModels && !modelError && (
-          <li className="text-xs text-slate-500 px-3 py-3 text-center">No models found</li>
+          <li className="text-xs text-neo-subtle px-3 py-3 text-center">No models found</li>
         )}
         {models.map((m) => (
           <li key={m.id}>
@@ -492,11 +492,11 @@ function ModelSelector({ apiKey, selectedModel, onSelect }) {
               className={`w-full text-left px-3 py-2 transition-colors text-xs
                 ${selectedModel === m.id
                   ? 'bg-brand-600/20 text-brand-300'
-                  : 'text-slate-200 hover:bg-slate-700'
+                  : 'text-neo-text/95 hover:bg-neo-sunken'
                 }`}
             >
               <p className="font-medium">{m.displayName}</p>
-              <p className="text-slate-500 font-mono truncate">{m.id}</p>
+              <p className="text-neo-subtle font-mono truncate">{m.id}</p>
             </button>
           </li>
         ))}
@@ -512,8 +512,8 @@ function ModelSelector({ apiKey, selectedModel, onSelect }) {
         type="button"
         onClick={handleToggle}
         title="Change Gemini model"
-        className="flex items-center gap-1.5 text-xs text-slate-400 hover:text-slate-200
-                   bg-slate-700/60 hover:bg-slate-700 border border-slate-600/50 rounded-lg
+        className="flex items-center gap-1.5 text-xs text-neo-muted hover:text-neo-text/95
+                   bg-neo-sunken/65 hover:bg-neo-sunken border border-neo-border/50 rounded-lg
                    px-2 py-1 transition-colors max-w-[160px]"
       >
         <svg className="w-3 h-3 text-brand-400 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -542,22 +542,22 @@ function ModelSelector({ apiKey, selectedModel, onSelect }) {
 // Markdown component map — scoped styles for the dark chat bubble
 const MD_COMPONENTS = {
   h1: ({ children }) => (
-    <p className="text-sm font-bold text-white mt-3 mb-1 first:mt-0">{children}</p>
+    <p className="text-sm font-bold text-neo-text mt-3 mb-1 first:mt-0">{children}</p>
   ),
   h2: ({ children }) => (
-    <p className="text-xs font-bold text-white mt-3 mb-1 first:mt-0 uppercase tracking-wide">{children}</p>
+    <p className="text-xs font-bold text-neo-text mt-3 mb-1 first:mt-0 uppercase tracking-wide">{children}</p>
   ),
   h3: ({ children }) => (
-    <p className="text-xs font-semibold text-brand-300 mt-2.5 mb-0.5 first:mt-0">{children}</p>
+    <p className="text-xs font-semibold text-brand-600 mt-2.5 mb-0.5 first:mt-0">{children}</p>
   ),
   p: ({ children }) => (
-    <p className="text-xs leading-relaxed text-slate-200 mb-2 last:mb-0">{children}</p>
+    <p className="text-xs leading-relaxed text-neo-text/95 mb-2 last:mb-0">{children}</p>
   ),
   strong: ({ children }) => (
-    <strong className="font-semibold text-white">{children}</strong>
+    <strong className="font-semibold text-neo-text">{children}</strong>
   ),
   em: ({ children }) => (
-    <em className="italic text-slate-300">{children}</em>
+    <em className="italic text-neo-muted">{children}</em>
   ),
   ul: ({ children }) => (
     <ul className="my-1.5 space-y-0.5 pl-1">{children}</ul>
@@ -566,25 +566,25 @@ const MD_COMPONENTS = {
     <ol className="my-1.5 space-y-0.5 pl-3 list-decimal">{children}</ol>
   ),
   li: ({ children, ordered }) => ordered ? (
-    <li className="text-xs text-slate-200 leading-relaxed pl-0.5">{children}</li>
+    <li className="text-xs text-neo-text/95 leading-relaxed pl-0.5">{children}</li>
   ) : (
-    <li className="text-xs text-slate-200 leading-relaxed flex gap-1.5 items-start">
+    <li className="text-xs text-neo-text/95 leading-relaxed flex gap-1.5 items-start">
       <span className="text-brand-400 mt-[3px] shrink-0">•</span>
       <span>{children}</span>
     </li>
   ),
   code: ({ inline, children }) =>
     inline ? (
-      <code className="font-mono text-[11px] bg-slate-900 text-emerald-300 px-1 py-0.5 rounded">{children}</code>
+      <code className="font-mono text-[11px] bg-neo-surface text-emerald-300 px-1 py-0.5 rounded">{children}</code>
     ) : (
-      <pre className="font-mono text-[11px] bg-slate-900 text-emerald-300 rounded-lg px-3 py-2 my-2 overflow-x-auto whitespace-pre-wrap">
+      <pre className="font-mono text-[11px] bg-neo-surface text-emerald-300 rounded-lg px-3 py-2 my-2 overflow-x-auto whitespace-pre-wrap">
         {children}
       </pre>
     ),
   blockquote: ({ children }) => (
-    <blockquote className="border-l-2 border-brand-500 pl-3 my-2 text-slate-400 italic">{children}</blockquote>
+    <blockquote className="border-l-2 border-brand-500 pl-3 my-2 text-neo-muted italic">{children}</blockquote>
   ),
-  hr: () => <hr className="border-slate-600 my-3" />,
+  hr: () => <hr className="border-neo-border my-3" />,
   a: ({ href, children }) => (
     <a href={href} target="_blank" rel="noreferrer"
        className="text-brand-400 hover:text-brand-300 underline underline-offset-2">{children}</a>
@@ -595,10 +595,10 @@ const MD_COMPONENTS = {
     </div>
   ),
   th: ({ children }) => (
-    <th className="text-left px-2 py-1 border border-slate-600 bg-slate-800 text-slate-300 font-semibold">{children}</th>
+    <th className="text-left px-2 py-1 border border-neo-border bg-neo-raised text-neo-muted font-semibold">{children}</th>
   ),
   td: ({ children }) => (
-    <td className="px-2 py-1 border border-slate-700 text-slate-200">{children}</td>
+    <td className="px-2 py-1 border border-neo-border text-neo-text/95">{children}</td>
   ),
 }
 
@@ -607,7 +607,7 @@ function Message({ role, content, loading }) {
     <div className={`flex gap-2 ${role === 'user' ? 'justify-end' : 'justify-start'}`}>
       {role === 'assistant' && (
         <div className="w-6 h-6 rounded-full bg-brand-600 flex items-center justify-center shrink-0 mt-0.5">
-          <svg className="w-3.5 h-3.5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-3.5 h-3.5 text-neo-text" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
               d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
           </svg>
@@ -616,15 +616,15 @@ function Message({ role, content, loading }) {
       <div
         className={`max-w-[82%] rounded-2xl px-3 py-2.5
           ${role === 'user'
-            ? 'bg-brand-600 text-white rounded-tr-sm text-xs leading-relaxed'
-            : 'bg-slate-800 text-slate-200 rounded-tl-sm border border-slate-700'
+            ? 'bg-brand-600 text-white rounded-tr-sm text-xs leading-relaxed shadow-neo-sm'
+            : 'bg-neo-raised text-neo-text/95 rounded-tl-sm border border-neo-border'
           }`}
       >
         {loading ? (
           <span className="flex items-center gap-1.5 py-0.5">
-            <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
-            <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '150ms' }} />
-            <span className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '300ms' }} />
+            <span className="w-1.5 h-1.5 bg-neo-subtle rounded-full animate-bounce shadow-neo-inset-sm" style={{ animationDelay: '0ms' }} />
+            <span className="w-1.5 h-1.5 bg-neo-subtle rounded-full animate-bounce shadow-neo-inset-sm" style={{ animationDelay: '150ms' }} />
+            <span className="w-1.5 h-1.5 bg-neo-subtle rounded-full animate-bounce shadow-neo-inset-sm" style={{ animationDelay: '300ms' }} />
           </span>
         ) : role === 'assistant' ? (
           <ReactMarkdown remarkPlugins={[remarkGfm]} components={MD_COMPONENTS}>
@@ -635,8 +635,8 @@ function Message({ role, content, loading }) {
         )}
       </div>
       {role === 'user' && (
-        <div className="w-6 h-6 rounded-full bg-slate-600 flex items-center justify-center shrink-0 mt-0.5">
-          <svg className="w-3.5 h-3.5 text-slate-300" fill="currentColor" viewBox="0 0 24 24">
+        <div className="w-6 h-6 rounded-full bg-neo-sunken flex items-center justify-center shrink-0 mt-0.5">
+          <svg className="w-3.5 h-3.5 text-neo-muted" fill="currentColor" viewBox="0 0 24 24">
             <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z" />
           </svg>
         </div>
@@ -649,21 +649,21 @@ function Message({ role, content, loading }) {
 
 function SessionPanel({ sessions, activeId, onSelect, onNew, onDelete, onClose }) {
   return (
-    <div className="flex flex-col h-full bg-slate-900">
-      <div className="flex items-center justify-between px-4 py-3 border-b border-slate-700">
-        <span className="text-sm font-semibold text-white">Chat history</span>
-        <button onClick={onClose} className="text-slate-400 hover:text-slate-200 transition-colors">
+    <div className="flex flex-col h-full bg-neo-surface">
+      <div className="flex items-center justify-between px-4 py-3 border-b border-neo-border">
+        <span className="text-sm font-semibold text-neo-text">Chat history</span>
+        <button onClick={onClose} className="text-neo-muted hover:text-neo-text/95 transition-colors">
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
           </svg>
         </button>
       </div>
 
-      <div className="p-3 border-b border-slate-700">
+      <div className="p-3 border-b border-neo-border">
         <button
           onClick={onNew}
           className="w-full flex items-center gap-2 px-3 py-2 rounded-lg bg-brand-600 hover:bg-brand-500
-                     text-white text-xs font-medium transition-colors"
+                     text-neo-text text-xs font-medium transition-colors"
         >
           <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
@@ -674,28 +674,28 @@ function SessionPanel({ sessions, activeId, onSelect, onNew, onDelete, onClose }
 
       <ul className="flex-1 overflow-y-auto py-2 space-y-0.5 px-2">
         {sessions.length === 0 && (
-          <li className="text-xs text-slate-500 px-2 py-4 text-center">No sessions yet</li>
+          <li className="text-xs text-neo-subtle px-2 py-4 text-center">No sessions yet</li>
         )}
         {[...sessions].reverse().map((s) => (
           <li key={s.id}>
             <div className={`group flex items-center gap-2 rounded-lg px-2 py-2 cursor-pointer transition-colors
-                             ${s.id === activeId ? 'bg-brand-600/20' : 'hover:bg-slate-800'}`}
+                             ${s.id === activeId ? 'bg-brand-600/20' : 'hover:bg-neo-raised'}`}
                  onClick={() => onSelect(s.id)}>
-              <svg className="w-3.5 h-3.5 text-slate-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-3.5 h-3.5 text-neo-subtle shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                   d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
               </svg>
               <div className="flex-1 min-w-0">
-                <p className={`text-xs font-medium truncate ${s.id === activeId ? 'text-brand-300' : 'text-slate-200'}`}>
+                <p className={`text-xs font-medium truncate ${s.id === activeId ? 'text-brand-300' : 'text-neo-text/95'}`}>
                   {s.label}
                 </p>
-                <p className="text-[10px] text-slate-500">
+                <p className="text-[10px] text-neo-subtle">
                   {s.messages.length} message{s.messages.length !== 1 ? 's' : ''}
                 </p>
               </div>
               <button
                 onClick={(e) => { e.stopPropagation(); onDelete(s.id) }}
-                className="opacity-0 group-hover:opacity-100 text-slate-500 hover:text-red-400
+                className="opacity-0 group-hover:opacity-100 text-neo-subtle hover:text-red-400
                            transition-all shrink-0"
                 title="Delete session"
               >
@@ -921,16 +921,16 @@ export default function AiChatOverlay({ properties, profile, activeTab, simState
       <button
         onClick={() => setOpen((o) => !o)}
         title="AI Chat"
-        className={`fixed bottom-6 right-6 z-[100] w-14 h-14 rounded-full shadow-2xl
+        className={`fixed bottom-6 right-6 z-[100] w-14 h-14 rounded-full shadow-neo-lg
                     flex items-center justify-center transition-all duration-200
                     ${open
-                      ? 'bg-slate-700 hover:bg-slate-600 rotate-45'
+                      ? 'bg-neo-sunken hover:bg-neo-sunken rotate-45'
                       : 'bg-brand-600 hover:bg-brand-500 hover:scale-105'
                     }`}
       >
         {open ? (
           /* Close (×) icon when panel is open */
-          <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-6 h-6 text-neo-text" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
           </svg>
         ) : (
@@ -947,7 +947,7 @@ export default function AiChatOverlay({ properties, profile, activeTab, simState
         <div
           className="fixed bottom-24 right-6 z-[99] w-[380px] max-w-[calc(100vw-2rem)]
                      h-[560px] max-h-[calc(100vh-8rem)]
-                     bg-slate-900 border border-slate-700 rounded-2xl shadow-2xl
+                     bg-neo-surface border border-white/60 rounded-3xl shadow-neo-lg
                      flex flex-col overflow-hidden"
         >
           {showSessions ? (
@@ -964,12 +964,12 @@ export default function AiChatOverlay({ properties, profile, activeTab, simState
             /* ── Chat view ── */
             <>
               {/* Header */}
-              <div className="flex items-center gap-2 px-3 py-2.5 border-b border-slate-700 shrink-0">
+              <div className="flex items-center gap-2 px-3 py-2.5 border-b border-neo-border shrink-0">
                 {/* Session switcher */}
                 <button
                   onClick={() => setShowSessions(true)}
                   title="Browse sessions"
-                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors"
+                  className="p-1.5 rounded-lg text-neo-muted hover:text-neo-text/95 hover:bg-neo-raised transition-colors"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -978,17 +978,17 @@ export default function AiChatOverlay({ properties, profile, activeTab, simState
                 </button>
 
                 <div className="flex-1 min-w-0">
-                  <p className="text-xs font-semibold text-white truncate">
+                  <p className="text-xs font-semibold text-neo-text truncate">
                     {activeSession?.label || 'AI Advisor'}
                   </p>
-                  <p className="text-[10px] text-slate-500">Powered by Google Gemini</p>
+                  <p className="text-[10px] text-neo-subtle">Powered by Google Gemini</p>
                 </div>
 
                 {/* New session */}
                 <button
                   onClick={handleNewSession}
                   title="New session"
-                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-colors"
+                  className="p-1.5 rounded-lg text-neo-muted hover:text-neo-text/95 hover:bg-neo-raised transition-colors"
                 >
                   <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
@@ -999,9 +999,9 @@ export default function AiChatOverlay({ properties, profile, activeTab, simState
 
               {/* Guest mode — AI disabled */}
               {!isOwner && (
-                <div className="m-3 rounded-xl border border-slate-700/60 bg-slate-800/60 p-3 space-y-1.5 shrink-0">
-                  <p className="text-slate-300 text-xs font-semibold">AI chat — owner only</p>
-                  <p className="text-slate-400 text-xs leading-relaxed">
+                <div className="m-3 rounded-xl border border-neo-border/60 bg-neo-sunken/70 p-3 space-y-1.5 shrink-0">
+                  <p className="text-neo-muted text-xs font-semibold">AI chat — owner only</p>
+                  <p className="text-neo-muted text-xs leading-relaxed">
                     You are browsing as a guest. Log in as owner using the{' '}
                     <span className="text-brand-300 font-medium">lock icon</span> in the sidebar
                     to enable the AI advisor.
@@ -1011,9 +1011,9 @@ export default function AiChatOverlay({ properties, profile, activeTab, simState
 
               {/* No API key warning (owner is authed but key missing in env) */}
               {isOwner && !hasKey && (
-                <div className="m-3 rounded-xl border border-amber-700/40 bg-amber-900/10 p-3 space-y-2 shrink-0">
-                  <p className="text-amber-300 text-xs font-semibold">API key not configured</p>
-                  <p className="text-amber-200/80 text-xs">
+                <div className="m-3 rounded-2xl border border-amber-200/80 bg-amber-50 shadow-neo-inset-sm p-3 space-y-2 shrink-0">
+                  <p className="text-amber-900 text-xs font-semibold">API key not configured</p>
+                  <p className="text-amber-800/90 text-xs">
                     Add <span className="font-mono">VITE_GEMINI_API_KEY</span> to your{' '}
                     <span className="font-mono">.env</span> and restart the dev server.
                   </p>
@@ -1032,8 +1032,8 @@ export default function AiChatOverlay({ properties, profile, activeTab, simState
                       </svg>
                     </div>
                     <div className="text-center px-4">
-                      <p className="text-slate-300 text-xs font-medium">Ask anything about your finances</p>
-                      <p className="text-slate-500 text-xs mt-1">
+                      <p className="text-neo-muted text-xs font-medium">Ask anything about your finances</p>
+                      <p className="text-neo-subtle text-xs mt-1">
                         AI has full context of your portfolio & household.
                       </p>
                       {hasKey && !selectedModel && (
@@ -1046,8 +1046,8 @@ export default function AiChatOverlay({ properties, profile, activeTab, simState
                           <button
                             key={s}
                             onClick={() => sendMessage(s)}
-                            className="w-full text-left text-xs text-slate-300 bg-slate-800 hover:bg-slate-700
-                                       border border-slate-700 hover:border-brand-500/50 rounded-xl px-3 py-2
+                            className="w-full text-left text-xs text-neo-muted bg-neo-raised hover:bg-neo-sunken
+                                       border border-neo-border hover:shadow-neo rounded-xl px-3 py-2
                                        transition-colors"
                           >
                             {s}
@@ -1065,8 +1065,8 @@ export default function AiChatOverlay({ properties, profile, activeTab, simState
                 {loading && <Message role="assistant" loading />}
 
                 {error && (
-                  <div className="rounded-xl border border-red-700/40 bg-red-900/10 px-3 py-2">
-                    <p className="text-red-300 text-xs">
+                  <div className="rounded-xl border border-red-200/80 bg-red-50 shadow-neo-inset-sm px-3 py-2">
+                    <p className="text-red-800 text-xs">
                       <span className="font-semibold">Error: </span>{error}
                     </p>
                   </div>
@@ -1077,14 +1077,14 @@ export default function AiChatOverlay({ properties, profile, activeTab, simState
 
               {/* Quick suggestions (after first message) */}
               {messages.length > 0 && hasKey && selectedModel && (
-                <div className="border-t border-slate-700 px-3 py-1.5 flex gap-1.5 overflow-x-auto shrink-0">
+                <div className="border-t border-neo-border px-3 py-1.5 flex gap-1.5 overflow-x-auto shrink-0">
                   {SUGGESTIONS.slice(3).map((s) => (
                     <button
                       key={s}
                       onClick={() => sendMessage(s)}
                       disabled={loading}
-                      className="shrink-0 text-[10px] text-slate-400 hover:text-slate-200 bg-slate-800
-                                 hover:bg-slate-700 border border-slate-700 rounded-lg px-2 py-1
+                      className="shrink-0 text-[10px] text-neo-muted hover:text-neo-text/95 bg-neo-raised
+                                 hover:bg-neo-sunken border border-neo-border rounded-lg px-2 py-1
                                  transition-colors whitespace-nowrap disabled:opacity-50"
                     >
                       {s}
@@ -1094,7 +1094,7 @@ export default function AiChatOverlay({ properties, profile, activeTab, simState
               )}
 
               {/* Input row */}
-              <div className="border-t border-slate-700 p-2 shrink-0">
+              <div className="border-t border-neo-border p-2 shrink-0">
                 <div className="flex items-center gap-1.5 mb-1.5">
                   <ModelSelector
                     apiKey={GEMINI_API_KEY}

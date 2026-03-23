@@ -171,7 +171,7 @@ const TYPE_LABELS = {
 }
 
 function typeStyle(type) {
-  return TYPE_LABELS[type] ?? { label: type, color: 'text-slate-300' }
+  return TYPE_LABELS[type] ?? { label: type, color: 'text-neo-muted' }
 }
 
 export default function RevolutTradeImporter({ onImport }) {
@@ -235,8 +235,8 @@ export default function RevolutTradeImporter({ onImport }) {
         onClick={() => fileRef.current?.click()}
         className={`border-2 border-dashed rounded-xl p-8 text-center cursor-pointer transition-colors
           ${dragging
-            ? 'border-brand-400 bg-brand-900/20'
-            : 'border-slate-600 hover:border-brand-500 bg-slate-700/30'}`}
+            ? 'border-brand-400 bg-sky-50 shadow-neo'
+            : 'border-neo-border hover:border-brand-500 bg-neo-bg shadow-neo-inset-sm'}`}
       >
         <input
           ref={fileRef}
@@ -246,17 +246,17 @@ export default function RevolutTradeImporter({ onImport }) {
           onChange={handleFile}
         />
         <div className="flex flex-col items-center gap-2">
-          <svg className="w-8 h-8 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <svg className="w-8 h-8 text-neo-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
               d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
           </svg>
-          <p className="text-sm text-slate-300 font-medium">
+          <p className="text-sm text-neo-muted font-medium">
             {dragging ? 'Drop the Revolut export here' : 'Drop your Revolut Trading CSV here, or click to browse'}
           </p>
-          <p className="text-xs text-slate-500">
+          <p className="text-xs text-neo-subtle">
             .csv — Revolut trading account export (comma-separated)
           </p>
-          <p className="text-xs text-slate-600">
+          <p className="text-xs text-neo-subtle">
             Columns: Date · Ticker · Type · Quantity · Price per share · Total Amount · Currency · FX Rate
           </p>
         </div>
@@ -264,7 +264,7 @@ export default function RevolutTradeImporter({ onImport }) {
 
       {/* Error */}
       {error && (
-        <div className="bg-red-900/30 border border-red-700 rounded-lg px-4 py-3 text-sm text-red-300 whitespace-pre-wrap">
+        <div className="bg-red-50 border border-red-200/80 rounded-2xl px-4 py-3 text-sm text-red-800 whitespace-pre-wrap shadow-neo-inset-sm">
           {error}
         </div>
       )}
@@ -273,42 +273,42 @@ export default function RevolutTradeImporter({ onImport }) {
       {preview && parsed && (
         <div className="space-y-3">
           <div className="flex items-center justify-between">
-            <p className="text-sm font-medium text-slate-300">
-              Preview — <span className="text-white">{parsed.length}</span> rows parsed
+            <p className="text-sm font-medium text-neo-muted">
+              Preview — <span className="text-neo-text">{parsed.length}</span> rows parsed
             </p>
           </div>
 
-          <div className="overflow-x-auto rounded-xl border border-slate-700">
+          <div className="overflow-x-auto rounded-xl border border-neo-border">
             <table className="w-full text-sm">
               <thead>
-                <tr className="bg-slate-700">
-                  <th className="px-3 py-2 text-left text-xs font-medium text-slate-400">Date</th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-slate-400">Ticker</th>
-                  <th className="px-3 py-2 text-left text-xs font-medium text-slate-400">Type</th>
-                  <th className="px-3 py-2 text-right text-xs font-medium text-slate-400">Qty</th>
-                  <th className="px-3 py-2 text-right text-xs font-medium text-slate-400">Price/share</th>
-                  <th className="px-3 py-2 text-right text-xs font-medium text-slate-400">Total</th>
+                <tr className="bg-neo-sunken">
+                  <th className="px-3 py-2 text-left text-xs font-medium text-neo-muted">Date</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-neo-muted">Ticker</th>
+                  <th className="px-3 py-2 text-left text-xs font-medium text-neo-muted">Type</th>
+                  <th className="px-3 py-2 text-right text-xs font-medium text-neo-muted">Qty</th>
+                  <th className="px-3 py-2 text-right text-xs font-medium text-neo-muted">Price/share</th>
+                  <th className="px-3 py-2 text-right text-xs font-medium text-neo-muted">Total</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-700">
+              <tbody className="divide-y divide-neo-border/50">
                 {preview.map((row, i) => {
                   const ts = typeStyle(row.type)
                   return (
-                    <tr key={i} className="bg-slate-800 hover:bg-slate-700/50">
-                      <td className="px-3 py-2 text-slate-400 whitespace-nowrap">{fmtDate(row.tradedAt)}</td>
-                      <td className="px-3 py-2 font-medium text-white">{row.ticker ?? '—'}</td>
+                    <tr key={i} className="bg-neo-raised hover:bg-neo-sunken/55">
+                      <td className="px-3 py-2 text-neo-muted whitespace-nowrap">{fmtDate(row.tradedAt)}</td>
+                      <td className="px-3 py-2 font-medium text-neo-text">{row.ticker ?? '—'}</td>
                       <td className={`px-3 py-2 font-medium ${ts.color}`}>{ts.label}</td>
-                      <td className="px-3 py-2 text-right text-slate-300">
+                      <td className="px-3 py-2 text-right text-neo-muted">
                         {row.quantity != null
                           ? row.quantity.toLocaleString('nl-BE', { maximumFractionDigits: 8 })
                           : '—'}
                       </td>
-                      <td className="px-3 py-2 text-right text-slate-300">
+                      <td className="px-3 py-2 text-right text-neo-muted">
                         {row.pricePerShare != null
                           ? fmtAmt(row.pricePerShare, row.currency)
                           : '—'}
                       </td>
-                      <td className="px-3 py-2 text-right font-semibold text-white whitespace-nowrap">
+                      <td className="px-3 py-2 text-right font-semibold text-neo-text whitespace-nowrap">
                         {fmtAmt(row.totalAmount, row.currency)}
                       </td>
                     </tr>
@@ -317,7 +317,7 @@ export default function RevolutTradeImporter({ onImport }) {
               </tbody>
             </table>
             {parsed.length > 8 && (
-              <p className="px-3 py-2 text-xs text-slate-500 text-center bg-slate-800 border-t border-slate-700">
+              <p className="px-3 py-2 text-xs text-neo-subtle text-center bg-neo-raised border-t border-neo-border">
                 … and {parsed.length - 8} more rows
               </p>
             )}

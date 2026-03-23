@@ -299,15 +299,15 @@ function RenovationLabel({ viewBox, description, cost }) {
 function ChartTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null
   return (
-    <div className="bg-slate-800 border border-slate-600 rounded-xl p-3 shadow-xl text-xs min-w-[200px]">
-      <p className="font-semibold text-white mb-2 text-sm">{label}</p>
+    <div className="bg-neo-raised border border-neo-border rounded-xl p-3 shadow-xl text-xs min-w-[200px]">
+      <p className="font-semibold text-neo-text mb-2 text-sm">{label}</p>
       {payload.map((entry) => (
         <div key={entry.dataKey} className="flex items-center justify-between gap-4 mb-1">
           <span style={{ color: entry.color }} className="font-medium flex items-center gap-1.5">
             <span className="w-2 h-2 rounded-full inline-block shrink-0" style={{ background: entry.color }} />
             {entry.name}
           </span>
-          <span className="text-white font-semibold">{fmt(entry.value)}</span>
+          <span className="text-neo-text font-semibold">{fmt(entry.value)}</span>
         </div>
       ))}
     </div>
@@ -316,14 +316,14 @@ function ChartTooltip({ active, payload, label }) {
 
 // ─── KPI card ─────────────────────────────────────────────────────────────────
 
-function KpiCard({ label, value, sub, color = 'text-white', highlight = false }) {
+function KpiCard({ label, value, sub, color = 'text-neo-text', highlight = false }) {
   return (
     <div className={`rounded-xl p-4 text-center ${highlight
       ? 'bg-gradient-to-br from-brand-600/30 to-brand-700/20 border border-brand-500/30'
-      : 'bg-slate-700/50'}`}>
-      <p className="text-xs text-slate-400 mb-1">{label}</p>
+      : 'bg-neo-sunken/55'}`}>
+      <p className="text-xs text-neo-muted mb-1">{label}</p>
       <p className={`text-xl font-bold ${color}`}>{value}</p>
-      {sub && <p className="text-xs text-slate-500 mt-0.5">{sub}</p>}
+      {sub && <p className="text-xs text-neo-subtle mt-0.5">{sub}</p>}
     </div>
   )
 }
@@ -333,7 +333,7 @@ function KpiCard({ label, value, sub, color = 'text-white', highlight = false })
 function Section({ title, children }) {
   return (
     <div className="card space-y-4">
-      <h3 className="font-semibold text-slate-100 text-base border-b border-slate-700 pb-2">{title}</h3>
+      <h3 className="font-semibold text-neo-text text-base border-b border-neo-border pb-2">{title}</h3>
       {children}
     </div>
   )
@@ -342,11 +342,11 @@ function Section({ title, children }) {
 // ─── Status badge ─────────────────────────────────────────────────────────────
 
 const STATUS_LABELS = {
-  owner_occupied: { label: 'Owner-occupied', color: 'bg-brand-800/50 text-brand-300 border-brand-700/50' },
-  rented:         { label: 'Rented out',     color: 'bg-emerald-900/40 text-emerald-300 border-emerald-700/40' },
-  vacant:         { label: 'Vacant',         color: 'bg-slate-700/60 text-slate-300 border-slate-600/60' },
-  for_sale:       { label: 'For sale',       color: 'bg-amber-900/40 text-amber-300 border-amber-700/40' },
-  renovation:     { label: 'Renovation',     color: 'bg-orange-900/40 text-orange-300 border-orange-700/40' },
+  owner_occupied: { label: 'Owner-occupied', color: 'bg-sky-100 text-sky-900 border-sky-200/80 shadow-neo-inset-sm' },
+  rented:         { label: 'Rented out',     color: 'bg-emerald-100 text-emerald-900 border-emerald-200/80 shadow-neo-inset-sm' },
+  vacant:         { label: 'Vacant',         color: 'bg-neo-bg text-neo-muted border-neo-border shadow-neo-inset-sm' },
+  for_sale:       { label: 'For sale',       color: 'bg-amber-100 text-amber-950 border-amber-200/80 shadow-neo-inset-sm' },
+  renovation:     { label: 'Renovation',     color: 'bg-orange-100 text-orange-900 border-orange-200/80 shadow-neo-inset-sm' },
 }
 
 function StatusBadge({ status }) {
@@ -472,7 +472,7 @@ export default function PropertyDetail({ property, onEdit, onBack }) {
         <div className="flex items-center gap-3">
           <button
             onClick={onBack}
-            className="text-slate-400 hover:text-slate-100 transition-colors p-1 rounded-lg hover:bg-slate-700"
+            className="text-neo-muted hover:text-neo-text transition-colors p-1 rounded-lg hover:bg-neo-sunken"
             title="Back to properties"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -481,11 +481,11 @@ export default function PropertyDetail({ property, onEdit, onBack }) {
           </button>
           <div>
             <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-2xl font-bold text-white">{property.name}</h1>
+              <h1 className="text-2xl font-bold text-neo-text">{property.name}</h1>
               <StatusBadge status={property.status} />
             </div>
             {property.address && (
-              <p className="text-slate-400 text-sm mt-0.5">{property.address}</p>
+              <p className="text-neo-muted text-sm mt-0.5">{property.address}</p>
             )}
           </div>
         </div>
@@ -504,7 +504,7 @@ export default function PropertyDetail({ property, onEdit, onBack }) {
           label="Market Value"
           value={fmt(property.currentValue)}
           sub={valuationLabel}
-          color="text-white"
+          color="text-neo-text"
           highlight
         />
         <KpiCard
@@ -530,8 +530,8 @@ export default function PropertyDetail({ property, onEdit, onBack }) {
       {/* ── Value vs cumulative spend chart ── */}
       <div className="card">
         <div className="mb-5">
-          <h2 className="font-semibold text-slate-100">Property Value vs. Total Spend</h2>
-          <p className="text-xs text-slate-400 mt-0.5">
+          <h2 className="font-semibold text-neo-text">Property Value vs. Total Spend</h2>
+          <p className="text-xs text-neo-muted mt-0.5">
             Market value projected from your {property.valuationDate ? `${fmtDate(property.valuationDate)} valuation` : 'current estimate'} at {((property.appreciationRate || 0.02) * 100).toFixed(1)}%/yr.
             Spend includes purchase price, estimated acquisition costs, all loan interest paid, and renovation costs.
             {!property.valuationDate && (
@@ -541,7 +541,7 @@ export default function PropertyDetail({ property, onEdit, onBack }) {
         </div>
 
         {/* Legend */}
-        <div className="flex flex-wrap gap-4 text-xs text-slate-400 mb-4">
+        <div className="flex flex-wrap gap-4 text-xs text-neo-muted mb-4">
           {[
             { color: '#10b981', label: 'Market Value' },
             { color: '#f59e0b', label: 'Total Spend' },
@@ -576,11 +576,11 @@ export default function PropertyDetail({ property, onEdit, onBack }) {
                 <stop offset="95%" stopColor="#38bdf8" stopOpacity={0.02} />
               </linearGradient>
             </defs>
-            <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" vertical={false} />
+            <CartesianGrid strokeDasharray="3 3" stroke="#cbd5e1" vertical={false} />
             <XAxis
               dataKey="label"
               tick={{ fill: '#94a3b8', fontSize: 11 }}
-              axisLine={{ stroke: '#1e293b' }}
+              axisLine={{ stroke: '#cbd5e1' }}
               tickLine={false}
               interval={allYears.length > 15 ? 4 : allYears.length > 8 ? 1 : 0}
             />
@@ -654,81 +654,81 @@ export default function PropertyDetail({ property, onEdit, onBack }) {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-slate-700">
-                <th className="text-left py-2 text-slate-400 font-medium text-xs pr-3">Category</th>
-                <th className="text-right py-2 text-slate-400 font-medium text-xs px-2">Amount</th>
-                <th className="text-left py-2 text-slate-400 font-medium text-xs pl-2">Notes</th>
+              <tr className="border-b border-neo-border">
+                <th className="text-left py-2 text-neo-muted font-medium text-xs pr-3">Category</th>
+                <th className="text-right py-2 text-neo-muted font-medium text-xs px-2">Amount</th>
+                <th className="text-left py-2 text-neo-muted font-medium text-xs pl-2">Notes</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-800">
-              <tr className="hover:bg-slate-700/30">
-                <td className="py-2 pr-3 text-slate-300">Purchase price</td>
-                <td className="py-2 px-2 text-right font-medium text-white">{fmt(pp)}</td>
-                <td className="py-2 pl-2 text-slate-500 text-xs">{fmtDate(property.purchaseDate)}</td>
+            <tbody className="divide-y divide-neo-border/50">
+              <tr className="hover:bg-neo-sunken/30">
+                <td className="py-2 pr-3 text-neo-muted">Purchase price</td>
+                <td className="py-2 px-2 text-right font-medium text-neo-text">{fmt(pp)}</td>
+                <td className="py-2 pl-2 text-neo-subtle text-xs">{fmtDate(property.purchaseDate)}</td>
               </tr>
-              <tr className="hover:bg-slate-700/30">
-                <td className="py-2 pr-3 text-slate-300">Registration tax</td>
+              <tr className="hover:bg-neo-sunken/30">
+                <td className="py-2 pr-3 text-neo-muted">Registration tax</td>
                 <td className="py-2 px-2 text-right font-medium text-amber-300">{fmt(regTaxAmt)}</td>
-                <td className="py-2 pl-2 text-slate-500 text-xs">
+                <td className="py-2 pl-2 text-neo-subtle text-xs">
                   {(regTaxRate * 100).toFixed(2)}%
                   {hasActualRegRate ? ' (actual)' : ' — estimated (standard 12%, Flemish investment property rate)'}
                 </td>
               </tr>
-              <tr className="hover:bg-slate-700/30">
-                <td className="py-2 pr-3 text-slate-300">Notary fees</td>
+              <tr className="hover:bg-neo-sunken/30">
+                <td className="py-2 pr-3 text-neo-muted">Notary fees</td>
                 <td className="py-2 px-2 text-right font-medium text-amber-300">{fmt(notaryAmt)}</td>
-                <td className="py-2 pl-2 text-slate-500 text-xs">
+                <td className="py-2 pl-2 text-neo-subtle text-xs">
                   {hasActualNotary ? 'actual' : 'estimated (1% + €1,500)'}
                 </td>
               </tr>
               {agencyAmt > 0 && (
-                <tr className="hover:bg-slate-700/30">
-                  <td className="py-2 pr-3 text-slate-300">Agency / broker fees</td>
+                <tr className="hover:bg-neo-sunken/30">
+                  <td className="py-2 pr-3 text-neo-muted">Agency / broker fees</td>
                   <td className="py-2 px-2 text-right font-medium text-amber-300">{fmt(agencyAmt)}</td>
-                  <td className="py-2 pl-2 text-slate-500 text-xs">actual</td>
+                  <td className="py-2 pl-2 text-neo-subtle text-xs">actual</td>
                 </tr>
               )}
               {otherAmt > 0 && (
-                <tr className="hover:bg-slate-700/30">
-                  <td className="py-2 pr-3 text-slate-300">Other acquisition costs</td>
+                <tr className="hover:bg-neo-sunken/30">
+                  <td className="py-2 pr-3 text-neo-muted">Other acquisition costs</td>
                   <td className="py-2 px-2 text-right font-medium text-amber-300">{fmt(otherAmt)}</td>
-                  <td className="py-2 pl-2 text-slate-500 text-xs">actual</td>
+                  <td className="py-2 pl-2 text-neo-subtle text-xs">actual</td>
                 </tr>
               )}
               {totalInterestPaid > 0 && (
-                <tr className="hover:bg-slate-700/30">
-                  <td className="py-2 pr-3 text-slate-300">Loan interest paid to date</td>
+                <tr className="hover:bg-neo-sunken/30">
+                  <td className="py-2 pr-3 text-neo-muted">Loan interest paid to date</td>
                   <td className="py-2 px-2 text-right font-medium text-red-400">{fmt(totalInterestPaid)}</td>
-                  <td className="py-2 pl-2 text-slate-500 text-xs">
+                  <td className="py-2 pl-2 text-neo-subtle text-xs">
                     {loans.length} loan{loans.length !== 1 ? 's' : ''}{loans.some((l) => l.amortizationSchedule?.length) ? ' (from schedule)' : ' (estimated)'}
                   </td>
                 </tr>
               )}
               {pastRenovCost > 0 && (
-                <tr className="hover:bg-slate-700/30">
-                  <td className="py-2 pr-3 text-slate-300">Renovations completed</td>
+                <tr className="hover:bg-neo-sunken/30">
+                  <td className="py-2 pr-3 text-neo-muted">Renovations completed</td>
                   <td className="py-2 px-2 text-right font-medium text-violet-400">{fmt(pastRenovCost)}</td>
-                  <td className="py-2 pl-2 text-slate-500 text-xs">
+                  <td className="py-2 pl-2 text-neo-subtle text-xs">
                     {renovations.filter((r) => r.plannedDate && new Date(r.plannedDate) <= today).length} renovation{renovations.filter((r) => r.plannedDate && new Date(r.plannedDate) <= today).length !== 1 ? 's' : ''}
                   </td>
                 </tr>
               )}
-              <tr className="border-t-2 border-slate-600 bg-slate-700/20">
-                <td className="py-2 pr-3 font-semibold text-white">Total invested to date</td>
+              <tr className="border-t-2 border-neo-border bg-neo-sunken/20">
+                <td className="py-2 pr-3 font-semibold text-neo-text">Total invested to date</td>
                 <td className="py-2 px-2 text-right font-bold text-amber-300">{fmt(totalInvested)}</td>
-                <td className="py-2 pl-2 text-slate-500 text-xs" />
+                <td className="py-2 pl-2 text-neo-subtle text-xs" />
               </tr>
-              <tr className="hover:bg-slate-700/30">
-                <td className="py-2 pr-3 text-slate-300">Current market value</td>
+              <tr className="hover:bg-neo-sunken/30">
+                <td className="py-2 pr-3 text-neo-muted">Current market value</td>
                 <td className="py-2 px-2 text-right font-medium text-emerald-400">{fmt(property.currentValue)}</td>
-                <td className="py-2 pl-2 text-slate-500 text-xs">{valuationLabel}</td>
+                <td className="py-2 pl-2 text-neo-subtle text-xs">{valuationLabel}</td>
               </tr>
-              <tr className="bg-slate-700/20">
-                <td className="py-2 pr-3 font-semibold text-white">Unrealised gain</td>
+              <tr className="bg-neo-sunken/20">
+                <td className="py-2 pr-3 font-semibold text-neo-text">Unrealised gain</td>
                 <td className={`py-2 px-2 text-right font-bold ${unrealisedGain >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
                   {unrealisedGain >= 0 ? '+' : ''}{fmt(unrealisedGain)}
                 </td>
-                <td className="py-2 pl-2 text-slate-500 text-xs">
+                <td className="py-2 pl-2 text-neo-subtle text-xs">
                   {roiPct >= 0 ? '+' : ''}{roiPct.toFixed(1)}% on total invested
                 </td>
               </tr>
@@ -743,29 +743,29 @@ export default function PropertyDetail({ property, onEdit, onBack }) {
           <div className="overflow-x-auto">
             <table className="w-full text-sm min-w-[500px]">
               <thead>
-                <tr className="border-b border-slate-700">
-                  <th className="text-left py-2 text-slate-400 font-medium text-xs pr-3">Date</th>
-                  <th className="text-left py-2 text-slate-400 font-medium text-xs pr-3">Description</th>
-                  <th className="text-right py-2 text-slate-400 font-medium text-xs px-2">Cost</th>
-                  <th className="text-right py-2 text-slate-400 font-medium text-xs px-2">Value added</th>
-                  <th className="text-right py-2 text-slate-400 font-medium text-xs pl-2">Net</th>
+                <tr className="border-b border-neo-border">
+                  <th className="text-left py-2 text-neo-muted font-medium text-xs pr-3">Date</th>
+                  <th className="text-left py-2 text-neo-muted font-medium text-xs pr-3">Description</th>
+                  <th className="text-right py-2 text-neo-muted font-medium text-xs px-2">Cost</th>
+                  <th className="text-right py-2 text-neo-muted font-medium text-xs px-2">Value added</th>
+                  <th className="text-right py-2 text-neo-muted font-medium text-xs pl-2">Net</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-slate-800">
+              <tbody className="divide-y divide-neo-border/50">
                 {renovations.map((r) => {
                   const isPast = r.plannedDate && new Date(r.plannedDate) <= today
                   const net    = (r.valueIncrease || 0) - (r.cost || 0)
                   return (
-                    <tr key={r.id} className="hover:bg-slate-700/30">
+                    <tr key={r.id} className="hover:bg-neo-sunken/30">
                       <td className="py-2 pr-3">
-                        <span className={`text-xs font-medium ${isPast ? 'text-slate-400' : 'text-amber-400'}`}>
+                        <span className={`text-xs font-medium ${isPast ? 'text-neo-muted' : 'text-amber-400'}`}>
                           {fmtDate(r.plannedDate)}
                         </span>
                         {!isPast && (
                           <span className="ml-1 text-xs text-amber-500">planned</span>
                         )}
                       </td>
-                      <td className="py-2 pr-3 text-slate-200">{r.description || '—'}</td>
+                      <td className="py-2 pr-3 text-neo-text/95">{r.description || '—'}</td>
                       <td className="py-2 px-2 text-right text-red-400 font-medium">
                         {r.cost ? `-${fmt(r.cost)}` : '—'}
                       </td>
@@ -779,9 +779,9 @@ export default function PropertyDetail({ property, onEdit, onBack }) {
                   )
                 })}
               </tbody>
-              <tfoot className="border-t-2 border-slate-600">
-                <tr className="bg-slate-700/20">
-                  <td colSpan={2} className="py-2 pr-3 font-semibold text-white text-sm">Total</td>
+              <tfoot className="border-t-2 border-neo-border">
+                <tr className="bg-neo-sunken/20">
+                  <td colSpan={2} className="py-2 pr-3 font-semibold text-neo-text text-sm">Total</td>
                   <td className="py-2 px-2 text-right font-bold text-red-400">{`-${fmt(totalRenovCost)}`}</td>
                   <td className="py-2 px-2 text-right font-bold text-emerald-400">{`+${fmt(totalRenovValue)}`}</td>
                   <td className={`py-2 pl-2 text-right font-bold ${totalRenovValue - totalRenovCost >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
@@ -805,21 +805,21 @@ export default function PropertyDetail({ property, onEdit, onBack }) {
                 ? (1 - remaining / loan.originalAmount) * 100
                 : 0
               return (
-                <div key={loan.id ?? i} className="rounded-xl border border-slate-700 p-4 space-y-3">
+                <div key={loan.id ?? i} className="rounded-xl border border-neo-border p-4 space-y-3">
                   <div className="flex items-start justify-between gap-2 flex-wrap">
                     <div>
-                      <p className="font-medium text-white">{loan.lender || `Loan ${i + 1}`}</p>
-                      <p className="text-xs text-slate-400 mt-0.5">
+                      <p className="font-medium text-neo-text">{loan.lender || `Loan ${i + 1}`}</p>
+                      <p className="text-xs text-neo-muted mt-0.5">
                         {fmt(loan.originalAmount)} at {((loan.interestRate || 0) * 100).toFixed(2)}% — {loan.termMonths || '?'} months
                       </p>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm font-semibold text-white">{fmt(remaining)} remaining</p>
-                      <p className="text-xs text-slate-400">{pctRepaid.toFixed(0)}% repaid</p>
+                      <p className="text-sm font-semibold text-neo-text">{fmt(remaining)} remaining</p>
+                      <p className="text-xs text-neo-muted">{pctRepaid.toFixed(0)}% repaid</p>
                     </div>
                   </div>
                   {/* Progress bar */}
-                  <div className="h-2 bg-slate-700 rounded-full overflow-hidden">
+                  <div className="h-2 bg-neo-sunken rounded-full overflow-hidden">
                     <div
                       className="h-full rounded-full bg-gradient-to-r from-brand-600 to-emerald-500 transition-all"
                       style={{ width: `${Math.min(100, pctRepaid)}%` }}
@@ -827,16 +827,16 @@ export default function PropertyDetail({ property, onEdit, onBack }) {
                   </div>
                   {/* Monthly breakdown */}
                   <div className="grid grid-cols-3 gap-2 text-center text-xs">
-                    <div className="rounded-lg bg-slate-800/60 p-2">
-                      <p className="text-slate-400 mb-0.5">Monthly</p>
-                      <p className="font-semibold text-white">{fmt(monthly)}</p>
+                    <div className="rounded-lg bg-neo-sunken/70 p-2">
+                      <p className="text-neo-muted mb-0.5">Monthly</p>
+                      <p className="font-semibold text-neo-text">{fmt(monthly)}</p>
                     </div>
-                    <div className="rounded-lg bg-slate-800/60 p-2">
-                      <p className="text-slate-400 mb-0.5">Interest</p>
+                    <div className="rounded-lg bg-neo-sunken/70 p-2">
+                      <p className="text-neo-muted mb-0.5">Interest</p>
                       <p className="font-semibold text-red-400">{fmt(interest)}</p>
                     </div>
-                    <div className="rounded-lg bg-slate-800/60 p-2">
-                      <p className="text-slate-400 mb-0.5">Capital</p>
+                    <div className="rounded-lg bg-neo-sunken/70 p-2">
+                      <p className="text-neo-muted mb-0.5">Capital</p>
                       <p className="font-semibold text-teal-400">{fmt(capital)}</p>
                     </div>
                   </div>
@@ -855,7 +855,7 @@ export default function PropertyDetail({ property, onEdit, onBack }) {
       {/* ── Full property timeline ── */}
       {(loans.length > 0 || property.rentalStartDate || property.purchaseDate) && (
         <div className="card">
-          <h3 className="font-semibold text-slate-100 text-base border-b border-slate-700 pb-2 mb-4">
+          <h3 className="font-semibold text-neo-text text-base border-b border-neo-border pb-2 mb-4">
             Property Timeline
           </h3>
           <PropertyTimeline property={property} compact={false} />
