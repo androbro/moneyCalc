@@ -153,6 +153,16 @@ function PlusIcon() {
   )
 }
 
+function TargetIcon() {
+  return (
+    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+      <circle cx="12" cy="12" r="8" strokeWidth={2} />
+      <circle cx="12" cy="12" r="4" strokeWidth={2} />
+      <circle cx="12" cy="12" r="1.2" fill="currentColor" stroke="none" />
+    </svg>
+  )
+}
+
 // ─── Stat Pill ────────────────────────────────────────────────────────────────
 
 function StatPill({ icon, label, value, explanation }) {
@@ -364,7 +374,7 @@ function EmptyState({ onAddProperty }) {
 
 // ─── Investment Ready Hero Card ───────────────────────────────────────────────
 
-function InvestmentReadyCard({ total, equityPart, cashPart, buyPowerConservative, buyPowerLeveraged }) {
+function InvestmentReadyCard({ total, equityPart, cashPart }) {
   const [expanded, setExpanded] = useState(false)
 
   return (
@@ -425,18 +435,6 @@ function InvestmentReadyCard({ total, equityPart, cashPart, buyPowerConservative
               Use for: <span className="text-neo-muted">12% registration tax</span> or <span className="text-neo-muted">20% own contribution</span> on next purchase
             </p>
           </div>
-          {/* Buy power */}
-          <div className="rounded-2xl px-3 py-2 space-y-1" style={{ background: 'rgba(4,7,14,0.35)', border: '1px solid rgba(255,255,255,0.05)' }}>
-            <p className="text-[10px] text-neo-subtle uppercase tracking-wider mb-1">Acquisition power</p>
-            <div className="flex justify-between items-center">
-              <span className="text-xs text-neo-subtle">Conservative (20% down)</span>
-              <span className="text-xs font-semibold text-emerald-400 tabular-nums">{kFmt(buyPowerConservative)}</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-xs text-neo-subtle">Leveraged (10% down)</span>
-              <span className="text-xs font-semibold text-amber-400 tabular-nums">{kFmt(buyPowerLeveraged)}</span>
-            </div>
-          </div>
         </div>
       </div>
     </div>
@@ -471,6 +469,75 @@ function PropertyEquityRow({ name, value, debt, headroom, ltvPct }) {
   )
 }
 
+function GoalModal({ onClose, onSave, defaultYear }) {
+  const [targetYear, setTargetYear] = useState(defaultYear)
+  const [targetCapital, setTargetCapital] = useState(50000)
+
+  const submit = (e) => {
+    e.preventDefault()
+    if (!targetYear || targetCapital <= 0) return
+    onSave({
+      id: crypto.randomUUID(),
+      type: 'investment_ready_capital',
+      targetYear: Number(targetYear),
+      targetAmount: Number(targetCapital),
+      createdAt: new Date().toISOString(),
+    })
+  }
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
+      <form onSubmit={submit} className="relative w-full max-w-md rounded-3xl border border-white/[0.12] p-5 space-y-4"
+        style={{ background: 'rgba(8,12,22,0.96)' }}>
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h3 className="text-lg font-semibold text-neo-text">Add Goal</h3>
+            <p className="text-xs text-neo-subtle mt-0.5">Target investment-ready capital by a specific year.</p>
+          </div>
+          <button type="button" onClick={onClose} className="text-neo-subtle hover:text-neo-text">✕</button>
+        </div>
+
+        <div className="space-y-1.5">
+          <label className="text-xs text-neo-muted">Target year</label>
+          <input
+            type="number"
+            min={new Date().getFullYear()}
+            max={new Date().getFullYear() + 40}
+            value={targetYear}
+            onChange={(e) => setTargetYear(e.target.value)}
+            className="input w-full"
+          />
+        </div>
+
+        <div className="space-y-1.5">
+          <label className="text-xs text-neo-muted">Required capital (€)</label>
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-neo-subtle text-sm">€</span>
+            <input
+              type="number"
+              min={1}
+              step={1000}
+              value={targetCapital}
+              onChange={(e) => setTargetCapital(Number(e.target.value || 0))}
+              className="input w-full pl-7"
+            />
+          </div>
+        </div>
+
+        <div className="flex justify-end gap-2 pt-1">
+          <button type="button" onClick={onClose} className="px-3 py-2 text-xs rounded-xl border border-white/[0.12] text-neo-muted hover:text-neo-text">
+            Cancel
+          </button>
+          <button type="submit" className="btn-primary text-xs">
+            Save Goal
+          </button>
+        </div>
+      </form>
+    </div>
+  )
+}
+
 // ─── Main Dashboard ───────────────────────────────────────────────────────────
 
 export default function Dashboard({
@@ -485,6 +552,7 @@ export default function Dashboard({
   const [chartRange, setChartRange]       = useState(10)
   const [chartPickerOpen, setChartPickerOpen] = useState(false)
   const [activeChart, setActiveChart]     = useState(profile?.dashboardChart ?? 'net_worth')
+  const [goalModalOpen, setGoalModalOpen] = useState(false)
 
   const s = computeSummary(properties, profile, { tradingPortfolioValue })
   const ltv = s.totalPortfolioValue > 0 ? (s.totalDebt / s.totalPortfolioValue) * 100 : null
@@ -564,6 +632,7 @@ export default function Dashboard({
   // Buy power: with investmentReadyCapital as 20% down → max property value × 5
   const buyPowerConservative = investmentReadyCapital * 5   // 20% down
   const buyPowerLeveraged    = investmentReadyCapital * 10  // 10% down
+  const capitalGoals = Array.isArray(profile?.capitalGoals) ? profile.capitalGoals : []
 
   // Per-property equity headroom for breakdown
   const propertyEquityRows = useMemo(() => {
@@ -581,6 +650,21 @@ export default function Dashboard({
       .sort((a, b) => b.headroom - a.headroom)
   }, [properties])
 
+  const projectedInvestmentReadyByYear = useMemo(() => {
+    const points = generateInvestmentReadyProjection(properties, s.personalCash, 25)
+    const map = new Map()
+    const nowYear = new Date().getFullYear()
+    points.forEach((p) => map.set(nowYear + p.year, p.value))
+    return map
+  }, [properties, s.personalCash])
+
+  async function handleAddGoal(goal) {
+    if (!onSaveProfile || !profile) return
+    const nextGoals = [...capitalGoals, goal]
+    await onSaveProfile({ ...profile, capitalGoals: nextGoals })
+    setGoalModalOpen(false)
+  }
+
   // ── Empty state ────────────────────────────────────────────
 
   if (properties.length === 0) {
@@ -589,6 +673,7 @@ export default function Dashboard({
 
   // ── Render ─────────────────────────────────────────────────
   return (
+    <>
     <div className="flex gap-6 min-h-full">
 
       {/* ══ Main content ══════════════════════════════════════ */}
@@ -600,10 +685,6 @@ export default function Dashboard({
             <h1 className="text-2xl font-bold text-neo-text tracking-tight">My Dashboard</h1>
             <p className="text-sm text-neo-muted mt-0.5">Real estate portfolio overview</p>
           </div>
-          <button onClick={onAddProperty} className="btn-primary">
-            <PlusIcon />
-            Add Property
-          </button>
         </div>
 
         {/* ── Investment Ready Capital hero ── */}
@@ -611,8 +692,6 @@ export default function Dashboard({
           total={investmentReadyCapital}
           equityPart={availableEquity}
           cashPart={liquidCash}
-          buyPowerConservative={buyPowerConservative}
-          buyPowerLeveraged={buyPowerLeveraged}
         />
 
         {/* ── Key Stats ── */}
@@ -855,7 +934,19 @@ export default function Dashboard({
       </div>
 
       {/* ══ Right Panel (xl+) ════════════════════════════════ */}
-      <div className="hidden xl:flex flex-col gap-5 w-72 shrink-0">
+      <div className="hidden xl:flex flex-col gap-5 w-72 shrink-0 mt-6">
+
+        {/* Quick actions */}
+        <div className="grid grid-cols-2 gap-2">
+          <button onClick={() => setGoalModalOpen(true)} className="btn-primary w-full text-sm justify-center">
+            <TargetIcon />
+            Goal
+          </button>
+          <button onClick={onAddProperty} className="btn-primary w-full text-sm justify-center">
+            <PlusIcon />
+            Property
+          </button>
+        </div>
 
         {/* Portfolio Health */}
         <div className="card">
@@ -905,6 +996,40 @@ export default function Dashboard({
           </div>
         </div>
 
+        {/* Goals */}
+        <div className="card">
+          <h3 className="font-semibold text-neo-text mb-3">Goals</h3>
+          {capitalGoals.length === 0 ? (
+            <p className="text-xs text-neo-subtle">No goals yet. Add one to track target capital by year.</p>
+          ) : (
+            <div className="space-y-3">
+              {capitalGoals.map((g) => {
+                const projected = projectedInvestmentReadyByYear.get(Number(g.targetYear)) ?? investmentReadyCapital
+                const pct = Math.max(0, Math.min(100, (projected / (g.targetAmount || 1)) * 100))
+                const remaining = Math.max(0, g.targetAmount - projected)
+                return (
+                  <div key={g.id} className="rounded-2xl px-3 py-3 border border-white/[0.08]" style={{ background: 'rgba(4,7,14,0.35)' }}>
+                    <div className="flex items-center justify-between gap-2">
+                      <p className="text-xs text-neo-muted">By {g.targetYear}: {kFmt(g.targetAmount)} ready capital</p>
+                      <span className="text-xs font-semibold text-neo-text tabular-nums">{Math.round(pct)}%</span>
+                    </div>
+                    <div className="h-1.5 bg-neo-sunken rounded-full mt-2 overflow-hidden">
+                      <div className="h-full rounded-full" style={{ width: `${pct}%`, background: 'linear-gradient(90deg, #ea580c, #f59e0b)' }} />
+                    </div>
+                    <p className="text-[10px] text-neo-subtle mt-2">
+                      Projected: <span className="text-neo-muted">{kFmt(projected)}</span>
+                      {' · '}
+                      {remaining > 0
+                        ? <>Gap: <span className="text-red-400">{kFmt(remaining)}</span></>
+                        : <span className="text-emerald-400">On track</span>}
+                    </p>
+                  </div>
+                )
+              })}
+            </div>
+          )}
+        </div>
+
         {/* Profile card */}
         <div className="card">
           <div className="flex items-center gap-3 mb-4">
@@ -933,13 +1058,17 @@ export default function Dashboard({
               </div>
             )}
           </div>
-          <button onClick={onAddProperty} className="btn-primary w-full mt-4 text-sm">
-            <PlusIcon />
-            Add Property
-          </button>
         </div>
 
       </div>
     </div>
+    {goalModalOpen && (
+      <GoalModal
+        onClose={() => setGoalModalOpen(false)}
+        onSave={handleAddGoal}
+        defaultYear={new Date().getFullYear() + 3}
+      />
+    )}
+    </>
   )
 }

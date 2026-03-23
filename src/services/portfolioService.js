@@ -462,6 +462,7 @@ function householdToDb(h, userId) {
     ui_preferences: {
       ...(h.uiPreferences ?? {}),
       dashboardChart: h.dashboardChart ?? 'net_worth',
+      capitalGoals: Array.isArray(h.capitalGoals) ? h.capitalGoals : [],
     },
   }
   if (userId) row.user_id = userId
@@ -478,6 +479,7 @@ function dbToHousehold(row) {
       householdExpenses:   Number(row.household_expenses ?? 0),
       personalSavingsRate: Number(row.personal_savings_rate ?? 0.10),
       dashboardChart:      uiPrefs.dashboardChart ?? 'net_worth',
+      capitalGoals:        Array.isArray(uiPrefs.capitalGoals) ? uiPrefs.capitalGoals : [],
       uiPreferences:       uiPrefs,
     }
   }
@@ -507,6 +509,7 @@ function dbToHousehold(row) {
     householdExpenses:   Number(row.household_expenses ?? 0),
     personalSavingsRate: Number(row.personal_savings_rate ?? 0.10),
     dashboardChart:      uiPrefs.dashboardChart ?? 'net_worth',
+    capitalGoals:        Array.isArray(uiPrefs.capitalGoals) ? uiPrefs.capitalGoals : [],
     uiPreferences:       uiPrefs,
   }
 }
@@ -516,6 +519,7 @@ export function defaultHousehold() {
     members: [{ id: 'member-me', name: 'Me', netIncome: 0, investmentIncome: 0, cash: 0, isMe: true }],
     householdExpenses: 0,
     personalSavingsRate: 0.10,
+    capitalGoals: [],
   }
 }
 
