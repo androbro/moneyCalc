@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { AnimatePresence, motion } from 'motion/react'
 import {
   computeSummary,
@@ -132,6 +132,7 @@ function GlowCard({
   glowOpacity = 0.16,
   borderGlowSize = 180,
   borderGlowOpacity = 0.34,
+  whileHover,
   ...motionProps
 }) {
   const [glow, setGlow] = useState({ x: 0, y: 0, active: false })
@@ -154,6 +155,7 @@ function GlowCard({
       {...motionProps}
       className={`${className} relative overflow-hidden`}
       style={style}
+      whileHover={whileHover}
       onMouseMove={handleMouseMove}
       onMouseLeave={handleMouseLeave}
     >
@@ -239,7 +241,6 @@ function StatPill({ icon, label, value, explanation }) {
     <GlowCard
       className="relative border border-white/[0.10] rounded-2xl px-4 py-3 flex-1 min-w-0"
       style={{ background: 'rgba(10, 14, 24, 0.38)', backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)' }}
-      whileHover={{ y: -2 }}
       transition={{ duration: 0.2, ease: SOFT_EASE }}
       glowSize={170}
       glowOpacity={0.14}
@@ -308,7 +309,11 @@ function ChartTooltip({ active, payload, label, suffix = '' }) {
 function GoalBar({ label, pct, color = '#ea580c' }) {
   const clamped = Math.min(100, Math.max(0, pct))
   return (
-    <div className="space-y-1.5">
+    <motion.div
+      className="space-y-1.5"
+      whileHover={{ scale: 1.012 }}
+      transition={{ duration: 0.18, ease: SOFT_EASE }}
+    >
       <div className="flex justify-between items-center">
         <span className="text-sm text-neo-muted">{label}</span>
         <span className="text-sm font-semibold text-neo-text tabular-nums">{Math.round(clamped)}%</span>
@@ -325,41 +330,88 @@ function GoalBar({ label, pct, color = '#ea580c' }) {
           }}
         />
       </div>
-    </div>
+    </motion.div>
   )
 }
 
 // ─── Radial Gauge ─────────────────────────────────────────────────────────────
 
 function RadialGauge({ pct, label }) {
+  const [animatedPct, setAnimatedPct] = useState(0)
+  const previousPctRef = useRef(0)
+
+  const clampedPct = Math.max(0, Math.min(100, pct))
+
+  useEffect(() => {
+    const from = previousPctRef.current
+    const to = clampedPct
+    const duration = 700
+    let rafId = null
+
+    function tick(startTime) {
+      rafId = requestAnimationFrame((now) => {
+        const elapsed = now - startTime
+        const progress = Math.min(1, elapsed / duration)
+        // Ease-out cubic for a soft finish.
+        const eased = 1 - Math.pow(1 - progress, 3)
+        const next = from + (to - from) * eased
+        setAnimatedPct(next)
+
+        if (progress < 1) {
+          tick(startTime)
+          return
+        }
+
+        previousPctRef.current = to
+      })
+    }
+
+    tick(performance.now())
+
+    return () => {
+      if (rafId !== null) cancelAnimationFrame(rafId)
+    }
+  }, [clampedPct])
+
   const r = 48
   const cx = 70
   const cy = 70
   const circumference = 2 * Math.PI * r
-  const dashOffset = circumference - (Math.max(0, Math.min(100, pct)) / 100) * circumference
+  const dashOffset = circumference - (animatedPct / 100) * circumference
 
   return (
-    <svg width="140" height="140" viewBox="0 0 140 140" className="shrink-0">
+    <motion.svg
+      width="140"
+      height="140"
+      viewBox="0 0 140 140"
+      className="shrink-0"
+      whileHover={{ scale: 1.03 }}
+      transition={{ duration: 0.2, ease: SOFT_EASE }}
+    >
       {/* Track */}
       <circle cx={cx} cy={cy} r={r} fill="none" stroke="rgba(255,255,255,0.05)" strokeWidth="10" />
       {/* Progress arc */}
-      <circle
+      <motion.circle
         cx={cx} cy={cy} r={r} fill="none"
         stroke="#ea580c" strokeWidth="10" strokeLinecap="round"
-        strokeDasharray={circumference} strokeDashoffset={dashOffset}
+        strokeDasharray={circumference}
+        strokeDashoffset={dashOffset}
+        initial={{ strokeDashoffset: circumference }}
+        animate={{ strokeDashoffset: dashOffset }}
+        transition={{ duration: 0.7, ease: SOFT_EASE }}
         transform={`rotate(-90 ${cx} ${cy})`}
         style={{ filter: 'drop-shadow(0 0 8px rgba(234,88,12,0.7))' }}
       />
       {/* Center labels */}
       <text x={cx} y={cy - 6} textAnchor="middle"
             fill="#e2e8f4" fontSize="22" fontWeight="bold" fontFamily="Inter, sans-serif">
-        {Math.round(pct)}%
+        {Math.round(animatedPct)}%
       </text>
       <text x={cx} y={cy + 14} textAnchor="middle"
             fill="#8897b5" fontSize="11" fontFamily="Inter, sans-serif">
         {label}
       </text>
-    </svg>
+    </motion.svg>
   )
 }
 
@@ -373,7 +425,6 @@ function PortfolioCard({ equity, name }) {
         background: 'linear-gradient(135deg, #ea580c 0%, #c2410c 55%, #9a3412 100%)',
         minHeight: '164px',
       }}
-      whileHover={{ y: -2, scale: 1.005 }}
       transition={{ duration: 0.22, ease: SOFT_EASE }}
       glowSize={260}
       glowOpacity={0.12}
@@ -524,7 +575,11 @@ function PropertyEquityRow({ name, value, debt, headroom, ltvPct }) {
   const ltvColor = ltvPct < 60 ? '#10b981' : ltvPct < 75 ? '#f59e0b' : '#ef4444'
   const maxBorrow = value * 0.80
   return (
-    <div className="flex items-start gap-3 py-2.5 border-b border-white/[0.04] last:border-0">
+    <motion.div
+      className="flex items-start gap-3 py-2.5 border-b border-white/[0.04] last:border-0"
+      whileHover={{ scale: 1.01 }}
+      transition={{ duration: 0.18, ease: SOFT_EASE }}
+    >
       <div className="flex-1 min-w-0">
         <p className="text-sm text-neo-text truncate leading-tight">{name}</p>
         {/* Formula: value×80% − debt = headroom */}
@@ -542,7 +597,7 @@ function PropertyEquityRow({ name, value, debt, headroom, ltvPct }) {
         <p className="text-sm font-semibold text-brand-400 tabular-nums">{kFmt(headroom)}</p>
         <p className="text-[10px] text-neo-subtle">available</p>
       </div>
-    </div>
+    </motion.div>
   )
 }
 
@@ -975,28 +1030,30 @@ export default function Dashboard({
             )}
 
             {/* ── Chart ── */}
-            <ResponsiveContainer width="100%" height={200}>
-              <AreaChart data={chartData} margin={{ top: 28, right: 10, bottom: 0, left: 0 }}>
-                <defs>
-                  <linearGradient id="valueGrad" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%"  stopColor="#ea580c" stopOpacity={0.35} />
-                    <stop offset="95%" stopColor="#ea580c" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
-                <XAxis dataKey="label" tick={{ fill: '#8897b5', fontSize: 11 }} axisLine={false} tickLine={false}
-                  interval={chartRange <= 5 ? 0 : Math.floor(chartRange / 5)} />
-                <YAxis tickFormatter={activeChart === 'cashflow' ? (v) => `${kFmt(v)}` : kFmt}
-                  tick={{ fill: '#8897b5', fontSize: 11 }} axisLine={false} tickLine={false} width={54} />
-                <Tooltip content={<ChartTooltip suffix={activeChart === 'cashflow' ? '/mo' : ''} />}
-                  cursor={{ stroke: 'rgba(255,255,255,0.08)', strokeWidth: 1 }} />
-                <Area type="monotone" dataKey="value" stroke="#ea580c" strokeWidth={2.5}
-                  fill="url(#valueGrad)" dot={false}
-                  activeDot={{ r: 5, fill: '#ea580c', stroke: '#fff', strokeWidth: 2 }}
-                  style={{ filter: 'drop-shadow(0 0 6px rgba(234,88,12,0.5))' }}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
+            <motion.div whileHover={{ scale: 1.01 }} transition={{ duration: 0.2, ease: SOFT_EASE }}>
+              <ResponsiveContainer width="100%" height={200}>
+                <AreaChart data={chartData} margin={{ top: 28, right: 10, bottom: 0, left: 0 }}>
+                  <defs>
+                    <linearGradient id="valueGrad" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%"  stopColor="#ea580c" stopOpacity={0.35} />
+                      <stop offset="95%" stopColor="#ea580c" stopOpacity={0} />
+                    </linearGradient>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
+                  <XAxis dataKey="label" tick={{ fill: '#8897b5', fontSize: 11 }} axisLine={false} tickLine={false}
+                    interval={chartRange <= 5 ? 0 : Math.floor(chartRange / 5)} />
+                  <YAxis tickFormatter={activeChart === 'cashflow' ? (v) => `${kFmt(v)}` : kFmt}
+                    tick={{ fill: '#8897b5', fontSize: 11 }} axisLine={false} tickLine={false} width={54} />
+                  <Tooltip content={<ChartTooltip suffix={activeChart === 'cashflow' ? '/mo' : ''} />}
+                    cursor={{ stroke: 'rgba(255,255,255,0.08)', strokeWidth: 1 }} />
+                  <Area type="monotone" dataKey="value" stroke="#ea580c" strokeWidth={2.5}
+                    fill="url(#valueGrad)" dot={false}
+                    activeDot={{ r: 5, fill: '#ea580c', stroke: '#fff', strokeWidth: 2 }}
+                    style={{ filter: 'drop-shadow(0 0 6px rgba(234,88,12,0.5))' }}
+                  />
+                </AreaChart>
+              </ResponsiveContainer>
+            </motion.div>
           </GlowCard>
 
           {/* Equity Headroom per Property */}
@@ -1021,8 +1078,8 @@ export default function Dashboard({
 
         </div>
 
-        {/* ── Cash Flow + Goals ── */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+        {/* ── Cash Flow ── */}
+        <div className="grid grid-cols-1 gap-5">
 
           {/* Cash Flow Breakdown */}
           <GlowCard className="card" {...cardReveal} transition={{ duration: 0.3, ease: SOFT_EASE, delay: 0.05 }}>
@@ -1056,16 +1113,6 @@ export default function Dashboard({
                   <span className="text-xs font-semibold text-emerald-400 tabular-nums">{s.roe.toFixed(1)}%</span>
                 </div>
               )}
-            </div>
-          </GlowCard>
-
-          {/* Goals */}
-          <GlowCard className="card" {...cardReveal} transition={{ duration: 0.3, ease: SOFT_EASE, delay: 0.08 }}>
-            <h3 className="font-semibold text-neo-text mb-5">Goals</h3>
-            <div className="space-y-4">
-              <GoalBar label="Portfolio Value Target" pct={valueGoalPct} color="#ea580c" />
-              <GoalBar label="Monthly Cash Flow (€3k)" pct={cfGoalPct} color="#f59e0b" />
-              {ltv !== null && <GoalBar label="LTV Reduction (target 60%)" pct={ltvGoalPct} color="#10b981" />}
             </div>
           </GlowCard>
 
@@ -1148,7 +1195,13 @@ export default function Dashboard({
                 const currentPct = Math.max(0, Math.min(100, (investmentReadyCapital / (g.targetAmount || 1)) * 100))
                 const remaining = Math.max(0, g.targetAmount - projected)
                 return (
-                  <div key={g.id} className="group rounded-2xl px-3 py-3 border border-white/[0.08]" style={{ background: 'rgba(4,7,14,0.35)' }}>
+                  <motion.div
+                    key={g.id}
+                    className="group rounded-2xl px-3 py-3 border border-white/[0.08]"
+                    style={{ background: 'rgba(4,7,14,0.35)' }}
+                    whileHover={{ scale: 1.01 }}
+                    transition={{ duration: 0.18, ease: SOFT_EASE }}
+                  >
                     <div className="flex items-center justify-between gap-2">
                       <p className="text-xs text-neo-muted">By {g.targetYear}: {kFmt(g.targetAmount)} ready capital</p>
                       <div className="flex items-center gap-2">
@@ -1204,7 +1257,7 @@ export default function Dashboard({
                         ? <>Gap: <span className="text-red-400">{kFmt(remaining)}</span></>
                         : <span className="text-emerald-400">On track</span>}
                     </p>
-                  </div>
+                  </motion.div>
                 )
               })}
             </div>
