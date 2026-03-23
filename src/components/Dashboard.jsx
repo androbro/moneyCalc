@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react'
+import { AnimatePresence, motion } from 'motion/react'
 import {
   computeSummary,
   formatEUR,
@@ -116,6 +117,52 @@ const CHARTS = [
   { id: 'cashflow',         label: 'Monthly Cash Flow',        sub: 'Rent − expenses − loan payments'   },
 ]
 
+const SOFT_EASE = [0.22, 1, 0.36, 1]
+const cardReveal = {
+  initial: { opacity: 0, y: 8 },
+  animate: { opacity: 1, y: 0 },
+  transition: { duration: 0.28, ease: SOFT_EASE },
+}
+
+function GlowCard({ children, className = '', style, glowSize = 220, glowOpacity = 0.16, ...motionProps }) {
+  const [glow, setGlow] = useState({ x: 0, y: 0, active: false })
+
+  function handleMouseMove(e) {
+    const rect = e.currentTarget.getBoundingClientRect()
+    setGlow({
+      x: e.clientX - rect.left,
+      y: e.clientY - rect.top,
+      active: true,
+    })
+  }
+
+  function handleMouseLeave() {
+    setGlow((prev) => ({ ...prev, active: false }))
+  }
+
+  return (
+    <motion.div
+      {...motionProps}
+      className={`${className} relative overflow-hidden`}
+      style={style}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
+    >
+      <div
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 z-0 transition-opacity duration-200"
+        style={{
+          opacity: glow.active ? 1 : 0,
+          background: `radial-gradient(${glowSize}px circle at ${glow.x}px ${glow.y}px, rgba(234,88,12,${glowOpacity}), rgba(234,88,12,0) 72%)`,
+        }}
+      />
+      <div className="relative z-10">
+        {children}
+      </div>
+    </motion.div>
+  )
+}
+
 // ─── Icons ────────────────────────────────────────────────────────────────────
 
 function WalletIcon() {
@@ -169,9 +216,13 @@ function StatPill({ icon, label, value, explanation }) {
   const [expanded, setExpanded] = useState(false)
 
   return (
-    <div
+    <GlowCard
       className="relative border border-white/[0.10] rounded-2xl px-4 py-3 flex-1 min-w-0"
       style={{ background: 'rgba(10, 14, 24, 0.38)', backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)' }}
+      whileHover={{ y: -2 }}
+      transition={{ duration: 0.2, ease: SOFT_EASE }}
+      glowSize={170}
+      glowOpacity={0.14}
     >
       <div className="flex items-center gap-3">
         <div className="w-9 h-9 rounded-xl bg-brand-600/15 flex items-center justify-center shrink-0 text-brand-400">
@@ -211,7 +262,7 @@ function StatPill({ icon, label, value, explanation }) {
       <div className={`sm:hidden mt-2 text-[11px] leading-relaxed text-neo-subtle ${expanded ? 'block' : 'hidden'}`}>
         {explanation}
       </div>
-    </div>
+    </GlowCard>
   )
 }
 
@@ -243,10 +294,12 @@ function GoalBar({ label, pct, color = '#ea580c' }) {
         <span className="text-sm font-semibold text-neo-text tabular-nums">{Math.round(clamped)}%</span>
       </div>
       <div className="h-2 bg-neo-sunken rounded-full overflow-hidden">
-        <div
+        <motion.div
           className="h-full rounded-full transition-all duration-700"
+          initial={{ width: 0 }}
+          animate={{ width: `${clamped}%` }}
+          transition={{ duration: 0.7, ease: SOFT_EASE }}
           style={{
-            width: `${clamped}%`,
             background: `linear-gradient(90deg, ${color}cc, ${color})`,
             boxShadow: `0 0 10px ${color}55`,
           }}
@@ -294,12 +347,16 @@ function RadialGauge({ pct, label }) {
 
 function PortfolioCard({ equity, name }) {
   return (
-    <div
+    <GlowCard
       className="relative rounded-2xl overflow-hidden p-5"
       style={{
         background: 'linear-gradient(135deg, #ea580c 0%, #c2410c 55%, #9a3412 100%)',
         minHeight: '164px',
       }}
+      whileHover={{ y: -2, scale: 1.005 }}
+      transition={{ duration: 0.22, ease: SOFT_EASE }}
+      glowSize={260}
+      glowOpacity={0.12}
     >
       {/* Decorative circles */}
       <div className="absolute -right-10 -top-10 w-44 h-44 rounded-full bg-white/10 pointer-events-none" />
@@ -324,7 +381,7 @@ function PortfolioCard({ equity, name }) {
         {/* Name */}
         <p className="text-white/55 text-xs mt-3 truncate">{name}</p>
       </div>
-    </div>
+    </GlowCard>
   )
 }
 
@@ -486,10 +543,29 @@ function GoalModal({ onClose, onSave, defaultYear, initialGoal = null }) {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="absolute inset-0 bg-black/50 backdrop-blur-sm" onClick={onClose} />
-      <form onSubmit={submit} className="relative w-full max-w-md rounded-3xl border border-white/[0.12] p-5 space-y-4"
-        style={{ background: 'rgba(8,12,22,0.96)' }}>
+    <motion.div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+      transition={{ duration: 0.18, ease: SOFT_EASE }}
+    >
+      <motion.div
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        onClick={onClose}
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+      />
+      <motion.form
+        onSubmit={submit}
+        className="relative w-full max-w-md rounded-3xl border border-white/[0.12] p-5 space-y-4"
+        style={{ background: 'rgba(8,12,22,0.96)' }}
+        initial={{ opacity: 0, y: 10, scale: 0.98 }}
+        animate={{ opacity: 1, y: 0, scale: 1 }}
+        exit={{ opacity: 0, y: 8, scale: 0.98 }}
+        transition={{ duration: 0.22, ease: SOFT_EASE }}
+      >
         <div className="flex items-start justify-between gap-3">
           <div>
             <h3 className="text-lg font-semibold text-neo-text">{initialGoal ? 'Edit Goal' : 'Add Goal'}</h3>
@@ -533,8 +609,8 @@ function GoalModal({ onClose, onSave, defaultYear, initialGoal = null }) {
             {initialGoal ? 'Update Goal' : 'Save Goal'}
           </button>
         </div>
-      </form>
-    </div>
+      </motion.form>
+    </motion.div>
   )
 }
 
@@ -699,70 +775,96 @@ export default function Dashboard({
         </div>
 
         {/* ── Investment Ready Capital hero ── */}
-        <InvestmentReadyCard
-          total={investmentReadyCapital}
-          equityPart={availableEquity}
-          cashPart={liquidCash}
-        />
+        <motion.div {...cardReveal}>
+          <InvestmentReadyCard
+            total={investmentReadyCapital}
+            equityPart={availableEquity}
+            cashPart={liquidCash}
+          />
+        </motion.div>
 
         {/* ── Key Stats ── */}
-        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <StatPill
-            icon={<WalletIcon />}
-            label="Net Worth"
-            value={formatEUR(s.personalNetWorth)}
-            explanation={
-              <>
-                <p>Personal net worth includes your share of real-estate equity, plus liquid cash and trading portfolio value.</p>
-                <p className="mt-1.5 font-mono text-[10px] text-neo-icon">
-                  {kFmt(s.personalRealEstateNetWorth)} + {kFmt(s.personalCash)} + {kFmt(s.personalTradingValue)}
-                </p>
-              </>
-            }
-          />
-          <StatPill
-            icon={<CashFlowIcon />}
-            label="Monthly CF"
-            value={formatEUR(s.totalMonthlyCashFlow)}
-            explanation={
-              <>
-                <p>Monthly cash flow is rent minus operating costs and interest (capital repayment is tracked separately).</p>
-                <p className="mt-1.5 font-mono text-[10px] text-neo-icon">
-                  {kFmt(s.annualRentalIncome / 12)} - {kFmt(s.annualOpex / 12)} - {kFmt(s.monthlyInterest)}
-                </p>
-              </>
-            }
-          />
-          <StatPill
-            icon={
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
-              </svg>
-            }
-            label="Portfolio LTV"
-            value={ltv !== null ? `${ltv.toFixed(1)}%` : '—'}
-            explanation={
-              <>
-                <p>Loan-to-value compares total outstanding debt to total portfolio value across live properties.</p>
-                <p className="mt-1.5 font-mono text-[10px] text-neo-icon">
-                  ({kFmt(s.totalDebt)} / {kFmt(s.totalPortfolioValue)}) x 100
-                </p>
-              </>
-            }
-          />
-          <StatPill
-            icon={<HomeIcon />}
-            label="Properties"
-            value={s.propertyCount}
-            explanation="Count of live properties currently in portfolio metrics (planned entries are excluded)."
-          />
-        </div>
+        <motion.div
+          className="grid grid-cols-2 sm:grid-cols-4 gap-3"
+          initial="initial"
+          animate="animate"
+          variants={{
+            initial: {},
+            animate: {
+              transition: {
+                staggerChildren: 0.05,
+              },
+            },
+          }}
+        >
+          {[
+            {
+              icon: <WalletIcon />,
+              label: 'Net Worth',
+              value: formatEUR(s.personalNetWorth),
+              explanation: (
+                <>
+                  <p>Personal net worth includes your share of real-estate equity, plus liquid cash and trading portfolio value.</p>
+                  <p className="mt-1.5 font-mono text-[10px] text-neo-icon">
+                    {kFmt(s.personalRealEstateNetWorth)} + {kFmt(s.personalCash)} + {kFmt(s.personalTradingValue)}
+                  </p>
+                </>
+              ),
+            },
+            {
+              icon: <CashFlowIcon />,
+              label: 'Monthly CF',
+              value: formatEUR(s.totalMonthlyCashFlow),
+              explanation: (
+                <>
+                  <p>Monthly cash flow is rent minus operating costs and interest (capital repayment is tracked separately).</p>
+                  <p className="mt-1.5 font-mono text-[10px] text-neo-icon">
+                    {kFmt(s.annualRentalIncome / 12)} - {kFmt(s.annualOpex / 12)} - {kFmt(s.monthlyInterest)}
+                  </p>
+                </>
+              ),
+            },
+            {
+              icon: (
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                </svg>
+              ),
+              label: 'Portfolio LTV',
+              value: ltv !== null ? `${ltv.toFixed(1)}%` : '—',
+              explanation: (
+                <>
+                  <p>Loan-to-value compares total outstanding debt to total portfolio value across live properties.</p>
+                  <p className="mt-1.5 font-mono text-[10px] text-neo-icon">
+                    ({kFmt(s.totalDebt)} / {kFmt(s.totalPortfolioValue)}) x 100
+                  </p>
+                </>
+              ),
+            },
+            {
+              icon: <HomeIcon />,
+              label: 'Properties',
+              value: s.propertyCount,
+              explanation: 'Count of live properties currently in portfolio metrics (planned entries are excluded).',
+            },
+          ].map((pill) => (
+            <motion.div
+              key={pill.label}
+              variants={{
+                initial: { opacity: 0, y: 10 },
+                animate: { opacity: 1, y: 0, transition: { duration: 0.25, ease: SOFT_EASE } },
+              }}
+            >
+              <StatPill {...pill} />
+            </motion.div>
+          ))}
+        </motion.div>
 
         {/* ── Chart + Equity Breakdown ── */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
 
           {/* Projection Chart — switchable */}
-          <div className="card relative">
+          <GlowCard className="card relative" {...cardReveal}>
 
             {/* ── Header: clickable title + range toggle ── */}
             <div className="flex items-center justify-between mb-4">
@@ -809,10 +911,15 @@ export default function Dashboard({
             </div>
 
             {/* ── Chart picker dropdown ── */}
+            <AnimatePresence>
             {chartPickerOpen && (
-              <div
+              <motion.div
                 className="absolute left-4 top-14 z-20 rounded-2xl border border-white/[0.10] overflow-hidden shadow-2xl"
                 style={{ background: 'rgba(8,12,22,0.95)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)', minWidth: '220px' }}
+                initial={{ opacity: 0, y: -4, scale: 0.98 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -4, scale: 0.98 }}
+                transition={{ duration: 0.16, ease: SOFT_EASE }}
               >
                 {CHARTS.map((c) => (
                   <button
@@ -828,8 +935,9 @@ export default function Dashboard({
                     <span className="text-[11px] text-neo-subtle mt-0.5">{c.sub}</span>
                   </button>
                 ))}
-              </div>
+              </motion.div>
             )}
+            </AnimatePresence>
 
             {/* ── End-value badge ── */}
             {chartData.length > 0 && Math.abs(chartData[chartData.length - 1].value) > 0 && (
@@ -869,10 +977,10 @@ export default function Dashboard({
                 />
               </AreaChart>
             </ResponsiveContainer>
-          </div>
+          </GlowCard>
 
           {/* Equity Headroom per Property */}
-          <div className="card">
+          <GlowCard className="card" {...cardReveal} transition={{ duration: 0.3, ease: SOFT_EASE, delay: 0.04 }}>
             <h3 className="font-semibold text-neo-text mb-1">Equity Headroom</h3>
             <p className="text-xs text-neo-subtle mb-4">Available borrowing at 80% LTV per property</p>
             {propertyEquityRows.length > 0 ? (
@@ -889,7 +997,7 @@ export default function Dashboard({
               <span className="text-xs text-neo-muted">Total available equity</span>
               <span className="text-sm font-bold text-brand-400 tabular-nums">{kFmt(availableEquity)}</span>
             </div>
-          </div>
+          </GlowCard>
 
         </div>
 
@@ -897,7 +1005,7 @@ export default function Dashboard({
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
 
           {/* Cash Flow Breakdown */}
-          <div className="card">
+          <GlowCard className="card" {...cardReveal} transition={{ duration: 0.3, ease: SOFT_EASE, delay: 0.05 }}>
             <h3 className="font-semibold text-neo-text mb-4">Cash Flow</h3>
             <div className="space-y-3">
               <div className="flex justify-between items-center py-2 border-b border-white/[0.04]">
@@ -929,17 +1037,17 @@ export default function Dashboard({
                 </div>
               )}
             </div>
-          </div>
+          </GlowCard>
 
           {/* Goals */}
-          <div className="card">
+          <GlowCard className="card" {...cardReveal} transition={{ duration: 0.3, ease: SOFT_EASE, delay: 0.08 }}>
             <h3 className="font-semibold text-neo-text mb-5">Goals</h3>
             <div className="space-y-4">
               <GoalBar label="Portfolio Value Target" pct={valueGoalPct} color="#ea580c" />
               <GoalBar label="Monthly Cash Flow (€3k)" pct={cfGoalPct} color="#f59e0b" />
               {ltv !== null && <GoalBar label="LTV Reduction (target 60%)" pct={ltvGoalPct} color="#10b981" />}
             </div>
-          </div>
+          </GlowCard>
 
         </div>
       </div>
@@ -960,7 +1068,7 @@ export default function Dashboard({
         </div>
 
         {/* Portfolio Health */}
-        <div className="card">
+        <GlowCard className="card" {...cardReveal} transition={{ duration: 0.3, ease: SOFT_EASE, delay: 0.08 }}>
           <h3 className="font-semibold text-neo-text mb-3">Portfolio Health</h3>
           <div className="flex items-center gap-4">
             <RadialGauge pct={healthScore} label={healthLabel(healthScore)} />
@@ -987,10 +1095,10 @@ export default function Dashboard({
               </div>
             </div>
           </div>
-        </div>
+        </GlowCard>
 
         {/* Buy Power */}
-        <div className="card">
+        <GlowCard className="card" {...cardReveal} transition={{ duration: 0.3, ease: SOFT_EASE, delay: 0.12 }}>
           <h3 className="font-semibold text-neo-text mb-3">Acquisition Power</h3>
           <p className="text-xs text-neo-subtle mb-4">Based on {kFmt(investmentReadyCapital)} ready capital</p>
           <div className="space-y-3">
@@ -1005,10 +1113,10 @@ export default function Dashboard({
               <p className="text-[10px] text-neo-subtle mt-0.5">max property value</p>
             </div>
           </div>
-        </div>
+        </GlowCard>
 
         {/* Goals */}
-        <div className="card">
+        <GlowCard className="card" {...cardReveal} transition={{ duration: 0.3, ease: SOFT_EASE, delay: 0.16 }}>
           <h3 className="font-semibold text-neo-text mb-3">Goals</h3>
           {capitalGoals.length === 0 ? (
             <p className="text-xs text-neo-subtle">No goals yet. Add one to track target capital by year.</p>
@@ -1081,10 +1189,10 @@ export default function Dashboard({
               })}
             </div>
           )}
-        </div>
+        </GlowCard>
 
         {/* Profile card */}
-        <div className="card">
+        <GlowCard className="card" {...cardReveal} transition={{ duration: 0.3, ease: SOFT_EASE, delay: 0.2 }}>
           <div className="flex items-center gap-3 mb-4">
             <div className="w-10 h-10 rounded-2xl bg-brand-600/15 border border-brand-500/20
                             flex items-center justify-center text-brand-400 font-bold shrink-0">
@@ -1111,18 +1219,20 @@ export default function Dashboard({
               </div>
             )}
           </div>
-        </div>
+        </GlowCard>
 
       </div>
     </div>
-    {goalModalOpen && (
-      <GoalModal
-        onClose={() => setGoalModalOpen(false)}
-        onSave={handleSaveGoal}
-        defaultYear={new Date().getFullYear() + 3}
-        initialGoal={goalBeingEdited}
-      />
-    )}
+    <AnimatePresence>
+      {goalModalOpen && (
+        <GoalModal
+          onClose={() => setGoalModalOpen(false)}
+          onSave={handleSaveGoal}
+          defaultYear={new Date().getFullYear() + 3}
+          initialGoal={goalBeingEdited}
+        />
+      )}
+    </AnimatePresence>
     </>
   )
 }
