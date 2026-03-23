@@ -257,7 +257,7 @@ export default function MobileLayout({ activeTab, onTabChange, children, isLogge
 
       {/* Bottom tab bar with center AI FAB */}
       <nav
-        className="fixed bottom-0 inset-x-0 z-20 flex items-stretch border-t"
+        className="fixed bottom-0 inset-x-0 z-[50] flex items-stretch border-t"
         style={{
           background: 'rgba(6, 10, 20, 0.88)',
           backdropFilter: 'blur(24px)',

@@ -948,10 +948,11 @@ export default function AiChatOverlay({ properties, profile, activeTab, simState
       {/* ── Chat panel ── */}
       {open && (
         <div
-          className="fixed bottom-24 right-6 z-[99] w-[380px] max-w-[calc(100vw-2rem)]
-                     h-[560px] max-h-[calc(100vh-8rem)]
-                     bg-neo-surface border border-white/60 rounded-3xl shadow-neo-lg
-                     flex flex-col overflow-hidden"
+          className="fixed z-[40] flex flex-col overflow-hidden
+                     top-0 left-0 right-0 bottom-[64px] sm:inset-auto sm:bottom-24 sm:right-6 sm:z-[99]
+                     sm:w-[380px] sm:max-w-[calc(100vw-2rem)]
+                     sm:h-[560px] sm:max-h-[calc(100vh-8rem)]
+                     bg-neo-surface sm:border border-white/60 sm:rounded-3xl shadow-neo-lg"
         >
           {showSessions ? (
             /* ── Session list view ── */

@@ -281,6 +281,101 @@ function EmptyState({ onAddProperty }) {
   )
 }
 
+// ─── Investment Ready Hero Card ───────────────────────────────────────────────
+
+function InvestmentReadyCard({ total, equityPart, cashPart, buyPowerConservative, buyPowerLeveraged }) {
+  return (
+    <div
+      className="relative rounded-3xl p-5 overflow-hidden border border-brand-500/20"
+      style={{ background: 'linear-gradient(135deg, rgba(234,88,12,0.18) 0%, rgba(194,65,12,0.10) 60%, rgba(10,14,24,0.38) 100%)', backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)', boxShadow: '0 0 40px rgba(234,88,12,0.12), 0 8px 32px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.07)' }}
+    >
+      {/* Decorative glow */}
+      <div className="absolute -right-16 -top-16 w-64 h-64 rounded-full pointer-events-none" style={{ background: 'radial-gradient(circle, rgba(234,88,12,0.15) 0%, transparent 70%)' }} />
+
+      <div className="relative z-10 flex flex-col sm:flex-row sm:items-center gap-5">
+        {/* Left: big number */}
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-1">
+            <div className="w-2 h-2 rounded-full bg-brand-500 animate-pulse" style={{ boxShadow: '0 0 8px rgba(234,88,12,0.8)' }} />
+            <p className="text-xs font-semibold text-brand-400 uppercase tracking-wider">Investment Ready Capital</p>
+          </div>
+          <p className="text-3xl sm:text-4xl font-bold text-neo-text tabular-nums leading-none mb-2" style={{ textShadow: '0 0 30px rgba(234,88,12,0.3)' }}>
+            {formatEUR(total)}
+          </p>
+          <p className="text-xs text-neo-muted">Available for your next property acquisition</p>
+        </div>
+
+        {/* Right: breakdown + buy power */}
+        <div className="sm:w-72 shrink-0 space-y-2">
+          {/* Breakdown with formula */}
+          <div className="rounded-2xl px-3 py-2.5 space-y-1.5" style={{ background: 'rgba(4,7,14,0.45)', border: '1px solid rgba(255,255,255,0.06)' }}>
+            <div className="flex justify-between items-start gap-2">
+              <div className="min-w-0">
+                <span className="text-xs text-neo-subtle">Reusable property equity</span>
+                <p className="text-[10px] text-neo-icon mt-0.5 font-mono">Σ (value × 80%) − debt</p>
+              </div>
+              <span className="text-xs font-semibold text-neo-text tabular-nums shrink-0">{kFmt(equityPart)}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-xs text-neo-subtle">Liquid savings</span>
+              <span className="text-xs font-semibold text-neo-text tabular-nums">{kFmt(cashPart)}</span>
+            </div>
+            <div className="h-px" style={{ background: 'rgba(255,255,255,0.07)' }} />
+            <div className="flex justify-between items-center">
+              <span className="text-xs font-medium text-neo-muted">Total ready</span>
+              <span className="text-xs font-bold text-brand-400 tabular-nums">{kFmt(total)}</span>
+            </div>
+            {/* Usage hint */}
+            <p className="text-[10px] text-neo-subtle leading-relaxed pt-0.5" style={{ borderTop: '1px solid rgba(255,255,255,0.04)' }}>
+              Use for: <span className="text-neo-muted">12% registration tax</span> or <span className="text-neo-muted">20% own contribution</span> on next purchase
+            </p>
+          </div>
+          {/* Buy power */}
+          <div className="rounded-2xl px-3 py-2 space-y-1" style={{ background: 'rgba(4,7,14,0.35)', border: '1px solid rgba(255,255,255,0.05)' }}>
+            <p className="text-[10px] text-neo-subtle uppercase tracking-wider mb-1">Acquisition power</p>
+            <div className="flex justify-between items-center">
+              <span className="text-xs text-neo-subtle">Conservative (20% down)</span>
+              <span className="text-xs font-semibold text-emerald-400 tabular-nums">{kFmt(buyPowerConservative)}</span>
+            </div>
+            <div className="flex justify-between items-center">
+              <span className="text-xs text-neo-subtle">Leveraged (10% down)</span>
+              <span className="text-xs font-semibold text-amber-400 tabular-nums">{kFmt(buyPowerLeveraged)}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Property Equity Row ──────────────────────────────────────────────────────
+
+function PropertyEquityRow({ name, value, debt, headroom, ltvPct }) {
+  const ltvColor = ltvPct < 60 ? '#10b981' : ltvPct < 75 ? '#f59e0b' : '#ef4444'
+  const maxBorrow = value * 0.80
+  return (
+    <div className="flex items-start gap-3 py-2.5 border-b border-white/[0.04] last:border-0">
+      <div className="flex-1 min-w-0">
+        <p className="text-sm text-neo-text truncate leading-tight">{name}</p>
+        {/* Formula: value×80% − debt = headroom */}
+        <p className="text-[10px] text-neo-icon font-mono mt-0.5 truncate">
+          {kFmt(maxBorrow)} − {kFmt(debt)} = <span style={{ color: '#fb923c' }}>{kFmt(headroom)}</span>
+        </p>
+        <div className="flex items-center gap-2 mt-1">
+          <div className="flex-1 h-1 bg-neo-sunken rounded-full overflow-hidden" style={{ maxWidth: '80px' }}>
+            <div className="h-full rounded-full" style={{ width: `${Math.min(100, ltvPct)}%`, background: ltvColor, boxShadow: `0 0 6px ${ltvColor}66` }} />
+          </div>
+          <span className="text-[10px] tabular-nums" style={{ color: ltvColor }}>{ltvPct.toFixed(0)}% LTV</span>
+        </div>
+      </div>
+      <div className="text-right shrink-0">
+        <p className="text-sm font-semibold text-brand-400 tabular-nums">{kFmt(headroom)}</p>
+        <p className="text-[10px] text-neo-subtle">available</p>
+      </div>
+    </div>
+  )
+}
+
 // ─── Main Dashboard ───────────────────────────────────────────────────────────
 
 export default function Dashboard({
@@ -330,30 +425,6 @@ export default function Dashboard({
     return Math.max(0, 100 - ((ltv - target) / (100 - target)) * 100)
   }, [ltv])
 
-  // Right panel: top properties by current value
-  const propertyRows = useMemo(() => {
-    const todayISO = new Date().toISOString()
-    return [...properties]
-      .filter((p) => p.status !== 'planned')
-      .sort((a, b) => (b.currentValue || 0) - (a.currentValue || 0))
-      .slice(0, 4)
-      .map((p) => {
-        const debt = (p.loans || []).reduce(
-          (sum, l) => sum + getRemainingBalance(l, todayISO),
-          0
-        )
-        const equity = (p.currentValue || 0) - debt
-        const isRented = isRentalActiveOn(p, new Date())
-        return {
-          icon: isRented ? '🏘' : '🏠',
-          title: p.name || p.address || 'Property',
-          sub: isRented ? 'Rental income' : 'Owner occupied',
-          amount: formatEUR(equity),
-          positive: equity >= 0,
-        }
-      })
-  }, [properties])
-
   // Profile name for right panel
   const profileName = useMemo(() => {
     if (profile?.members?.length) {
@@ -365,6 +436,42 @@ export default function Dashboard({
 
   const profileInitials = profileName.slice(0, 2).toUpperCase()
 
+  // ── Investment Ready Capital ─────────────────────────────────
+  // Belgian 80% LTV rule: max borrowable = currentValue × 0.80
+  const LTV_MAX = 0.80
+  const availableEquity = useMemo(() => {
+    const todayISO = new Date().toISOString()
+    return properties
+      .filter(p => p.status !== 'planned')
+      .reduce((sum, p) => {
+        const debt = (p.loans || []).reduce((s, l) => s + getRemainingBalance(l, todayISO), 0)
+        return sum + Math.max(0, (p.currentValue || 0) * LTV_MAX - debt)
+      }, 0)
+  }, [properties])
+
+  const liquidCash = s.personalCash || 0
+  const investmentReadyCapital = availableEquity + liquidCash
+
+  // Buy power: with investmentReadyCapital as 20% down → max property value × 5
+  const buyPowerConservative = investmentReadyCapital * 5   // 20% down
+  const buyPowerLeveraged    = investmentReadyCapital * 10  // 10% down
+
+  // Per-property equity headroom for breakdown
+  const propertyEquityRows = useMemo(() => {
+    const todayISO = new Date().toISOString()
+    return properties
+      .filter(p => p.status !== 'planned')
+      .map(p => {
+        const debt = (p.loans || []).reduce((s, l) => s + getRemainingBalance(l, todayISO), 0)
+        const value = p.currentValue || 0
+        const maxBorrow = value * LTV_MAX
+        const headroom = Math.max(0, maxBorrow - debt)
+        const ltvPct = value > 0 ? (debt / value) * 100 : 0
+        return { name: p.name || p.address || 'Property', value, debt, headroom, ltvPct }
+      })
+      .sort((a, b) => b.headroom - a.headroom)
+  }, [properties])
+
   // ── Empty state ────────────────────────────────────────────
 
   if (properties.length === 0) {
@@ -372,7 +479,6 @@ export default function Dashboard({
   }
 
   // ── Render ─────────────────────────────────────────────────
-
   return (
     <div className="flex gap-6 min-h-full">
 
@@ -391,176 +497,157 @@ export default function Dashboard({
           </button>
         </div>
 
-        {/* Stat Pills */}
-        <div className="flex flex-col sm:flex-row gap-3">
+        {/* ── Investment Ready Capital hero ── */}
+        <InvestmentReadyCard
+          total={investmentReadyCapital}
+          equityPart={availableEquity}
+          cashPart={liquidCash}
+          buyPowerConservative={buyPowerConservative}
+          buyPowerLeveraged={buyPowerLeveraged}
+        />
+
+        {/* ── Key Stats ── */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <StatPill icon={<WalletIcon />} label="Net Worth" value={formatEUR(s.personalNetWorth)} />
+          <StatPill icon={<CashFlowIcon />} label="Monthly CF" value={formatEUR(s.totalMonthlyCashFlow)} />
           <StatPill
-            icon={<WalletIcon />}
-            label="Net Worth"
-            value={formatEUR(s.personalNetWorth)}
+            icon={
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+              </svg>
+            }
+            label="Portfolio LTV"
+            value={ltv !== null ? `${ltv.toFixed(1)}%` : '—'}
           />
-          <StatPill
-            icon={<CashFlowIcon />}
-            label="Monthly Cash Flow"
-            value={formatEUR(s.totalMonthlyCashFlow)}
-          />
-          <StatPill
-            icon={<HomeIcon />}
-            label="Properties Owned"
-            value={s.propertyCount}
-          />
+          <StatPill icon={<HomeIcon />} label="Properties" value={s.propertyCount} />
         </div>
 
-        {/* ── Portfolio Growth Chart ── */}
-        <div className="card">
-          <div className="flex items-center justify-between mb-4">
-            <div>
-              <h2 className="font-semibold text-neo-text">Statistic</h2>
-              <p className="text-xs text-neo-subtle mt-0.5">Portfolio Growth</p>
-            </div>
-            <div className="flex gap-1.5">
-              {[3, 6, 12].map((m) => (
-                <button
-                  key={m}
-                  onClick={() => setChartRange(m)}
-                  className={`px-3 py-1 rounded-xl text-xs font-medium transition-all
-                    ${chartRange === m
-                      ? 'bg-brand-600/15 text-brand-400 border border-brand-500/20'
-                      : 'text-neo-subtle hover:text-neo-muted border border-transparent'}`}
-                >
-                  {m === 12 ? '1Y' : `${m}M`}
-                </button>
-              ))}
-            </div>
-          </div>
+        {/* ── Chart + Equity Breakdown ── */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-5">
 
-          {/* Legend */}
-          <div className="flex items-center gap-4 mb-3">
-            <div className="flex items-center gap-1.5">
-              <div className="w-2.5 h-2.5 rounded-full bg-brand-500" />
-              <span className="text-xs text-neo-muted">Total Value</span>
-            </div>
-          </div>
-
-          {/* Peak label */}
-          {chartData.length > 0 && chartData[chartData.length - 1].value > 0 && (
-            <div className="relative h-0">
-              <div className="absolute right-14 -top-1 z-10">
-                <div className="bg-brand-600/90 backdrop-blur-sm rounded-xl px-3 py-1.5 shadow-glow-sm">
-                  <p className="text-white text-xs font-bold tabular-nums">
-                    {kFmt(chartData[chartData.length - 1].value)}
-                  </p>
-                </div>
+          {/* Portfolio Growth Chart */}
+          <div className="card">
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="font-semibold text-neo-text">Portfolio Value</h2>
+                <p className="text-xs text-neo-subtle mt-0.5">Historical growth</p>
+              </div>
+              <div className="flex gap-1.5">
+                {[3, 6, 12].map((m) => (
+                  <button
+                    key={m}
+                    onClick={() => setChartRange(m)}
+                    className={`px-3 py-1 rounded-xl text-xs font-medium transition-all
+                      ${chartRange === m
+                        ? 'bg-brand-600/15 text-brand-400 border border-brand-500/20'
+                        : 'text-neo-subtle hover:text-neo-muted border border-transparent'}`}
+                  >
+                    {m === 12 ? '1Y' : `${m}M`}
+                  </button>
+                ))}
               </div>
             </div>
-          )}
 
-          <ResponsiveContainer width="100%" height={200}>
-            <AreaChart data={chartData} margin={{ top: 28, right: 10, bottom: 0, left: 0 }}>
-              <defs>
-                <linearGradient id="valueGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%"  stopColor="#ea580c" stopOpacity={0.35} />
-                  <stop offset="95%" stopColor="#ea580c" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
-              <XAxis
-                dataKey="month"
-                tick={{ fill: '#8897b5', fontSize: 11 }}
-                axisLine={false}
-                tickLine={false}
-              />
-              <YAxis
-                tickFormatter={kFmt}
-                tick={{ fill: '#8897b5', fontSize: 11 }}
-                axisLine={false}
-                tickLine={false}
-                width={54}
-              />
-              <Tooltip content={<ChartTooltip />} cursor={{ stroke: 'rgba(255,255,255,0.08)', strokeWidth: 1 }} />
-              <Area
-                type="monotone"
-                dataKey="value"
-                stroke="#ea580c"
-                strokeWidth={2.5}
-                fill="url(#valueGrad)"
-                dot={false}
-                activeDot={{ r: 5, fill: '#ea580c', stroke: '#fff', strokeWidth: 2 }}
-                style={{ filter: 'drop-shadow(0 0 6px rgba(234,88,12,0.5))' }}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
+            {chartData.length > 0 && chartData[chartData.length - 1].value > 0 && (
+              <div className="relative h-0">
+                <div className="absolute right-14 -top-1 z-10">
+                  <div className="bg-brand-600/90 backdrop-blur-sm rounded-xl px-3 py-1.5 shadow-glow-sm">
+                    <p className="text-white text-xs font-bold tabular-nums">
+                      {kFmt(chartData[chartData.length - 1].value)}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            <ResponsiveContainer width="100%" height={200}>
+              <AreaChart data={chartData} margin={{ top: 28, right: 10, bottom: 0, left: 0 }}>
+                <defs>
+                  <linearGradient id="valueGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%"  stopColor="#ea580c" stopOpacity={0.35} />
+                    <stop offset="95%" stopColor="#ea580c" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.04)" vertical={false} />
+                <XAxis dataKey="month" tick={{ fill: '#8897b5', fontSize: 11 }} axisLine={false} tickLine={false} />
+                <YAxis tickFormatter={kFmt} tick={{ fill: '#8897b5', fontSize: 11 }} axisLine={false} tickLine={false} width={54} />
+                <Tooltip content={<ChartTooltip />} cursor={{ stroke: 'rgba(255,255,255,0.08)', strokeWidth: 1 }} />
+                <Area type="monotone" dataKey="value" stroke="#ea580c" strokeWidth={2.5}
+                  fill="url(#valueGrad)" dot={false}
+                  activeDot={{ r: 5, fill: '#ea580c', stroke: '#fff', strokeWidth: 2 }}
+                  style={{ filter: 'drop-shadow(0 0 6px rgba(234,88,12,0.5))' }}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+
+          {/* Equity Headroom per Property */}
+          <div className="card">
+            <h3 className="font-semibold text-neo-text mb-1">Equity Headroom</h3>
+            <p className="text-xs text-neo-subtle mb-4">Available borrowing at 80% LTV per property</p>
+            {propertyEquityRows.length > 0 ? (
+              <div>
+                {propertyEquityRows.map((row, i) => (
+                  <PropertyEquityRow key={i} {...row} />
+                ))}
+              </div>
+            ) : (
+              <p className="text-sm text-neo-subtle text-center py-8">No live properties</p>
+            )}
+            {/* Total bar */}
+            <div className="mt-3 pt-3 border-t border-white/[0.06] flex justify-between items-center">
+              <span className="text-xs text-neo-muted">Total available equity</span>
+              <span className="text-sm font-bold text-brand-400 tabular-nums">{kFmt(availableEquity)}</span>
+            </div>
+          </div>
+
         </div>
 
-        {/* ── Goals + Health ── */}
+        {/* ── Cash Flow + Goals ── */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
 
-          {/* My Goals */}
+          {/* Cash Flow Breakdown */}
           <div className="card">
-            <h3 className="font-semibold text-neo-text mb-5">My Goals</h3>
-            <div className="space-y-4">
-              <GoalBar
-                label="Portfolio Value Target"
-                pct={valueGoalPct}
-                color="#ea580c"
-              />
-              <GoalBar
-                label="Monthly Cash Flow (€3k)"
-                pct={cfGoalPct}
-                color="#f59e0b"
-              />
-              {ltv !== null && (
-                <GoalBar
-                  label="LTV Reduction (target 60%)"
-                  pct={ltvGoalPct}
-                  color="#10b981"
-                />
+            <h3 className="font-semibold text-neo-text mb-4">Cash Flow</h3>
+            <div className="space-y-3">
+              <div className="flex justify-between items-center py-2 border-b border-white/[0.04]">
+                <span className="text-sm text-neo-muted">Rental income</span>
+                <span className="text-sm font-semibold text-emerald-400 tabular-nums">+{kFmt(s.annualRentalIncome / 12)}/mo</span>
+              </div>
+              <div className="flex justify-between items-center py-2 border-b border-white/[0.04]">
+                <span className="text-sm text-neo-muted">Interest costs</span>
+                <span className="text-sm font-semibold text-red-400 tabular-nums">-{kFmt(s.monthlyInterest)}/mo</span>
+              </div>
+              <div className="flex justify-between items-center py-2 border-b border-white/[0.04]">
+                <span className="text-sm text-neo-muted">Operating costs</span>
+                <span className="text-sm font-semibold text-red-400 tabular-nums">-{kFmt(s.annualOpex / 12)}/mo</span>
+              </div>
+              <div className="flex justify-between items-center py-2">
+                <span className="text-sm font-medium text-neo-text">Net monthly CF</span>
+                <span className={`text-sm font-bold tabular-nums ${s.totalMonthlyCashFlow >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                  {s.totalMonthlyCashFlow >= 0 ? '+' : ''}{formatEUR(s.totalMonthlyCashFlow)}/mo
+                </span>
+              </div>
+              <div className="flex justify-between items-center pt-1">
+                <span className="text-xs text-neo-muted">Capital repaid/mo</span>
+                <span className="text-xs font-semibold text-neo-muted tabular-nums">+{kFmt(s.monthlyCapital)}/mo</span>
+              </div>
+              {s.roe > 0 && (
+                <div className="flex justify-between items-center">
+                  <span className="text-xs text-neo-muted">Return on Equity (ROE)</span>
+                  <span className="text-xs font-semibold text-emerald-400 tabular-nums">{s.roe.toFixed(1)}%</span>
+                </div>
               )}
             </div>
           </div>
 
-          {/* Portfolio Health */}
+          {/* Goals */}
           <div className="card">
-            <h3 className="font-semibold text-neo-text mb-3">Portfolio Health</h3>
-            <div className="flex items-center gap-4">
-              <RadialGauge pct={healthScore} label={healthLabel(healthScore)} />
-              <div className="flex-1 space-y-2.5">
-                <div className="flex justify-between">
-                  <span className="text-xs text-neo-muted">Target Value</span>
-                  <span className="text-xs font-medium text-neo-text tabular-nums">
-                    {kFmt(Math.max(s.totalPortfolioValue * 1.5, 500_000))}
-                  </span>
-                </div>
-                <div className="flex justify-between">
-                  <span className="text-xs text-neo-muted">Current Value</span>
-                  <span className="text-xs font-medium text-neo-text tabular-nums">
-                    {kFmt(s.totalPortfolioValue)}
-                  </span>
-                </div>
-                {ltv !== null && (
-                  <div className="flex justify-between">
-                    <span className="text-xs text-neo-muted">LTV Ratio</span>
-                    <span className={`text-xs font-semibold tabular-nums ${
-                      ltv < 60 ? 'text-emerald-400' : ltv < 80 ? 'text-amber-400' : 'text-red-400'
-                    }`}>
-                      {ltv.toFixed(1)}%
-                    </span>
-                  </div>
-                )}
-                <div className="flex justify-between">
-                  <span className="text-xs text-neo-muted">Total Debt</span>
-                  <span className="text-xs font-medium text-red-400 tabular-nums">
-                    {kFmt(s.totalDebt)}
-                  </span>
-                </div>
-                {s.roe > 0 && (
-                  <div className="flex justify-between">
-                    <span className="text-xs text-neo-muted">ROE</span>
-                    <span className="text-xs font-semibold text-emerald-400 tabular-nums">
-                      {s.roe.toFixed(1)}%
-                    </span>
-                  </div>
-                )}
-              </div>
+            <h3 className="font-semibold text-neo-text mb-5">Goals</h3>
+            <div className="space-y-4">
+              <GoalBar label="Portfolio Value Target" pct={valueGoalPct} color="#ea580c" />
+              <GoalBar label="Monthly Cash Flow (€3k)" pct={cfGoalPct} color="#f59e0b" />
+              {ltv !== null && <GoalBar label="LTV Reduction (target 60%)" pct={ltvGoalPct} color="#10b981" />}
             </div>
           </div>
 
@@ -570,91 +657,86 @@ export default function Dashboard({
       {/* ══ Right Panel (xl+) ════════════════════════════════ */}
       <div className="hidden xl:flex flex-col gap-5 w-72 shrink-0">
 
+        {/* Portfolio Health */}
+        <div className="card">
+          <h3 className="font-semibold text-neo-text mb-3">Portfolio Health</h3>
+          <div className="flex items-center gap-4">
+            <RadialGauge pct={healthScore} label={healthLabel(healthScore)} />
+            <div className="flex-1 space-y-2.5">
+              <div className="flex justify-between">
+                <span className="text-xs text-neo-muted">Portfolio value</span>
+                <span className="text-xs font-medium text-neo-text tabular-nums">{kFmt(s.totalPortfolioValue)}</span>
+              </div>
+              {ltv !== null && (
+                <div className="flex justify-between">
+                  <span className="text-xs text-neo-muted">LTV</span>
+                  <span className={`text-xs font-semibold tabular-nums ${ltv < 60 ? 'text-emerald-400' : ltv < 80 ? 'text-amber-400' : 'text-red-400'}`}>
+                    {ltv.toFixed(1)}%
+                  </span>
+                </div>
+              )}
+              <div className="flex justify-between">
+                <span className="text-xs text-neo-muted">Total debt</span>
+                <span className="text-xs font-medium text-red-400 tabular-nums">{kFmt(s.totalDebt)}</span>
+              </div>
+              <div className="flex justify-between">
+                <span className="text-xs text-neo-muted">Net worth</span>
+                <span className="text-xs font-semibold text-neo-text tabular-nums">{kFmt(s.personalNetWorth)}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Buy Power */}
+        <div className="card">
+          <h3 className="font-semibold text-neo-text mb-3">Acquisition Power</h3>
+          <p className="text-xs text-neo-subtle mb-4">Based on {kFmt(investmentReadyCapital)} ready capital</p>
+          <div className="space-y-3">
+            <div className="rounded-2xl px-3 py-3" style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.15)' }}>
+              <p className="text-[10px] text-emerald-400/70 uppercase tracking-wider mb-1">Conservative · 20% down</p>
+              <p className="text-lg font-bold text-emerald-400 tabular-nums">{kFmt(buyPowerConservative)}</p>
+              <p className="text-[10px] text-neo-subtle mt-0.5">max property value</p>
+            </div>
+            <div className="rounded-2xl px-3 py-3" style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.15)' }}>
+              <p className="text-[10px] text-amber-400/70 uppercase tracking-wider mb-1">Leveraged · 10% down</p>
+              <p className="text-lg font-bold text-amber-400 tabular-nums">{kFmt(buyPowerLeveraged)}</p>
+              <p className="text-[10px] text-neo-subtle mt-0.5">max property value</p>
+            </div>
+          </div>
+        </div>
+
         {/* Profile card */}
         <div className="card">
-          <div className="flex items-start justify-between mb-5">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-2xl bg-brand-600/15 border border-brand-500/20
-                              flex items-center justify-center text-brand-400 font-bold text-lg shrink-0">
-                {profileInitials}
-              </div>
-              <div>
-                <p className="font-semibold text-neo-text leading-snug">{profileName}</p>
-                <p className="text-xs text-neo-muted">
-                  {s.propertyCount} propert{s.propertyCount === 1 ? 'y' : 'ies'}
-                </p>
-              </div>
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-10 h-10 rounded-2xl bg-brand-600/15 border border-brand-500/20
+                            flex items-center justify-center text-brand-400 font-bold shrink-0">
+              {profileInitials}
             </div>
-            <button className="text-neo-subtle hover:text-neo-muted transition-colors">
-              <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
-              </svg>
-            </button>
-          </div>
-
-          {/* Quick actions */}
-          <div className="grid grid-cols-4 gap-2">
-            {[
-              { label: 'Add',    icon: '＋',  action: onAddProperty },
-              { label: 'Edit',   icon: '✏',  action: null },
-              { label: 'Report', icon: '↗',  action: null },
-              { label: 'Share',  icon: '⬡',  action: null },
-            ].map(({ label, icon, action }) => (
-              <button
-                key={label}
-                onClick={action || undefined}
-                className="flex flex-col items-center gap-1.5 group"
-              >
-                <div className="w-11 h-11 rounded-2xl bg-neo-raised/60 border border-white/[0.06]
-                                flex items-center justify-center text-neo-muted
-                                group-hover:text-brand-400 group-hover:bg-brand-600/10
-                                group-hover:border-brand-500/20 transition-all text-base">
-                  {icon}
-                </div>
-                <span className="text-[10px] text-neo-subtle group-hover:text-neo-muted transition-colors">
-                  {label}
-                </span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Investment Card */}
-        <div className="card !p-4">
-          <h3 className="text-sm font-semibold text-neo-text mb-3">Investment Card</h3>
-          <PortfolioCard equity={s.totalNetWorth} name={profileName} />
-          <div className="mt-3 flex justify-between items-center">
             <div>
-              <p className="text-[10px] text-neo-subtle">Total Balance</p>
-              <p className="text-sm font-bold text-neo-text tabular-nums">
-                {formatEUR(s.totalNetWorth)}
-              </p>
-            </div>
-            <div className="text-right">
-              <p className="text-[10px] text-neo-subtle">Properties</p>
-              <p className="text-sm font-bold text-neo-text">{s.propertyCount}</p>
+              <p className="font-semibold text-neo-text text-sm leading-snug">{profileName}</p>
+              <p className="text-xs text-neo-muted">{s.propertyCount} propert{s.propertyCount === 1 ? 'y' : 'ies'} · {s.activeRentalCount} rented</p>
             </div>
           </div>
-        </div>
-
-        {/* Month Transactions */}
-        <div className="card flex-1">
-          <div className="flex items-center justify-between mb-1">
-            <h3 className="text-sm font-semibold text-neo-text">Top Properties</h3>
-            <button
-              onClick={() => onEditProperty && properties[0] && onEditProperty(properties[0])}
-              className="text-xs text-brand-400 hover:text-brand-300 transition-colors"
-            >
-              See all
-            </button>
-          </div>
-          <div>
-            {propertyRows.length > 0 ? (
-              propertyRows.map((row, i) => <TransactionRow key={i} {...row} />)
-            ) : (
-              <p className="text-xs text-neo-subtle text-center py-4">No properties yet</p>
+          <div className="space-y-2">
+            <div className="flex justify-between">
+              <span className="text-xs text-neo-muted">Liquid cash</span>
+              <span className="text-xs font-semibold text-neo-text tabular-nums">{kFmt(liquidCash)}</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-xs text-neo-muted">Equity headroom</span>
+              <span className="text-xs font-semibold text-brand-400 tabular-nums">{kFmt(availableEquity)}</span>
+            </div>
+            {s.personalTradingValue > 0 && (
+              <div className="flex justify-between">
+                <span className="text-xs text-neo-muted">Trading portfolio</span>
+                <span className="text-xs font-semibold text-neo-text tabular-nums">{kFmt(s.personalTradingValue)}</span>
+              </div>
             )}
           </div>
+          <button onClick={onAddProperty} className="btn-primary w-full mt-4 text-sm">
+            <PlusIcon />
+            Add Property
+          </button>
         </div>
 
       </div>
