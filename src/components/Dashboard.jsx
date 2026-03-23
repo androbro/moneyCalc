@@ -155,19 +155,51 @@ function PlusIcon() {
 
 // ─── Stat Pill ────────────────────────────────────────────────────────────────
 
-function StatPill({ icon, label, value }) {
+function StatPill({ icon, label, value, explanation }) {
+  const [expanded, setExpanded] = useState(false)
+
   return (
     <div
-      className="flex items-center gap-3 border border-white/[0.10] rounded-2xl px-4 py-3 flex-1 min-w-0"
+      className="relative border border-white/[0.10] rounded-2xl px-4 py-3 flex-1 min-w-0"
       style={{ background: 'rgba(10, 14, 24, 0.38)', backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)' }}
     >
-      <div className="w-9 h-9 rounded-xl bg-brand-600/15 flex items-center justify-center
-                      shrink-0 text-brand-400">
-        {icon}
+      <div className="flex items-center gap-3">
+        <div className="w-9 h-9 rounded-xl bg-brand-600/15 flex items-center justify-center shrink-0 text-brand-400">
+          {icon}
+        </div>
+        <div className="min-w-0">
+          <div className="flex items-center gap-1.5">
+            <p className="text-xs text-neo-muted truncate">{label}</p>
+            <button
+              type="button"
+              className="sm:hidden text-neo-subtle hover:text-neo-muted transition-colors"
+              onClick={() => setExpanded((prev) => !prev)}
+              aria-label={`Explain ${label}`}
+            >
+              <svg className={`w-3.5 h-3.5 transition-transform duration-200 ${expanded ? 'rotate-180' : ''}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            <span className="hidden sm:inline-flex items-center justify-center text-neo-subtle group relative">
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              <span
+                className="pointer-events-none absolute z-20 w-64 left-1/2 -translate-x-1/2 bottom-full mb-2
+                           rounded-xl border border-white/[0.12] px-3 py-2 text-xs leading-relaxed text-neo-muted
+                           opacity-0 group-hover:opacity-100 transition-opacity duration-150"
+                style={{ background: 'rgba(8, 12, 22, 0.95)', backdropFilter: 'blur(16px)', WebkitBackdropFilter: 'blur(16px)' }}
+              >
+                {explanation}
+              </span>
+            </span>
+          </div>
+          <p className="text-sm font-bold text-neo-text tabular-nums truncate">{value}</p>
+        </div>
       </div>
-      <div className="min-w-0">
-        <p className="text-xs text-neo-muted truncate">{label}</p>
-        <p className="text-sm font-bold text-neo-text tabular-nums truncate">{value}</p>
+
+      <div className={`sm:hidden mt-2 text-[11px] leading-relaxed text-neo-subtle ${expanded ? 'block' : 'hidden'}`}>
+        {explanation}
       </div>
     </div>
   )
@@ -585,8 +617,32 @@ export default function Dashboard({
 
         {/* ── Key Stats ── */}
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-          <StatPill icon={<WalletIcon />} label="Net Worth" value={formatEUR(s.personalNetWorth)} />
-          <StatPill icon={<CashFlowIcon />} label="Monthly CF" value={formatEUR(s.totalMonthlyCashFlow)} />
+          <StatPill
+            icon={<WalletIcon />}
+            label="Net Worth"
+            value={formatEUR(s.personalNetWorth)}
+            explanation={
+              <>
+                <p>Personal net worth includes your share of real-estate equity, plus liquid cash and trading portfolio value.</p>
+                <p className="mt-1.5 font-mono text-[10px] text-neo-icon">
+                  {kFmt(s.personalRealEstateNetWorth)} + {kFmt(s.personalCash)} + {kFmt(s.personalTradingValue)}
+                </p>
+              </>
+            }
+          />
+          <StatPill
+            icon={<CashFlowIcon />}
+            label="Monthly CF"
+            value={formatEUR(s.totalMonthlyCashFlow)}
+            explanation={
+              <>
+                <p>Monthly cash flow is rent minus operating costs and interest (capital repayment is tracked separately).</p>
+                <p className="mt-1.5 font-mono text-[10px] text-neo-icon">
+                  {kFmt(s.annualRentalIncome / 12)} - {kFmt(s.annualOpex / 12)} - {kFmt(s.monthlyInterest)}
+                </p>
+              </>
+            }
+          />
           <StatPill
             icon={
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -595,8 +651,21 @@ export default function Dashboard({
             }
             label="Portfolio LTV"
             value={ltv !== null ? `${ltv.toFixed(1)}%` : '—'}
+            explanation={
+              <>
+                <p>Loan-to-value compares total outstanding debt to total portfolio value across live properties.</p>
+                <p className="mt-1.5 font-mono text-[10px] text-neo-icon">
+                  ({kFmt(s.totalDebt)} / {kFmt(s.totalPortfolioValue)}) x 100
+                </p>
+              </>
+            }
           />
-          <StatPill icon={<HomeIcon />} label="Properties" value={s.propertyCount} />
+          <StatPill
+            icon={<HomeIcon />}
+            label="Properties"
+            value={s.propertyCount}
+            explanation="Count of live properties currently in portfolio metrics (planned entries are excluded)."
+          />
         </div>
 
         {/* ── Chart + Equity Breakdown ── */}
