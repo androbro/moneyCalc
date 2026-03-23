@@ -779,6 +779,7 @@ export default function ProjectionChart({ properties, profile, trades = [], trad
               <ReferenceLine
                 key={label}
                 x={label}
+                yAxisId="left"
                 stroke="#fbbf24"
                 strokeWidth={1.5}
                 strokeDasharray="4 3"
