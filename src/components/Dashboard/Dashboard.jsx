@@ -735,13 +735,17 @@ export default function Dashboard({
   onSaveProfile,
   tradingPortfolioValue = 0,
 }) {
-  const [chartRange, setChartRange]       = useState(10)
+  const [chartRange, setChartRange]       = useState(profile?.dashboardChartRange ?? 10)
   const [chartPickerOpen, setChartPickerOpen] = useState(false)
   const [loanPickerOpen, setLoanPickerOpen] = useState(false)
   const [activeChart, setActiveChart]     = useState(profile?.dashboardChart ?? 'net_worth')
   const [goalModalOpen, setGoalModalOpen] = useState(false)
   const [goalBeingEdited, setGoalBeingEdited] = useState(null)
-  const [excludedLoanKeys, setExcludedLoanKeys] = useState([])
+  const [excludedLoanKeys, setExcludedLoanKeys] = useState(
+    Array.isArray(profile?.dashboardCashflowExcludedLoanKeys)
+      ? profile.dashboardCashflowExcludedLoanKeys
+      : []
+  )
 
   const s = computeSummary(properties, profile, { tradingPortfolioValue })
   const ltv = s.totalPortfolioValue > 0 ? (s.totalDebt / s.totalPortfolioValue) * 100 : null
@@ -760,6 +764,16 @@ export default function Dashboard({
     if (onSaveProfile && profile) {
       onSaveProfile({ ...profile, dashboardChart: id })
     }
+  }
+
+  function saveDashboardPrefs(partial) {
+    if (!onSaveProfile || !profile) return
+    onSaveProfile({ ...profile, ...partial })
+  }
+
+  function handleChartRangeSelect(years) {
+    setChartRange(years)
+    saveDashboardPrefs({ dashboardChartRange: years })
   }
 
   const loanOptions = useMemo(() => {
@@ -831,11 +845,24 @@ export default function Dashboard({
   }, [properties, s.personalCash, chartRange, activeChart, includedLoanKeys])
 
   function toggleLoanIncluded(loanKey) {
-    setExcludedLoanKeys((prev) => (
-      prev.includes(loanKey)
+    setExcludedLoanKeys((prev) => {
+      const next = prev.includes(loanKey)
         ? prev.filter((k) => k !== loanKey)
         : [...prev, loanKey]
-    ))
+      saveDashboardPrefs({ dashboardCashflowExcludedLoanKeys: next })
+      return next
+    })
+  }
+
+  function includeAllLoans() {
+    setExcludedLoanKeys([])
+    saveDashboardPrefs({ dashboardCashflowExcludedLoanKeys: [] })
+  }
+
+  function includeNoLoans() {
+    const next = loanOptions.map((l) => l.key)
+    setExcludedLoanKeys(next)
+    saveDashboardPrefs({ dashboardCashflowExcludedLoanKeys: next })
   }
 
   // Goals: portfolio value progress & monthly cash flow progress
@@ -1079,7 +1106,7 @@ export default function Dashboard({
                 {[5, 10, 25].map((y) => (
                   <button
                     key={y}
-                    onClick={() => setChartRange(y)}
+                    onClick={() => handleChartRangeSelect(y)}
                     className={`px-3 py-1 rounded-xl text-xs font-medium transition-all
                       ${chartRange === y
                         ? 'bg-brand-600/15 text-brand-400 border border-brand-500/20'
@@ -1187,14 +1214,14 @@ export default function Dashboard({
                     <div className="flex items-center gap-2">
                       <button
                         type="button"
-                        onClick={() => setExcludedLoanKeys([])}
+                        onClick={includeAllLoans}
                         className="text-[10px] text-neo-subtle hover:text-neo-muted"
                       >
                         All
                       </button>
                       <button
                         type="button"
-                        onClick={() => setExcludedLoanKeys(loanOptions.map((l) => l.key))}
+                        onClick={includeNoLoans}
                         className="text-[10px] text-neo-subtle hover:text-neo-muted"
                       >
                         None

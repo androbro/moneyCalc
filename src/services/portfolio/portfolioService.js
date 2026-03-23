@@ -462,7 +462,11 @@ function householdToDb(h, userId) {
     ui_preferences: {
       ...(h.uiPreferences ?? {}),
       dashboardChart: h.dashboardChart ?? 'net_worth',
+      dashboardChartRange: Number(h.dashboardChartRange ?? 10),
       capitalGoals: Array.isArray(h.capitalGoals) ? h.capitalGoals : [],
+      dashboardCashflowExcludedLoanKeys: Array.isArray(h.dashboardCashflowExcludedLoanKeys)
+        ? h.dashboardCashflowExcludedLoanKeys
+        : [],
     },
   }
   if (userId) row.user_id = userId
@@ -479,7 +483,11 @@ function dbToHousehold(row) {
       householdExpenses:   Number(row.household_expenses ?? 0),
       personalSavingsRate: Number(row.personal_savings_rate ?? 0.10),
       dashboardChart:      uiPrefs.dashboardChart ?? 'net_worth',
+      dashboardChartRange: Number(uiPrefs.dashboardChartRange ?? 10),
       capitalGoals:        Array.isArray(uiPrefs.capitalGoals) ? uiPrefs.capitalGoals : [],
+      dashboardCashflowExcludedLoanKeys: Array.isArray(uiPrefs.dashboardCashflowExcludedLoanKeys)
+        ? uiPrefs.dashboardCashflowExcludedLoanKeys
+        : [],
       uiPreferences:       uiPrefs,
     }
   }
@@ -509,7 +517,11 @@ function dbToHousehold(row) {
     householdExpenses:   Number(row.household_expenses ?? 0),
     personalSavingsRate: Number(row.personal_savings_rate ?? 0.10),
     dashboardChart:      uiPrefs.dashboardChart ?? 'net_worth',
+    dashboardChartRange: Number(uiPrefs.dashboardChartRange ?? 10),
     capitalGoals:        Array.isArray(uiPrefs.capitalGoals) ? uiPrefs.capitalGoals : [],
+    dashboardCashflowExcludedLoanKeys: Array.isArray(uiPrefs.dashboardCashflowExcludedLoanKeys)
+      ? uiPrefs.dashboardCashflowExcludedLoanKeys
+      : [],
     uiPreferences:       uiPrefs,
   }
 }
