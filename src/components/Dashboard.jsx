@@ -469,19 +469,19 @@ function PropertyEquityRow({ name, value, debt, headroom, ltvPct }) {
   )
 }
 
-function GoalModal({ onClose, onSave, defaultYear }) {
-  const [targetYear, setTargetYear] = useState(defaultYear)
-  const [targetCapital, setTargetCapital] = useState(50000)
+function GoalModal({ onClose, onSave, defaultYear, initialGoal = null }) {
+  const [targetYear, setTargetYear] = useState(initialGoal?.targetYear ?? defaultYear)
+  const [targetCapital, setTargetCapital] = useState(initialGoal?.targetAmount ?? 50000)
 
   const submit = (e) => {
     e.preventDefault()
     if (!targetYear || targetCapital <= 0) return
     onSave({
-      id: crypto.randomUUID(),
+      id: initialGoal?.id ?? crypto.randomUUID(),
       type: 'investment_ready_capital',
       targetYear: Number(targetYear),
       targetAmount: Number(targetCapital),
-      createdAt: new Date().toISOString(),
+      createdAt: initialGoal?.createdAt ?? new Date().toISOString(),
     })
   }
 
@@ -492,7 +492,7 @@ function GoalModal({ onClose, onSave, defaultYear }) {
         style={{ background: 'rgba(8,12,22,0.96)' }}>
         <div className="flex items-start justify-between gap-3">
           <div>
-            <h3 className="text-lg font-semibold text-neo-text">Add Goal</h3>
+            <h3 className="text-lg font-semibold text-neo-text">{initialGoal ? 'Edit Goal' : 'Add Goal'}</h3>
             <p className="text-xs text-neo-subtle mt-0.5">Target investment-ready capital by a specific year.</p>
           </div>
           <button type="button" onClick={onClose} className="text-neo-subtle hover:text-neo-text">✕</button>
@@ -516,7 +516,7 @@ function GoalModal({ onClose, onSave, defaultYear }) {
             <span className="absolute left-3 top-1/2 -translate-y-1/2 text-neo-subtle text-sm">€</span>
             <input
               type="number"
-              min={1}
+              min={0}
               step={1000}
               value={targetCapital}
               onChange={(e) => setTargetCapital(Number(e.target.value || 0))}
@@ -530,7 +530,7 @@ function GoalModal({ onClose, onSave, defaultYear }) {
             Cancel
           </button>
           <button type="submit" className="btn-primary text-xs">
-            Save Goal
+            {initialGoal ? 'Update Goal' : 'Save Goal'}
           </button>
         </div>
       </form>
@@ -553,6 +553,7 @@ export default function Dashboard({
   const [chartPickerOpen, setChartPickerOpen] = useState(false)
   const [activeChart, setActiveChart]     = useState(profile?.dashboardChart ?? 'net_worth')
   const [goalModalOpen, setGoalModalOpen] = useState(false)
+  const [goalBeingEdited, setGoalBeingEdited] = useState(null)
 
   const s = computeSummary(properties, profile, { tradingPortfolioValue })
   const ltv = s.totalPortfolioValue > 0 ? (s.totalDebt / s.totalPortfolioValue) * 100 : null
@@ -658,11 +659,21 @@ export default function Dashboard({
     return map
   }, [properties, s.personalCash])
 
-  async function handleAddGoal(goal) {
+  async function handleSaveGoal(goal) {
     if (!onSaveProfile || !profile) return
-    const nextGoals = [...capitalGoals, goal]
+    const exists = capitalGoals.some((g) => g.id === goal.id)
+    const nextGoals = exists
+      ? capitalGoals.map((g) => (g.id === goal.id ? { ...g, ...goal } : g))
+      : [...capitalGoals, goal]
     await onSaveProfile({ ...profile, capitalGoals: nextGoals })
+    setGoalBeingEdited(null)
     setGoalModalOpen(false)
+  }
+
+  async function handleDeleteGoal(goalId) {
+    if (!onSaveProfile || !profile) return
+    const nextGoals = capitalGoals.filter((g) => g.id !== goalId)
+    await onSaveProfile({ ...profile, capitalGoals: nextGoals })
   }
 
   // ── Empty state ────────────────────────────────────────────
@@ -938,7 +949,7 @@ export default function Dashboard({
 
         {/* Quick actions */}
         <div className="grid grid-cols-2 gap-2">
-          <button onClick={() => setGoalModalOpen(true)} className="btn-primary w-full text-sm justify-center">
+          <button onClick={() => { setGoalBeingEdited(null); setGoalModalOpen(true) }} className="btn-primary w-full text-sm justify-center">
             <TargetIcon />
             Goal
           </button>
@@ -1006,17 +1017,59 @@ export default function Dashboard({
               {capitalGoals.map((g) => {
                 const projected = projectedInvestmentReadyByYear.get(Number(g.targetYear)) ?? investmentReadyCapital
                 const pct = Math.max(0, Math.min(100, (projected / (g.targetAmount || 1)) * 100))
+                const currentPct = Math.max(0, Math.min(100, (investmentReadyCapital / (g.targetAmount || 1)) * 100))
                 const remaining = Math.max(0, g.targetAmount - projected)
                 return (
-                  <div key={g.id} className="rounded-2xl px-3 py-3 border border-white/[0.08]" style={{ background: 'rgba(4,7,14,0.35)' }}>
+                  <div key={g.id} className="group rounded-2xl px-3 py-3 border border-white/[0.08]" style={{ background: 'rgba(4,7,14,0.35)' }}>
                     <div className="flex items-center justify-between gap-2">
                       <p className="text-xs text-neo-muted">By {g.targetYear}: {kFmt(g.targetAmount)} ready capital</p>
-                      <span className="text-xs font-semibold text-neo-text tabular-nums">{Math.round(pct)}%</span>
+                      <div className="flex items-center gap-2">
+                        <span className="text-xs font-semibold text-neo-text tabular-nums">{Math.round(pct)}%</span>
+                        <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                          <button
+                            type="button"
+                            onClick={() => { setGoalBeingEdited(g); setGoalModalOpen(true) }}
+                            className="w-6 h-6 rounded-lg text-neo-subtle hover:text-brand-300 hover:bg-white/[0.06] transition-colors flex items-center justify-center"
+                            title="Edit goal"
+                            aria-label="Edit goal"
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                            </svg>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteGoal(g.id)}
+                            className="w-6 h-6 rounded-lg text-neo-subtle hover:text-red-400 hover:bg-white/[0.06] transition-colors flex items-center justify-center"
+                            title="Delete goal"
+                            aria-label="Delete goal"
+                          >
+                            <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                          </button>
+                        </div>
+                      </div>
                     </div>
-                    <div className="h-1.5 bg-neo-sunken rounded-full mt-2 overflow-hidden">
-                      <div className="h-full rounded-full" style={{ width: `${pct}%`, background: 'linear-gradient(90deg, #ea580c, #f59e0b)' }} />
+                    <div className="relative h-2 bg-neo-sunken rounded-full mt-2 overflow-hidden">
+                      <div
+                        className="absolute left-0 top-0 h-full rounded-l-full"
+                        style={{ width: `${Math.min(currentPct, pct)}%`, background: '#10b981' }}
+                      />
+                      {pct > currentPct && (
+                        <div
+                          className="absolute top-0 h-full"
+                          style={{
+                            left: `${currentPct}%`,
+                            width: `${pct - currentPct}%`,
+                            background: 'linear-gradient(90deg, #ea580c, #f59e0b)',
+                          }}
+                        />
+                      )}
                     </div>
                     <p className="text-[10px] text-neo-subtle mt-2">
+                      Current: <span className="text-neo-muted">{kFmt(investmentReadyCapital)}</span>
+                      {' · '}
                       Projected: <span className="text-neo-muted">{kFmt(projected)}</span>
                       {' · '}
                       {remaining > 0
@@ -1065,8 +1118,9 @@ export default function Dashboard({
     {goalModalOpen && (
       <GoalModal
         onClose={() => setGoalModalOpen(false)}
-        onSave={handleAddGoal}
+        onSave={handleSaveGoal}
         defaultYear={new Date().getFullYear() + 3}
+        initialGoal={goalBeingEdited}
       />
     )}
     </>
