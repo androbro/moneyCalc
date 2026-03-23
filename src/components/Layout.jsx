@@ -147,7 +147,7 @@ function UserMenu({ user, onSignOut, onResetDemo }) {
   if (!user) {
     // Guest mode footer
     return (
-      <div className="px-3 py-3 border-t border-white/50 space-y-2">
+      <div className="px-3 py-3 border-t border-white/[0.07] space-y-2">
         <div className="flex items-center gap-2.5 px-3 py-2">
           <div className="w-7 h-7 rounded-full bg-neo-bg shadow-neo-inset-sm flex items-center justify-center shrink-0">
             <svg className="w-3.5 h-3.5 text-neo-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -181,7 +181,7 @@ function UserMenu({ user, onSignOut, onResetDemo }) {
   const shortEmail = email.length > 22 ? email.slice(0, 20) + '…' : email
 
   return (
-    <div ref={ref} className="px-3 py-3 border-t border-white/50 relative">
+    <div ref={ref} className="px-3 py-3 border-t border-white/[0.07] relative">
       <button
         onClick={() => setOpen((o) => !o)}
         className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg
@@ -203,8 +203,10 @@ function UserMenu({ user, onSignOut, onResetDemo }) {
       </button>
 
       {open && (
-        <div className="absolute bottom-full left-3 right-3 mb-1 bg-neo-surface border border-white/60
-                        rounded-2xl shadow-neo-lg overflow-hidden z-50">
+        <div
+          className="absolute bottom-full left-3 right-3 mb-1 border border-white/[0.12] rounded-2xl shadow-neo-lg overflow-hidden z-50"
+          style={{ background: 'rgba(8, 12, 22, 0.90)', backdropFilter: 'blur(24px)', WebkitBackdropFilter: 'blur(24px)' }}
+        >
           <div className="px-3 py-2.5 border-b border-neo-border/60">
             <p className="text-xs text-neo-muted truncate">{email}</p>
           </div>
@@ -236,9 +238,12 @@ export default function Layout({ activeTab, onTabChange, children, isLoggedIn, u
   }
 
   return (
-    <div className="min-h-screen flex bg-neo-bg">
+    <div className="min-h-screen flex">
       {/* ── Desktop sidebar ── */}
-      <aside className="hidden md:flex md:w-56 lg:w-64 flex-col bg-neo-bg border-r border-white/50 shadow-neo-sm fixed inset-y-0 left-0 z-20">
+      <aside
+        className="hidden md:flex md:w-56 lg:w-64 flex-col border-r border-white/[0.09] fixed inset-y-0 left-0 z-20"
+        style={{ background: 'rgba(6, 10, 20, 0.68)', backdropFilter: 'blur(28px)', WebkitBackdropFilter: 'blur(28px)' }}
+      >
         <SidebarContent
           active={activeTab}
           onNav={handleNav}
@@ -260,9 +265,10 @@ export default function Layout({ activeTab, onTabChange, children, isLoggedIn, u
 
       {/* ── Mobile drawer ── */}
       <aside
-        className={`fixed inset-y-0 left-0 z-40 w-64 bg-neo-bg border-r border-white/50 shadow-neo-lg
+        className={`fixed inset-y-0 left-0 z-40 w-64 border-r border-white/[0.09] shadow-neo-lg
                     transform transition-transform duration-300 md:hidden
                     ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}`}
+        style={{ background: 'rgba(6, 10, 20, 0.82)', backdropFilter: 'blur(28px)', WebkitBackdropFilter: 'blur(28px)' }}
       >
         <button
           className="absolute top-4 right-4 text-neo-muted hover:text-neo-text"
@@ -284,7 +290,10 @@ export default function Layout({ activeTab, onTabChange, children, isLoggedIn, u
       {/* ── Main content ── */}
       <div className="flex-1 md:ml-56 lg:ml-64 flex flex-col min-h-screen">
         {/* Mobile top bar */}
-        <header className="md:hidden flex items-center gap-3 px-4 py-3 bg-neo-bg border-b border-white/50 shadow-neo-sm sticky top-0 z-10">
+        <header
+          className="md:hidden flex items-center gap-3 px-4 py-3 border-b border-white/[0.09] sticky top-0 z-10"
+          style={{ background: 'rgba(6, 10, 20, 0.72)', backdropFilter: 'blur(20px)', WebkitBackdropFilter: 'blur(20px)' }}
+        >
           <button
             className="text-neo-muted hover:text-neo-text"
             onClick={() => setMobileOpen(true)}
@@ -327,7 +336,7 @@ function SidebarContent({ active, onNav, isLoggedIn, user, onSignOut, onResetDem
   return (
     <div className="flex flex-col h-full">
       {/* Logo */}
-      <div className="px-5 py-6 border-b border-white/50">
+      <div className="px-5 py-6 border-b border-white/[0.07]">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-xl bg-brand-600 flex items-center justify-center shadow-neo-sm">
             <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
@@ -345,7 +354,7 @@ function SidebarContent({ active, onNav, isLoggedIn, user, onSignOut, onResetDem
       <nav className="flex-1 px-3 py-4 space-y-4 overflow-y-auto">
         {/* Guest mode banner */}
         {!isLoggedIn && (
-          <div className="mx-1 mb-2 rounded-2xl bg-neo-surface border border-white/60 px-3 py-2.5 space-y-1.5 shadow-neo-inset-sm">
+          <div className="mx-1 mb-2 rounded-2xl bg-neo-raised/50 border border-white/[0.07] px-3 py-2.5 space-y-1.5">
             <p className="text-xs font-medium text-neo-muted">Demo mode</p>
             <p className="text-[11px] text-neo-subtle leading-relaxed">
               You're browsing with sample data.{' '}
@@ -375,8 +384,8 @@ function SidebarContent({ active, onNav, isLoggedIn, user, onSignOut, onResetDem
                     className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-2xl text-sm font-medium
                                 transition-all text-left
                                 ${active === id
-                                  ? 'bg-brand-600 text-white shadow-neo-sm'
-                                  : 'text-neo-muted hover:text-neo-text hover:bg-neo-surface hover:shadow-neo-sm'}`}
+                                  ? 'bg-brand-600/15 text-brand-400 border border-brand-500/25 shadow-glow-sm'
+                                  : 'text-neo-muted border border-transparent hover:text-neo-text hover:bg-neo-raised/40'}`}
                   >
                     <Icon />
                     {label}
@@ -390,7 +399,7 @@ function SidebarContent({ active, onNav, isLoggedIn, user, onSignOut, onResetDem
 
       {/* Share button — authenticated only */}
       {isLoggedIn && (
-        <div className="px-3 pb-1 border-t border-white/50 pt-3">
+        <div className="px-3 pb-1 border-t border-white/[0.07] pt-3">
           <button
             onClick={onShare}
             className="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-sm font-medium
