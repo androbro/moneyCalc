@@ -343,11 +343,12 @@ function Section({ title, children }) {
 // ─── Status badge ─────────────────────────────────────────────────────────────
 
 const STATUS_LABELS = {
-  owner_occupied: { label: 'Owner-occupied', color: 'bg-sky-100 text-sky-900 border-sky-200/80 shadow-neo-inset-sm' },
-  rented:         { label: 'Rented out',     color: 'bg-emerald-100 text-emerald-900 border-emerald-200/80 shadow-neo-inset-sm' },
-  vacant:         { label: 'Vacant',         color: 'bg-neo-bg text-neo-muted border-neo-border shadow-neo-inset-sm' },
-  for_sale:       { label: 'For sale',       color: 'bg-amber-100 text-amber-950 border-amber-200/80 shadow-neo-inset-sm' },
-  renovation:     { label: 'Renovation',     color: 'bg-orange-100 text-orange-900 border-orange-200/80 shadow-neo-inset-sm' },
+  owner_occupied: { label: 'Owner-occupied', color: 'bg-sky-400/15 text-sky-300 border-sky-400/30' },
+  rented:         { label: 'Rented out',     color: 'bg-emerald-400/15 text-emerald-300 border-emerald-400/30' },
+  vacant:         { label: 'Vacant',         color: 'bg-white/5 text-neo-muted border-white/10' },
+  for_sale:       { label: 'For sale',       color: 'bg-amber-400/15 text-amber-300 border-amber-400/30' },
+  renovation:     { label: 'Renovation',     color: 'bg-orange-400/15 text-orange-300 border-orange-400/30' },
+  planned:        { label: 'Planned',        color: 'bg-violet-400/15 text-violet-300 border-violet-400/30' },
 }
 
 function StatusBadge({ status }) {

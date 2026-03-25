@@ -1132,12 +1132,12 @@ function PropertyListCard({ property, onView, onEdit, onDelete }) {
 		}).format(n ?? 0);
 
 	const STATUS_CONFIG = {
-		owner_occupied: { label: "Owner-occupied", bg: "bg-sky-100 text-sky-800 border-sky-200/80 shadow-neo-inset-sm", icon: "🏠" },
-		rented:         { label: "Rented out",     bg: "bg-emerald-100 text-emerald-800 border-emerald-200/80 shadow-neo-inset-sm", icon: "🔑" },
-		vacant:         { label: "Vacant",         bg: "bg-neo-bg text-neo-muted border-neo-border shadow-neo-inset-sm", icon: "⬜" },
-		for_sale:       { label: "For sale",       bg: "bg-amber-100 text-amber-900 border-amber-200/80 shadow-neo-inset-sm", icon: "🏷️" },
-		renovation:     { label: "Renovation",     bg: "bg-orange-100 text-orange-900 border-orange-200/80 shadow-neo-inset-sm", icon: "🔨" },
-		planned:        { label: "Planned",        bg: "bg-sky-50 text-sky-900 border-sky-200/80 shadow-neo-inset-sm", icon: "💡" },
+		owner_occupied: { label: "Owner-occupied", bg: "bg-sky-400/15 text-sky-300 border-sky-400/30",          icon: "🏠" },
+		rented:         { label: "Rented out",     bg: "bg-emerald-400/15 text-emerald-300 border-emerald-400/30", icon: "🔑" },
+		vacant:         { label: "Vacant",         bg: "bg-white/5 text-neo-muted border-white/10",              icon: "⬜" },
+		for_sale:       { label: "For sale",       bg: "bg-amber-400/15 text-amber-300 border-amber-400/30",     icon: "🏷️" },
+		renovation:     { label: "Renovation",     bg: "bg-orange-400/15 text-orange-300 border-orange-400/30",  icon: "🔨" },
+		planned:        { label: "Planned",        bg: "bg-violet-400/15 text-violet-300 border-violet-400/30",  icon: "💡" },
 	};
 
 	const cfg = STATUS_CONFIG[property.status] ?? STATUS_CONFIG.owner_occupied;
