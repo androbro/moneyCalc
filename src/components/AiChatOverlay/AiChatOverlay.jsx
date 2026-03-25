@@ -999,10 +999,11 @@ export default function AiChatOverlay({ properties, profile, activeTab, simState
 
   // ── Render ────────────────────────────────────────────────────────────────
 
-  // Mobile: position the panel precisely within the visual viewport so it
-  // stays above the software keyboard on iOS/Android.
+  // Mobile: fill the screen above the bottom navbar.
+  // dvh (dynamic viewport height) shrinks automatically when the software
+  // keyboard appears, so the input bar stays visible without any JS math.
   const mobileStyle = isMobile
-    ? { top: `${vp.offsetTop}px`, height: `${vp.height}px` }
+    ? { height: 'calc(100dvh - 4rem)' }
     : undefined
 
   return (

@@ -241,10 +241,12 @@ export default function MobileLayout({ activeTab, onTabChange, children, isLogge
   return (
     <div className="min-h-screen flex flex-col">
 
-      {/* Content */}
-      <main className="flex-1 overflow-y-auto px-4 pt-5 pb-24 space-y-4">
-        {children}
-      </main>
+      {/* Content — hidden when AI chat is open so it's a clean full screen */}
+      {!aiChatOpen && (
+        <main className="flex-1 overflow-y-auto px-4 pt-5 pb-24 space-y-4">
+          {children}
+        </main>
+      )}
 
       {/* Bottom tab bar with center AI FAB */}
       <nav
