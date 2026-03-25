@@ -274,14 +274,14 @@ function StatPill({ icon, label, value, explanation }) {
 
   return (
     <GlowCard
-      className="relative border border-white/[0.10] rounded-2xl px-4 py-3 flex-1 min-w-0"
+      className="relative border border-white/[0.10] rounded-2xl px-4 py-4 flex-1 min-w-0"
       style={{ background: 'rgba(10, 14, 24, 0.38)', backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)' }}
       transition={{ duration: 0.2, ease: SOFT_EASE }}
       glowSize={170}
       glowOpacity={0.14}
     >
       <div className="flex items-center gap-3">
-        <div className="w-9 h-9 rounded-xl bg-brand-600/15 flex items-center justify-center shrink-0 text-brand-400">
+        <div className="w-10 h-10 rounded-xl bg-brand-600/15 flex items-center justify-center shrink-0 text-brand-400">
           {icon}
         </div>
         <div className="min-w-0">
@@ -311,7 +311,7 @@ function StatPill({ icon, label, value, explanation }) {
               </span>
             </span>
           </div>
-          <p className="text-sm font-bold text-neo-text tabular-nums truncate">{value}</p>
+          <p className="text-base font-bold text-neo-text tabular-nums truncate">{value}</p>
         </div>
       </div>
 
@@ -542,7 +542,7 @@ function InvestmentReadyCard({ total, equityPart, cashPart }) {
 
   return (
     <div
-      className="relative rounded-3xl p-5 overflow-hidden border border-brand-500/20"
+      className="relative rounded-3xl p-5 sm:p-5 overflow-hidden border border-brand-500/20"
       style={{ background: 'linear-gradient(135deg, rgba(234,88,12,0.18) 0%, rgba(194,65,12,0.10) 60%, rgba(10,14,24,0.38) 100%)', backdropFilter: 'blur(14px)', WebkitBackdropFilter: 'blur(14px)', boxShadow: '0 0 40px rgba(234,88,12,0.12), 0 8px 32px rgba(0,0,0,0.28), inset 0 1px 0 rgba(255,255,255,0.07)' }}
     >
       {/* Decorative glow */}
@@ -945,13 +945,13 @@ export default function Dashboard({
     <div className="flex gap-6 min-h-full">
 
       {/* ══ Main content ══════════════════════════════════════ */}
-      <div className="flex-1 flex flex-col gap-5 min-w-0">
+      <div className="flex-1 flex flex-col gap-5 sm:gap-5 min-w-0">
 
         {/* Header */}
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
             <h1 className="text-2xl font-bold text-neo-text tracking-tight">My Dashboard</h1>
-            <p className="text-sm text-neo-muted mt-0.5">Real estate portfolio overview</p>
+            <p className="text-sm text-neo-muted mt-1">Real estate portfolio overview</p>
           </div>
         </div>
 
@@ -966,7 +966,7 @@ export default function Dashboard({
 
         {/* ── Key Stats ── */}
         <motion.div
-          className="grid grid-cols-2 sm:grid-cols-4 gap-3"
+          className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-3"
           initial="initial"
           animate="animate"
           variants={{
