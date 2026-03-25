@@ -948,8 +948,8 @@ export default function Dashboard({
       <div className="flex-1 flex flex-col gap-5 sm:gap-5 min-w-0">
 
         {/* Header */}
-        <h1 className="text-5xl text-neo-text tracking-wide"
-            style={{ fontFamily: "'Bebas Neue', sans-serif", textShadow: '0 0 30px rgba(234,88,12,0.25)' }}>
+        <h1 className="text-5xl text-neo-text"
+            style={{ fontFamily: "'Caveat', cursive", textShadow: '0 0 30px rgba(234,88,12,0.25)' }}>
           wenLambo
         </h1>
 
