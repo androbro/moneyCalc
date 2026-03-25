@@ -21,6 +21,11 @@ import { computeSummary, formatEUR, getRemainingBalance } from '../../utils/proj
 // ─── Config ───────────────────────────────────────────────────────────────────
 
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY
+// true on the local dev server OR when VITE_DEMO_MODE=true is set (e.g. Vercel preview env)
+const IS_DEV         = import.meta.env.DEV || import.meta.env.VITE_DEMO_MODE === 'true'
+const DEMO_MODEL_ID  = '__demo__'
+const DEMO_OPTION    = { id: DEMO_MODEL_ID, displayName: 'Demo LLM (returns "sup")' }
+
 const LIST_MODELS_URL =
   `https://generativelanguage.googleapis.com/v1beta/models?key=${GEMINI_API_KEY}`
 
@@ -401,6 +406,9 @@ function ModelSelector({ apiKey, selectedModel, onSelect }) {
   const btnRef                            = useRef(null)
   const dropdownRef                       = useRef(null)
 
+  // In dev mode the demo model is always prepended, regardless of API key
+  const allModels = IS_DEV ? [DEMO_OPTION, ...models] : models
+
   const fetchModels = useCallback(async () => {
     if (!apiKey) return
     setLoadingModels(true)
@@ -426,6 +434,11 @@ function ModelSelector({ apiKey, selectedModel, onSelect }) {
     } finally {
       setLoadingModels(false)
     }
+  }, [apiKey, selectedModel, onSelect])
+
+  // In dev mode, auto-select the demo model when there's no API key
+  useEffect(() => {
+    if (IS_DEV && !apiKey && !selectedModel) onSelect(DEMO_MODEL_ID)
   }, [apiKey, selectedModel, onSelect])
 
   useEffect(() => { if (apiKey) fetchModels() }, [apiKey, fetchModels])
@@ -455,16 +468,20 @@ function ModelSelector({ apiKey, selectedModel, onSelect }) {
   const handleToggle = () => {
     if (!open && btnRef.current) {
       const rect = btnRef.current.getBoundingClientRect()
-      // Position the dropdown above the button, aligned to its right edge
+      // Anchor to the right edge of the button, but clamp so the 256px-wide
+      // dropdown never overflows the left side of the viewport (8px min margin).
+      const anchoredRight = window.innerWidth - rect.right
+      const maxRight      = window.innerWidth - 256 - 8
       setDropdownPos({
         bottom: window.innerHeight - rect.top + 6,
-        right:  window.innerWidth - rect.right,
+        right:  Math.min(anchoredRight, maxRight),
       })
     }
     setOpen((o) => !o)
   }
 
-  if (!apiKey) return null
+  // Hide the selector entirely when there's nothing to show (prod + no API key)
+  if (!apiKey && !IS_DEV) return null
 
   const dropdown = open && createPortal(
     <div
@@ -474,17 +491,19 @@ function ModelSelector({ apiKey, selectedModel, onSelect }) {
     >
       <div className="flex items-center justify-between px-3 py-2 border-b border-neo-border">
         <span className="text-xs text-neo-muted font-medium">Available models</span>
-        <button onClick={fetchModels} disabled={loadingModels}
-          className="text-xs text-brand-400 hover:text-brand-300 disabled:opacity-50">
-          {loadingModels ? 'Refreshing…' : 'Refresh'}
-        </button>
+        {apiKey && (
+          <button onClick={fetchModels} disabled={loadingModels}
+            className="text-xs text-brand-400 hover:text-brand-300 disabled:opacity-50">
+            {loadingModels ? 'Refreshing…' : 'Refresh'}
+          </button>
+        )}
       </div>
       {modelError && <p className="text-xs text-red-400 px-3 py-2">{modelError}</p>}
       <ul className="max-h-60 overflow-y-auto py-1">
-        {models.length === 0 && !loadingModels && !modelError && (
+        {allModels.length === 0 && !loadingModels && !modelError && (
           <li className="text-xs text-neo-subtle px-3 py-3 text-center">No models found</li>
         )}
-        {models.map((m) => (
+        {allModels.map((m) => (
           <li key={m.id}>
             <button
               type="button"
@@ -496,7 +515,9 @@ function ModelSelector({ apiKey, selectedModel, onSelect }) {
                 }`}
             >
               <p className="font-medium">{m.displayName}</p>
-              <p className="text-neo-subtle font-mono truncate">{m.id}</p>
+              {m.id !== DEMO_MODEL_ID && (
+                <p className="text-neo-subtle font-mono truncate">{m.id}</p>
+              )}
             </button>
           </li>
         ))}
@@ -520,7 +541,11 @@ function ModelSelector({ apiKey, selectedModel, onSelect }) {
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
             d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
         </svg>
-        <span className="truncate">{selectedModel || 'Select model…'}</span>
+        <span className="truncate">
+          {selectedModel === DEMO_MODEL_ID
+            ? DEMO_OPTION.displayName
+            : (selectedModel || 'Select model…')}
+        </span>
         {loadingModels
           ? <svg className="w-2.5 h-2.5 animate-spin shrink-0" fill="none" viewBox="0 0 24 24">
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"/>
@@ -712,6 +737,43 @@ function SessionPanel({ sessions, activeId, onSelect, onNew, onDelete, onClose }
   )
 }
 
+// ─── Viewport hooks (mobile keyboard awareness) ───────────────────────────────
+
+/** Returns true when the viewport is narrower than Tailwind's `sm` breakpoint (640 px). */
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== 'undefined' ? window.innerWidth < 640 : false
+  )
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 639px)')
+    const handler = (e) => setIsMobile(e.matches)
+    mq.addEventListener('change', handler)
+    return () => mq.removeEventListener('change', handler)
+  }, [])
+  return isMobile
+}
+
+/**
+ * Returns the Visual Viewport height in pixels.
+ * On mobile this shrinks when the software keyboard appears, which lets us
+ * resize the chat panel so the input row stays above the keyboard.
+ */
+function useVisualViewport() {
+  const [height, setHeight] = useState(() =>
+    typeof window !== 'undefined'
+      ? (window.visualViewport?.height ?? window.innerHeight)
+      : 600
+  )
+  useEffect(() => {
+    const vv = window.visualViewport
+    if (!vv) return
+    const update = () => setHeight(vv.height)
+    vv.addEventListener('resize', update)
+    return () => vv.removeEventListener('resize', update)
+  }, [])
+  return height
+}
+
 // ─── Main overlay component ───────────────────────────────────────────────────
 
 export default function AiChatOverlay({ properties, profile, activeTab, simState, isOwner, open: controlledOpen, onToggle }) {
@@ -733,10 +795,15 @@ export default function AiChatOverlay({ properties, profile, activeTab, simState
   const [selectedModel, setSelectedModel] = useState(() => loadModel())
   const bottomRef                         = useRef(null)
   const inputRef                          = useRef(null)
+  const isMobile                          = useIsMobile()
+  const vpHeight                          = useVisualViewport()
 
   // AI chat is only available to the authenticated owner — the Gemini API key
   // should not be usable by anonymous guests.
-  const hasKey = Boolean(GEMINI_API_KEY) && Boolean(isOwner)
+  const hasKey   = Boolean(GEMINI_API_KEY) && Boolean(isOwner)
+  const isDemo   = selectedModel === DEMO_MODEL_ID && IS_DEV
+  // In dev mode the demo model is always usable (no API key required)
+  const canChat  = hasKey || isDemo
 
   // Derive the active session object
   const activeSession = sessions.find((s) => s.id === activeId) || null
@@ -747,10 +814,10 @@ export default function AiChatOverlay({ properties, profile, activeTab, simState
   useEffect(() => { saveActiveId(activeId) },       [activeId])
   useEffect(() => { saveModel(selectedModel) },     [selectedModel])
 
-  // Auto-scroll to bottom
+  // Auto-scroll to bottom (also fires when keyboard opens/closes on mobile)
   useEffect(() => {
     if (open) bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages, loading, open])
+  }, [messages, loading, open, vpHeight])
 
   // Focus input when panel opens
   useEffect(() => {
@@ -823,66 +890,75 @@ export default function AiChatOverlay({ properties, profile, activeTab, simState
     setLoading(true)
 
     try {
-      const { systemPrompt, contextPrompt } = buildFinancialContext(properties, profile)
-      const screenContext = buildScreenContext(activeTab, simState, properties, profile)
+      let fullContent
+      let truncated = false
 
-      // Build contents from the current session's messages
-      const currentMessages = sessions.find((s) => s.id === sessionId)?.messages || []
+      if (selectedModel === DEMO_MODEL_ID) {
+        // Demo model — no API call, just echo "sup" after a short delay
+        await new Promise((r) => setTimeout(r, 600))
+        fullContent = 'sup'
+      } else {
+        const { systemPrompt, contextPrompt } = buildFinancialContext(properties, profile)
+        const screenContext = buildScreenContext(activeTab, simState, properties, profile)
 
-      const contents = [
-        // Full portfolio + household context — always the first grounding turn
-        {
-          role: 'user',
-          parts: [{ text: `${contextPrompt}\n\n---\nI will now ask you questions about my financial situation. Please answer based only on the data I have provided above.` }],
-        },
-        {
-          role: 'model',
-          parts: [{ text: "Understood. I have reviewed your complete financial picture and I'm ready to answer your questions with specific, data-driven advice." }],
-        },
-        // Prior conversation turns
-        ...currentMessages.map((m) => ({
-          role: m.role === 'user' ? 'user' : 'model',
-          parts: [{ text: m.content }],
-        })),
-        // Focused screen context injected just before the question for high recency
-        {
-          role: 'user',
-          parts: [{ text: `Before I ask my question, here is what I am currently looking at in the app:\n\n${screenContext}\nPlease keep this screen context in mind when answering.` }],
-        },
-        {
-          role: 'model',
-          parts: [{ text: `Noted — you are currently on the ${TAB_LABELS[activeTab] || activeTab || 'app'} screen. I'll focus my answer on that context while keeping your full financial picture in mind.` }],
-        },
-        { role: 'user', parts: [{ text: text.trim() }] },
-      ]
+        // Build contents from the current session's messages
+        const currentMessages = sessions.find((s) => s.id === sessionId)?.messages || []
 
-      const response = await fetch(endpointFor(selectedModel), {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          system_instruction: { parts: [{ text: systemPrompt }] },
-          contents,
-          generationConfig: { maxOutputTokens: 8192, temperature: 0.4 },
-        }),
-      })
+        const contents = [
+          // Full portfolio + household context — always the first grounding turn
+          {
+            role: 'user',
+            parts: [{ text: `${contextPrompt}\n\n---\nI will now ask you questions about my financial situation. Please answer based only on the data I have provided above.` }],
+          },
+          {
+            role: 'model',
+            parts: [{ text: "Understood. I have reviewed your complete financial picture and I'm ready to answer your questions with specific, data-driven advice." }],
+          },
+          // Prior conversation turns
+          ...currentMessages.map((m) => ({
+            role: m.role === 'user' ? 'user' : 'model',
+            parts: [{ text: m.content }],
+          })),
+          // Focused screen context injected just before the question for high recency
+          {
+            role: 'user',
+            parts: [{ text: `Before I ask my question, here is what I am currently looking at in the app:\n\n${screenContext}\nPlease keep this screen context in mind when answering.` }],
+          },
+          {
+            role: 'model',
+            parts: [{ text: `Noted — you are currently on the ${TAB_LABELS[activeTab] || activeTab || 'app'} screen. I'll focus my answer on that context while keeping your full financial picture in mind.` }],
+          },
+          { role: 'user', parts: [{ text: text.trim() }] },
+        ]
 
-      if (!response.ok) {
-        const errBody = await response.json().catch(() => ({}))
-        throw new Error(errBody?.error?.message || `Gemini API error ${response.status}: ${response.statusText}`)
+        const response = await fetch(endpointFor(selectedModel), {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            system_instruction: { parts: [{ text: systemPrompt }] },
+            contents,
+            generationConfig: { maxOutputTokens: 8192, temperature: 0.4 },
+          }),
+        })
+
+        if (!response.ok) {
+          const errBody = await response.json().catch(() => ({}))
+          throw new Error(errBody?.error?.message || `Gemini API error ${response.status}: ${response.statusText}`)
+        }
+
+        const data         = await response.json()
+        const candidate    = data?.candidates?.[0]
+        const reply        = candidate?.content?.parts?.[0]?.text
+        const finishReason = candidate?.finishReason  // 'STOP' | 'MAX_TOKENS' | 'SAFETY' | …
+
+        if (!reply) throw new Error('Empty response from Gemini.')
+
+        // Warn the user if the response was cut short by the token limit
+        truncated   = finishReason === 'MAX_TOKENS'
+        fullContent = truncated
+          ? reply + '\n\n*— response was cut off (token limit reached) —*'
+          : reply
       }
-
-      const data        = await response.json()
-      const candidate   = data?.candidates?.[0]
-      const reply       = candidate?.content?.parts?.[0]?.text
-      const finishReason = candidate?.finishReason  // 'STOP' | 'MAX_TOKENS' | 'SAFETY' | …
-
-      if (!reply) throw new Error('Empty response from Gemini.')
-
-      // Warn the user if the response was cut short by the token limit
-      const truncated = finishReason === 'MAX_TOKENS'
-      const fullContent = truncated
-        ? reply + '\n\n*— response was cut off (token limit reached) —*'
-        : reply
 
       // userMsg was already optimistically appended — just add the assistant reply
       setSessions((prev) =>
@@ -913,7 +989,7 @@ export default function AiChatOverlay({ properties, profile, activeTab, simState
     sendMessage(input)
   }
 
-  const canSend = hasKey && !loading && !!input.trim() && !!selectedModel
+  const canSend = canChat && !loading && !!input.trim() && !!selectedModel
 
   // ── Render ────────────────────────────────────────────────────────────────
 
@@ -949,10 +1025,11 @@ export default function AiChatOverlay({ properties, profile, activeTab, simState
       {open && (
         <div
           className="fixed z-[40] flex flex-col overflow-hidden
-                     top-0 left-0 right-0 bottom-[64px] sm:inset-auto sm:bottom-24 sm:right-6 sm:z-[99]
+                     top-0 left-0 right-0 sm:inset-auto sm:bottom-24 sm:right-6 sm:z-[99]
                      sm:w-[380px] sm:max-w-[calc(100vw-2rem)]
                      sm:h-[560px] sm:max-h-[calc(100vh-8rem)]
                      bg-neo-surface sm:border border-white/60 sm:rounded-3xl shadow-neo-lg"
+          style={isMobile ? { height: `${vpHeight - 64}px` } : undefined}
         >
           {showSessions ? (
             /* ── Session list view ── */
@@ -1014,13 +1091,18 @@ export default function AiChatOverlay({ properties, profile, activeTab, simState
               )}
 
               {/* No API key warning (owner is authed but key missing in env) */}
-              {isOwner && !hasKey && (
+              {isOwner && !hasKey && !isDemo && (
                 <div className="m-3 rounded-2xl border border-amber-200/80 bg-amber-50 shadow-neo-inset-sm p-3 space-y-2 shrink-0">
                   <p className="text-amber-900 text-xs font-semibold">API key not configured</p>
                   <p className="text-amber-800/90 text-xs">
                     Add <span className="font-mono">VITE_GEMINI_API_KEY</span> to your{' '}
                     <span className="font-mono">.env</span> and restart the dev server.
                   </p>
+                  {IS_DEV && (
+                    <p className="text-amber-800/90 text-xs">
+                      Select <span className="font-mono">Demo LLM</span> in the model picker below to test the UI without an API key.
+                    </p>
+                  )}
                 </div>
               )}
 
@@ -1040,11 +1122,11 @@ export default function AiChatOverlay({ properties, profile, activeTab, simState
                       <p className="text-neo-subtle text-xs mt-1">
                         AI has full context of your portfolio & household.
                       </p>
-                      {hasKey && !selectedModel && (
+                      {canChat && !selectedModel && (
                         <p className="text-amber-400 text-xs mt-1">Loading models…</p>
                       )}
                     </div>
-                    {hasKey && selectedModel && (
+                    {canChat && selectedModel && (
                       <div className="w-full space-y-1.5">
                         {SUGGESTIONS.slice(0, 3).map((s) => (
                           <button
@@ -1080,7 +1162,7 @@ export default function AiChatOverlay({ properties, profile, activeTab, simState
               </div>
 
               {/* Quick suggestions (after first message) */}
-              {messages.length > 0 && hasKey && selectedModel && (
+              {messages.length > 0 && canChat && selectedModel && (
                 <div className="border-t border-neo-border px-3 py-1.5 flex gap-1.5 overflow-x-auto shrink-0">
                   {SUGGESTIONS.slice(3).map((s) => (
                     <button
@@ -1113,13 +1195,15 @@ export default function AiChatOverlay({ properties, profile, activeTab, simState
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     placeholder={
-                      !hasKey
+                      !canChat
                         ? 'Configure API key…'
                         : !selectedModel
                         ? 'Loading models…'
+                        : isDemo
+                        ? 'Ask anything (demo mode)…'
                         : 'Ask about your portfolio…'
                     }
-                    disabled={!hasKey || loading || !selectedModel}
+                    disabled={!canChat || loading || !selectedModel}
                     className="input flex-1 text-xs py-2"
                   />
                   <button
