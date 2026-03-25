@@ -712,6 +712,43 @@ function SessionPanel({ sessions, activeId, onSelect, onNew, onDelete, onClose }
   )
 }
 
+// ─── Viewport hooks (mobile keyboard awareness) ───────────────────────────────
+
+/** Returns true when the viewport is narrower than Tailwind's `sm` breakpoint (640 px). */
+function useIsMobile() {
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== 'undefined' ? window.innerWidth < 640 : false
+  )
+  useEffect(() => {
+    const mq = window.matchMedia('(max-width: 639px)')
+    const handler = (e) => setIsMobile(e.matches)
+    mq.addEventListener('change', handler)
+    return () => mq.removeEventListener('change', handler)
+  }, [])
+  return isMobile
+}
+
+/**
+ * Returns the Visual Viewport height in pixels.
+ * On mobile this shrinks when the software keyboard appears, which lets us
+ * resize the chat panel so the input row stays above the keyboard.
+ */
+function useVisualViewport() {
+  const [height, setHeight] = useState(() =>
+    typeof window !== 'undefined'
+      ? (window.visualViewport?.height ?? window.innerHeight)
+      : 600
+  )
+  useEffect(() => {
+    const vv = window.visualViewport
+    if (!vv) return
+    const update = () => setHeight(vv.height)
+    vv.addEventListener('resize', update)
+    return () => vv.removeEventListener('resize', update)
+  }, [])
+  return height
+}
+
 // ─── Main overlay component ───────────────────────────────────────────────────
 
 export default function AiChatOverlay({ properties, profile, activeTab, simState, isOwner, open: controlledOpen, onToggle }) {
@@ -733,6 +770,8 @@ export default function AiChatOverlay({ properties, profile, activeTab, simState
   const [selectedModel, setSelectedModel] = useState(() => loadModel())
   const bottomRef                         = useRef(null)
   const inputRef                          = useRef(null)
+  const isMobile                          = useIsMobile()
+  const vpHeight                          = useVisualViewport()
 
   // AI chat is only available to the authenticated owner — the Gemini API key
   // should not be usable by anonymous guests.
@@ -747,10 +786,10 @@ export default function AiChatOverlay({ properties, profile, activeTab, simState
   useEffect(() => { saveActiveId(activeId) },       [activeId])
   useEffect(() => { saveModel(selectedModel) },     [selectedModel])
 
-  // Auto-scroll to bottom
+  // Auto-scroll to bottom (also fires when keyboard opens/closes on mobile)
   useEffect(() => {
     if (open) bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages, loading, open])
+  }, [messages, loading, open, vpHeight])
 
   // Focus input when panel opens
   useEffect(() => {
@@ -949,10 +988,11 @@ export default function AiChatOverlay({ properties, profile, activeTab, simState
       {open && (
         <div
           className="fixed z-[40] flex flex-col overflow-hidden
-                     top-0 left-0 right-0 bottom-[64px] sm:inset-auto sm:bottom-24 sm:right-6 sm:z-[99]
+                     top-0 left-0 right-0 sm:inset-auto sm:bottom-24 sm:right-6 sm:z-[99]
                      sm:w-[380px] sm:max-w-[calc(100vw-2rem)]
                      sm:h-[560px] sm:max-h-[calc(100vh-8rem)]
                      bg-neo-surface sm:border border-white/60 sm:rounded-3xl shadow-neo-lg"
+          style={isMobile ? { height: `${vpHeight - 64}px` } : undefined}
         >
           {showSessions ? (
             /* ── Session list view ── */
