@@ -628,44 +628,42 @@ const MD_COMPONENTS = {
 }
 
 function Message({ role, content, loading }) {
+  const isUser = role === 'user'
   return (
-    <div className={`flex gap-2 ${role === 'user' ? 'justify-end' : 'justify-start'}`}>
-      {role === 'assistant' && (
-        <div className="w-6 h-6 rounded-full bg-brand-600 flex items-center justify-center shrink-0 mt-0.5">
-          <svg className="w-3.5 h-3.5 text-neo-text" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+    <div className={`flex items-end gap-2 ${isUser ? 'flex-row-reverse' : 'flex-row'}`}>
+      {/* Avatar — only for assistant */}
+      {!isUser && (
+        <div className="w-7 h-7 rounded-full bg-brand-600/20 border border-brand-500/30
+                        flex items-center justify-center shrink-0 mb-0.5">
+          <svg className="w-3.5 h-3.5 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
               d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
           </svg>
         </div>
       )}
+
+      {/* Bubble */}
       <div
-        className={`max-w-[82%] rounded-2xl px-3 py-2.5
-          ${role === 'user'
-            ? 'bg-brand-600 text-white rounded-tr-sm text-xs leading-relaxed shadow-neo-sm'
-            : 'bg-neo-raised text-neo-text/95 rounded-tl-sm border border-neo-border'
+        className={`max-w-[78%] px-3.5 py-2.5 shadow-neo-sm
+          ${isUser
+            ? 'bg-brand-600 text-white rounded-2xl rounded-br-sm'
+            : 'bg-neo-raised border border-neo-border text-neo-text/95 rounded-2xl rounded-bl-sm'
           }`}
       >
         {loading ? (
-          <span className="flex items-center gap-1.5 py-0.5">
-            <span className="w-1.5 h-1.5 bg-neo-subtle rounded-full animate-bounce shadow-neo-inset-sm" style={{ animationDelay: '0ms' }} />
-            <span className="w-1.5 h-1.5 bg-neo-subtle rounded-full animate-bounce shadow-neo-inset-sm" style={{ animationDelay: '150ms' }} />
-            <span className="w-1.5 h-1.5 bg-neo-subtle rounded-full animate-bounce shadow-neo-inset-sm" style={{ animationDelay: '300ms' }} />
+          <span className="flex items-center gap-1.5 py-0.5 px-1">
+            <span className="w-2 h-2 bg-neo-subtle rounded-full animate-bounce" style={{ animationDelay: '0ms' }} />
+            <span className="w-2 h-2 bg-neo-subtle rounded-full animate-bounce" style={{ animationDelay: '160ms' }} />
+            <span className="w-2 h-2 bg-neo-subtle rounded-full animate-bounce" style={{ animationDelay: '320ms' }} />
           </span>
-        ) : role === 'assistant' ? (
+        ) : isUser ? (
+          <p className="text-sm leading-relaxed">{content}</p>
+        ) : (
           <ReactMarkdown remarkPlugins={[remarkGfm]} components={MD_COMPONENTS}>
             {content}
           </ReactMarkdown>
-        ) : (
-          content
         )}
       </div>
-      {role === 'user' && (
-        <div className="w-6 h-6 rounded-full bg-neo-sunken flex items-center justify-center shrink-0 mt-0.5">
-          <svg className="w-3.5 h-3.5 text-neo-muted" fill="currentColor" viewBox="0 0 24 24">
-            <path d="M12 12c2.7 0 4.8-2.1 4.8-4.8S14.7 2.4 12 2.4 7.2 4.5 7.2 7.2 9.3 12 12 12zm0 2.4c-3.2 0-9.6 1.6-9.6 4.8v2.4h19.2v-2.4c0-3.2-6.4-4.8-9.6-4.8z" />
-          </svg>
-        </div>
-      )}
     </div>
   )
 }
@@ -754,24 +752,32 @@ function useIsMobile() {
 }
 
 /**
- * Returns the Visual Viewport height in pixels.
- * On mobile this shrinks when the software keyboard appears, which lets us
- * resize the chat panel so the input row stays above the keyboard.
+ * Returns { height, offsetTop } from the Visual Viewport API.
+ * height shrinks when the software keyboard appears.
+ * offsetTop shifts when the browser scrolls the layout viewport to keep a
+ * focused input in view — both values together let us anchor the panel
+ * precisely in the visible area on iOS/Android.
  */
 function useVisualViewport() {
-  const [height, setHeight] = useState(() =>
-    typeof window !== 'undefined'
-      ? (window.visualViewport?.height ?? window.innerHeight)
-      : 600
-  )
+  const [vp, setVp] = useState(() => {
+    if (typeof window === 'undefined') return { height: 600, offsetTop: 0 }
+    return {
+      height:    window.visualViewport?.height    ?? window.innerHeight,
+      offsetTop: window.visualViewport?.offsetTop ?? 0,
+    }
+  })
   useEffect(() => {
     const vv = window.visualViewport
     if (!vv) return
-    const update = () => setHeight(vv.height)
+    const update = () => setVp({ height: vv.height, offsetTop: vv.offsetTop })
     vv.addEventListener('resize', update)
-    return () => vv.removeEventListener('resize', update)
+    vv.addEventListener('scroll', update)
+    return () => {
+      vv.removeEventListener('resize', update)
+      vv.removeEventListener('scroll', update)
+    }
   }, [])
-  return height
+  return vp
 }
 
 // ─── Main overlay component ───────────────────────────────────────────────────
@@ -796,7 +802,7 @@ export default function AiChatOverlay({ properties, profile, activeTab, simState
   const bottomRef                         = useRef(null)
   const inputRef                          = useRef(null)
   const isMobile                          = useIsMobile()
-  const vpHeight                          = useVisualViewport()
+  const vp                                = useVisualViewport()
 
   // AI chat is only available to the authenticated owner — the Gemini API key
   // should not be usable by anonymous guests.
@@ -817,7 +823,7 @@ export default function AiChatOverlay({ properties, profile, activeTab, simState
   // Auto-scroll to bottom (also fires when keyboard opens/closes on mobile)
   useEffect(() => {
     if (open) bottomRef.current?.scrollIntoView({ behavior: 'smooth' })
-  }, [messages, loading, open, vpHeight])
+  }, [messages, loading, open, vp])
 
   // Focus input when panel opens
   useEffect(() => {
@@ -993,46 +999,53 @@ export default function AiChatOverlay({ properties, profile, activeTab, simState
 
   // ── Render ────────────────────────────────────────────────────────────────
 
+  // Mobile: position the panel precisely within the visual viewport so it
+  // stays above the software keyboard on iOS/Android.
+  const mobileStyle = isMobile
+    ? { top: `${vp.offsetTop}px`, height: `${vp.height}px` }
+    : undefined
+
   return (
     <>
-      {/* ── Floating action button (desktop only — mobile uses center nav button) ── */}
-      <button
-        onClick={() => setOpen((o) => !o)}
-        title="AI Chat"
-        className={`fixed bottom-6 right-6 z-[100] w-14 h-14 rounded-full shadow-neo-lg
-                    items-center justify-center transition-all duration-200
-                    ${controlledOpen !== undefined ? 'hidden' : 'flex'}
-                    ${open
-                      ? 'bg-neo-sunken hover:bg-neo-sunken rotate-45'
-                      : 'bg-brand-600 hover:bg-brand-500 hover:scale-105'
-                    }`}
-      >
-        {open ? (
-          /* Close (×) icon when panel is open */
-          <svg className="w-6 h-6 text-neo-text" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
-          </svg>
-        ) : (
-          /* AI icon when panel is closed */
-          <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-              d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
-          </svg>
-        )}
-      </button>
+      {/* ── FAB (desktop only — mobile uses centre-nav trigger) ── */}
+      {controlledOpen === undefined && (
+        <button
+          onClick={() => setOpen((o) => !o)}
+          title="AI Chat"
+          className={`fixed bottom-6 right-6 z-[100] w-14 h-14 rounded-full shadow-neo-lg
+                      flex items-center justify-center transition-all duration-200
+                      ${open
+                        ? 'bg-neo-raised border border-neo-border hover:bg-neo-surface'
+                        : 'bg-brand-600 hover:bg-brand-500 hover:scale-105'
+                      }`}
+        >
+          {open ? (
+            <svg className="w-5 h-5 text-neo-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+            </svg>
+          ) : (
+            <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+            </svg>
+          )}
+        </button>
+      )}
 
       {/* ── Chat panel ── */}
       {open && (
         <div
-          className="fixed z-[40] flex flex-col overflow-hidden
-                     top-0 left-0 right-0 sm:inset-auto sm:bottom-24 sm:right-6 sm:z-[99]
-                     sm:w-[380px] sm:max-w-[calc(100vw-2rem)]
-                     sm:h-[560px] sm:max-h-[calc(100vh-8rem)]
-                     bg-neo-surface sm:border border-white/60 sm:rounded-3xl shadow-neo-lg"
-          style={isMobile ? { height: `${vpHeight - 64}px` } : undefined}
+          style={mobileStyle}
+          className="fixed z-[99] flex flex-col overflow-hidden
+                     inset-x-0 top-0
+                     sm:inset-auto sm:bottom-[5.5rem] sm:right-6
+                     sm:w-[400px] sm:max-w-[calc(100vw-2rem)]
+                     sm:h-[600px] sm:max-h-[calc(100vh-7rem)]
+                     sm:rounded-2xl
+                     bg-neo-surface sm:border sm:border-white/10 shadow-neo-lg"
         >
           {showSessions ? (
-            /* ── Session list view ── */
+            /* ── Session list ── */
             <SessionPanel
               sessions={sessions}
               activeId={activeId}
@@ -1045,101 +1058,122 @@ export default function AiChatOverlay({ properties, profile, activeTab, simState
             /* ── Chat view ── */
             <>
               {/* Header */}
-              <div className="flex items-center gap-2 px-3 py-2.5 border-b border-neo-border shrink-0">
-                {/* Session switcher */}
+              <div className="flex items-center gap-3 px-4 py-3 border-b border-neo-border bg-neo-raised shrink-0">
+                {/* Mobile back button */}
+                {controlledOpen !== undefined && (
+                  <button
+                    onClick={() => setOpen(false)}
+                    className="p-1 -ml-1 rounded-xl text-neo-muted hover:text-neo-text/95 hover:bg-neo-surface transition-colors"
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                    </svg>
+                  </button>
+                )}
+
+                {/* AI avatar + online indicator */}
+                <div className="relative shrink-0">
+                  <div className="w-9 h-9 rounded-full bg-brand-600/20 border border-brand-500/30
+                                  flex items-center justify-center">
+                    <svg className="w-[18px] h-[18px] text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                        d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                    </svg>
+                  </div>
+                  <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-400 border-2 border-neo-raised" />
+                </div>
+
+                {/* Name + status */}
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-semibold text-neo-text leading-tight truncate">
+                    {activeSession?.label || 'AI Advisor'}
+                  </p>
+                  <p className="text-[11px] leading-tight text-emerald-400">
+                    {canChat ? 'Online · Gemini' : 'Requires API key'}
+                  </p>
+                </div>
+
+                {/* History */}
                 <button
                   onClick={() => setShowSessions(true)}
-                  title="Browse sessions"
-                  className="p-1.5 rounded-lg text-neo-muted hover:text-neo-text/95 hover:bg-neo-raised transition-colors"
+                  title="Chat history"
+                  className="p-2 rounded-xl text-neo-muted hover:text-neo-text/95 hover:bg-neo-surface transition-colors"
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
-                      d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+                      d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                   </svg>
                 </button>
 
-                <div className="flex-1 min-w-0">
-                  <p className="text-xs font-semibold text-neo-text truncate">
-                    {activeSession?.label || 'AI Advisor'}
-                  </p>
-                  <p className="text-[10px] text-neo-subtle">Powered by Google Gemini</p>
-                </div>
-
-                {/* New session */}
+                {/* New chat */}
                 <button
                   onClick={handleNewSession}
-                  title="New session"
-                  className="p-1.5 rounded-lg text-neo-muted hover:text-neo-text/95 hover:bg-neo-raised transition-colors"
+                  title="New chat"
+                  className="p-2 rounded-xl text-neo-muted hover:text-neo-text/95 hover:bg-neo-surface transition-colors"
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <svg className="w-[18px] h-[18px]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                       d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                   </svg>
                 </button>
               </div>
 
-              {/* Guest mode — AI disabled */}
+              {/* Status banners */}
               {!isOwner && (
-                <div className="m-3 rounded-xl border border-neo-border/60 bg-neo-sunken/70 p-3 space-y-1.5 shrink-0">
-                  <p className="text-neo-muted text-xs font-semibold">AI chat — owner only</p>
-                  <p className="text-neo-muted text-xs leading-relaxed">
-                    You are browsing as a guest. Log in as owner using the{' '}
-                    <span className="text-brand-300 font-medium">lock icon</span> in the sidebar
-                    to enable the AI advisor.
+                <div className="px-4 py-3 border-b border-neo-border bg-neo-sunken/60 shrink-0">
+                  <p className="text-[11px] font-semibold text-neo-muted mb-0.5">Owner only</p>
+                  <p className="text-[11px] text-neo-subtle leading-relaxed">
+                    Log in as the owner (lock icon in sidebar) to use the AI advisor.
                   </p>
                 </div>
               )}
-
-              {/* No API key warning (owner is authed but key missing in env) */}
               {isOwner && !hasKey && !isDemo && (
-                <div className="m-3 rounded-2xl border border-amber-200/80 bg-amber-50 shadow-neo-inset-sm p-3 space-y-2 shrink-0">
-                  <p className="text-amber-900 text-xs font-semibold">API key not configured</p>
-                  <p className="text-amber-800/90 text-xs">
-                    Add <span className="font-mono">VITE_GEMINI_API_KEY</span> to your{' '}
-                    <span className="font-mono">.env</span> and restart the dev server.
+                <div className="px-4 py-3 border-b border-amber-600/30 bg-amber-900/10 shrink-0">
+                  <p className="text-[11px] font-semibold text-amber-400 mb-0.5">API key missing</p>
+                  <p className="text-[11px] text-amber-500/80 leading-relaxed">
+                    Add <code className="font-mono">VITE_GEMINI_API_KEY</code> to{' '}
+                    <code className="font-mono">.env</code> and restart.
+                    {IS_DEV && ' Select "Demo LLM" in the model picker to test without a key.'}
                   </p>
-                  {IS_DEV && (
-                    <p className="text-amber-800/90 text-xs">
-                      Select <span className="font-mono">Demo LLM</span> in the model picker below to test the UI without an API key.
-                    </p>
-                  )}
                 </div>
               )}
 
               {/* Messages */}
-              <div className="flex-1 overflow-y-auto p-3 space-y-3">
+              <div
+                className="flex-1 overflow-y-auto px-3 py-4 space-y-3"
+                style={{ background: 'rgba(7,11,17,0.45)' }}
+              >
                 {messages.length === 0 && !loading && (
-                  <div className="flex flex-col items-center justify-center h-full py-4 space-y-4">
-                    <div className="w-10 h-10 rounded-2xl bg-brand-600/20 border border-brand-500/30
+                  <div className="flex flex-col items-center justify-center h-full py-8 space-y-5 text-center">
+                    <div className="w-14 h-14 rounded-2xl bg-brand-600/15 border border-brand-500/25
                                     flex items-center justify-center">
-                      <svg className="w-5 h-5 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <svg className="w-7 h-7 text-brand-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5}
                           d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
                       </svg>
                     </div>
-                    <div className="text-center px-4">
-                      <p className="text-neo-muted text-xs font-medium">Ask anything about your finances</p>
-                      <p className="text-neo-subtle text-xs mt-1">
-                        AI has full context of your portfolio & household.
+                    <div className="space-y-1 px-6">
+                      <p className="text-sm font-semibold text-neo-text">AI Financial Advisor</p>
+                      <p className="text-xs text-neo-subtle leading-relaxed">
+                        Ask anything about your portfolio, loans, cash flow, or investment strategy.
                       </p>
-                      {canChat && !selectedModel && (
-                        <p className="text-amber-400 text-xs mt-1">Loading models…</p>
-                      )}
                     </div>
                     {canChat && selectedModel && (
-                      <div className="w-full space-y-1.5">
+                      <div className="w-full space-y-2 px-2">
                         {SUGGESTIONS.slice(0, 3).map((s) => (
                           <button
                             key={s}
                             onClick={() => sendMessage(s)}
-                            className="w-full text-left text-xs text-neo-muted bg-neo-raised hover:bg-neo-sunken
-                                       border border-neo-border hover:shadow-neo rounded-xl px-3 py-2
-                                       transition-colors"
+                            className="w-full text-left text-xs text-neo-muted bg-neo-surface/80 hover:bg-neo-raised
+                                       border border-neo-border rounded-2xl px-3.5 py-2.5 transition-colors leading-relaxed"
                           >
                             {s}
                           </button>
                         ))}
                       </div>
+                    )}
+                    {canChat && !selectedModel && (
+                      <p className="text-xs text-neo-subtle animate-pulse">Loading models…</p>
                     )}
                   </div>
                 )}
@@ -1151,27 +1185,30 @@ export default function AiChatOverlay({ properties, profile, activeTab, simState
                 {loading && <Message role="assistant" loading />}
 
                 {error && (
-                  <div className="rounded-xl border border-red-200/80 bg-red-50 shadow-neo-inset-sm px-3 py-2">
-                    <p className="text-red-800 text-xs">
-                      <span className="font-semibold">Error: </span>{error}
-                    </p>
+                  <div className="flex justify-start">
+                    <div className="max-w-[85%] rounded-2xl rounded-bl-sm px-3.5 py-2.5
+                                    bg-red-900/30 border border-red-700/40">
+                      <p className="text-xs text-red-300">
+                        <span className="font-semibold">Error: </span>{error}
+                      </p>
+                    </div>
                   </div>
                 )}
 
                 <div ref={bottomRef} />
               </div>
 
-              {/* Quick suggestions (after first message) */}
+              {/* Quick suggestion chips (after first message) */}
               {messages.length > 0 && canChat && selectedModel && (
-                <div className="border-t border-neo-border px-3 py-1.5 flex gap-1.5 overflow-x-auto shrink-0">
+                <div className="border-t border-neo-border px-3 py-2 flex gap-2 overflow-x-auto shrink-0 bg-neo-surface">
                   {SUGGESTIONS.slice(3).map((s) => (
                     <button
                       key={s}
                       onClick={() => sendMessage(s)}
                       disabled={loading}
-                      className="shrink-0 text-[10px] text-neo-muted hover:text-neo-text/95 bg-neo-raised
-                                 hover:bg-neo-sunken border border-neo-border rounded-lg px-2 py-1
-                                 transition-colors whitespace-nowrap disabled:opacity-50"
+                      className="shrink-0 text-[11px] text-neo-muted hover:text-neo-text/95
+                                 bg-neo-raised hover:bg-neo-sunken border border-neo-border
+                                 rounded-full px-3 py-1.5 transition-colors whitespace-nowrap disabled:opacity-40"
                     >
                       {s}
                     </button>
@@ -1179,39 +1216,47 @@ export default function AiChatOverlay({ properties, profile, activeTab, simState
                 </div>
               )}
 
-              {/* Input row */}
-              <div className="border-t border-neo-border p-2 shrink-0">
-                <div className="flex items-center gap-1.5 mb-1.5">
+              {/* Input area */}
+              <div className="shrink-0 border-t border-neo-border bg-neo-surface px-3 pt-2 pb-3">
+                <div className="mb-2">
                   <ModelSelector
                     apiKey={GEMINI_API_KEY}
                     selectedModel={selectedModel}
                     onSelect={setSelectedModel}
                   />
                 </div>
-                <form onSubmit={handleSubmit} className="flex gap-2">
+                <form onSubmit={handleSubmit} className="flex items-center gap-2">
                   <input
                     ref={inputRef}
                     type="text"
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     placeholder={
-                      !canChat
-                        ? 'Configure API key…'
-                        : !selectedModel
-                        ? 'Loading models…'
-                        : isDemo
-                        ? 'Ask anything (demo mode)…'
-                        : 'Ask about your portfolio…'
+                      !canChat         ? 'Configure API key…'
+                      : !selectedModel ? 'Loading models…'
+                      : isDemo         ? 'Ask anything (demo)…'
+                      :                  'Ask about your portfolio…'
                     }
                     disabled={!canChat || loading || !selectedModel}
-                    className="input flex-1 text-xs py-2"
+                    className="flex-1 bg-neo-raised border border-neo-border rounded-full
+                               px-4 py-2.5 text-sm text-neo-text placeholder:text-neo-subtle
+                               focus:outline-none focus:border-brand-500
+                               disabled:opacity-50 transition-colors"
                   />
                   <button
                     type="submit"
                     disabled={!canSend}
-                    className="btn-primary px-3 py-2 disabled:opacity-40 disabled:cursor-not-allowed"
+                    className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0
+                                transition-all duration-150
+                                ${canSend
+                                  ? 'bg-brand-600 hover:bg-brand-500 shadow-glow-sm'
+                                  : 'bg-neo-raised border border-neo-border'
+                                }`}
                   >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <svg
+                      className={`w-4 h-4 ${canSend ? 'text-white' : 'text-neo-subtle'}`}
+                      fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                    >
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
                         d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                     </svg>
