@@ -213,45 +213,11 @@ export default function MobileLayout({ activeTab, onTabChange, children, isLogge
     setShowMore(false)
   }
 
-  const activeLabel = ALL_TABS.find(t => t.id === activeTab)?.label ?? 'MoneyCalc'
-
   return (
     <div className="min-h-screen flex flex-col">
 
-      {/* Top bar */}
-      <header
-        className="sticky top-0 z-10 flex items-center px-4 py-3.5 border-b"
-        style={{
-          background: 'rgba(6, 10, 20, 0.80)',
-          backdropFilter: 'blur(20px)',
-          WebkitBackdropFilter: 'blur(20px)',
-          borderColor: 'rgba(255,255,255,0.08)',
-        }}
-      >
-        <div className="w-8 h-8 rounded-xl bg-brand-600 flex items-center justify-center mr-3 shrink-0"
-             style={{ boxShadow: '0 0 10px rgba(234,88,12,0.45)' }}>
-          <svg className="w-4 h-4 text-white" fill="currentColor" viewBox="0 0 20 20">
-            <path d="M10.707 2.293a1 1 0 00-1.414 0l-7 7a1 1 0 001.414 1.414L4 10.414V17a1 1 0 001 1h2a1 1 0 001-1v-2a1 1 0 011-1h2a1 1 0 011 1v2a1 1 0 001 1h2a1 1 0 001-1v-6.586l.293.293a1 1 0 001.414-1.414l-7-7z" />
-          </svg>
-        </div>
-        <span className="font-semibold text-neo-text flex-1 text-sm">{activeLabel}</span>
-        {isLoggedIn ? (
-          <div className="w-8 h-8 rounded-xl bg-brand-600 flex items-center justify-center text-white text-[10px] font-bold"
-               style={{ boxShadow: '0 0 8px rgba(234,88,12,0.35)' }}>
-            {(user?.email ?? '').slice(0, 2).toUpperCase()}
-          </div>
-        ) : (
-          <button
-            onClick={() => { window.history.pushState(null, '', '/login'); window.dispatchEvent(new PopStateEvent('popstate')) }}
-            className="text-sm text-brand-400 font-medium px-3 py-1.5"
-          >
-            Sign in
-          </button>
-        )}
-      </header>
-
       {/* Content */}
-      <main className="flex-1 overflow-y-auto px-4 pt-4 pb-24 space-y-4">
+      <main className="flex-1 overflow-y-auto px-4 pt-5 pb-24 space-y-4">
         {children}
       </main>
 
