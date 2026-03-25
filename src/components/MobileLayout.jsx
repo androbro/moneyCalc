@@ -139,18 +139,43 @@ function MoreOverlay({ active, onNav, isLoggedIn, user, onSignOut, onResetDemo, 
             {active === id && <span className="w-1.5 h-1.5 rounded-full bg-brand-500" style={{ boxShadow: '0 0 6px rgba(234,88,12,0.8)' }} />}
           </button>
         ))}
+
+        <div className="h-px mx-2 my-3" style={{ background: 'rgba(255,255,255,0.07)' }} />
+        <p className="text-[9px] text-neo-subtle uppercase tracking-widest px-2 mb-2 opacity-70">Account</p>
+        <button
+          onClick={() => { onNav('household'); onClose() }}
+          className="w-full flex items-center justify-between px-4 py-3.5 rounded-2xl text-sm font-medium transition-all duration-200"
+          style={active === 'household'
+            ? { background: 'rgba(234,88,12,0.15)', border: '1px solid rgba(234,88,12,0.28)', color: '#fb923c' }
+            : { border: '1px solid transparent', color: '#8897b5' }}
+        >
+          Profile Settings
+          {active === 'household' && <span className="w-1.5 h-1.5 rounded-full bg-brand-500" style={{ boxShadow: '0 0 6px rgba(234,88,12,0.8)' }} />}
+        </button>
       </div>
 
-      {/* User row */}
-      <div className="px-4 pb-8 pt-3 border-t" style={{ borderColor: 'rgba(255,255,255,0.07)' }}>
+      {/* Bottom: sign in or user actions */}
+      <div className="px-4 pb-8 pt-3 border-t space-y-2" style={{ borderColor: 'rgba(255,255,255,0.07)' }}>
+        {!user && (
+          <button
+            onClick={() => { window.history.pushState(null, '', '/login'); window.dispatchEvent(new PopStateEvent('popstate')); onClose() }}
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 rounded-2xl text-sm font-semibold transition-all duration-200"
+            style={{ background: 'linear-gradient(135deg, #ea580c, #c2410c)', boxShadow: '0 0 20px rgba(234,88,12,0.35)', color: '#fff' }}
+          >
+            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+            </svg>
+            Sign in
+          </button>
+        )}
         <button
           onClick={user ? onSignOut : onResetDemo}
-          className="w-full flex items-center gap-3 px-4 py-3.5 rounded-2xl transition-all duration-200 group"
-          style={{ border: '1px solid transparent' }}
+          className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl transition-all duration-200"
+          style={{ border: '1px solid rgba(255,255,255,0.07)', background: 'rgba(255,255,255,0.03)' }}
           onMouseEnter={e => e.currentTarget.style.background = 'rgba(239,68,68,0.08)'}
-          onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+          onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.03)'}
         >
-          <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 text-xs font-bold
+          <div className={`w-8 h-8 rounded-xl flex items-center justify-center shrink-0 text-xs font-bold
             ${user ? 'bg-brand-600 text-white' : 'text-neo-subtle'}`}
                style={user ? { boxShadow: '0 0 10px rgba(234,88,12,0.35)' } : {}}>
             {user
