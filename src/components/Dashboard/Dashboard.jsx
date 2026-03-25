@@ -949,7 +949,7 @@ export default function Dashboard({
 
         {/* Header */}
         <h1 className="text-5xl text-neo-text"
-            style={{ fontFamily: "'Caveat', cursive", textShadow: '0 0 30px rgba(234,88,12,0.25)' }}>
+            style={{ fontFamily: "'Satisfy', cursive", textShadow: '0 0 30px rgba(234,88,12,0.25)' }}>
           wenLambo
         </h1>
 
