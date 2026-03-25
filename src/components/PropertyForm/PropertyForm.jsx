@@ -2,16 +2,17 @@ import { useState, useEffect } from 'react'
 import { v4 as uuidv4 } from 'uuid'
 import CSVImporter from '../CSVImporter'
 import PropertyTimeline from '../PropertyTimeline'
+import { useMediaQuery } from '../../hooks/useMediaQuery'
 
 // ─── Property status options ───────────────────────────────────────────────────
 
 export const PROPERTY_STATUSES = [
-  { value: 'owner_occupied', label: 'Owner-occupied',    color: 'text-sky-800',   bg: 'bg-sky-100 border-sky-200/80 shadow-neo-inset-sm' },
-  { value: 'rented',         label: 'Rented out',        color: 'text-emerald-800', bg: 'bg-emerald-100 border-emerald-200/80 shadow-neo-inset-sm' },
-  { value: 'vacant',         label: 'Vacant',            color: 'text-amber-900',   bg: 'bg-amber-50 border-amber-200/80 shadow-neo-inset-sm' },
-  { value: 'for_sale',       label: 'For sale',          color: 'text-orange-900',  bg: 'bg-orange-100 border-orange-200/80 shadow-neo-inset-sm' },
-  { value: 'renovation',     label: 'Under renovation',  color: 'text-purple-900',  bg: 'bg-purple-100 border-purple-200/80 shadow-neo-inset-sm' },
-  { value: 'planned',        label: 'Planned / Simulated', color: 'text-sky-900',   bg: 'bg-sky-50 border-sky-200/80 shadow-neo-inset-sm' },
+  { value: 'owner_occupied', label: 'Owner-occupied',      color: 'text-sky-300',     bg: 'bg-sky-400/15 border-sky-400/30' },
+  { value: 'rented',         label: 'Rented out',          color: 'text-emerald-300', bg: 'bg-emerald-400/15 border-emerald-400/30' },
+  { value: 'vacant',         label: 'Vacant',              color: 'text-neo-muted',   bg: 'bg-white/5 border-white/10' },
+  { value: 'for_sale',       label: 'For sale',            color: 'text-amber-300',   bg: 'bg-amber-400/15 border-amber-400/30' },
+  { value: 'renovation',     label: 'Under renovation',    color: 'text-orange-300',  bg: 'bg-orange-400/15 border-orange-400/30' },
+  { value: 'planned',        label: 'Planned / Simulated', color: 'text-violet-300',  bg: 'bg-violet-400/15 border-violet-400/30' },
 ]
 
 export function getStatusMeta(status) {
@@ -265,7 +266,7 @@ function StatusSelector({ value, onChange }) {
           onClick={() => onChange(s.value)}
           className={`rounded-xl border px-3 py-2.5 text-xs font-semibold text-left transition-all
             ${value === s.value
-              ? `${s.bg} ${s.color} border-current shadow-sm`
+              ? `${s.bg} ${s.color}`
               : 'bg-neo-raised border-neo-border text-neo-muted hover:border-neo-border hover:text-neo-text/95'
             }`}
         >
@@ -291,6 +292,7 @@ const STATUS_ICONS = {
 // ─── Main form ────────────────────────────────────────────────────────────────
 
 export default function PropertyForm({ property: editProperty, profile, onSave, onCancel }) {
+  const isMobile = useMediaQuery('(max-width: 767px)')
   // Names available to pick from: household members + a fallback "Other"
   const memberNames = (profile?.members || []).map((m) => m.name).filter(Boolean)
   const [form, setForm] = useState(EMPTY_PROPERTY)
@@ -445,14 +447,14 @@ export default function PropertyForm({ property: editProperty, profile, onSave, 
   const isEdit = Boolean(editProperty)
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 pb-8">
+    <form onSubmit={handleSubmit} className={`space-y-6 ${isMobile ? 'pb-28' : 'pb-8'}`}>
 
       {/* Header */}
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-bold text-neo-text">
           {isEdit ? 'Edit Property' : 'Add Property'}
         </h2>
-        <button type="button" onClick={onCancel} className="text-neo-muted hover:text-neo-text">
+        <button type="button" onClick={onCancel} className="text-neo-muted hover:text-neo-text p-1 rounded-lg hover:bg-neo-sunken transition-colors">
           <CloseIcon />
         </button>
       </div>
@@ -900,13 +902,25 @@ export default function PropertyForm({ property: editProperty, profile, onSave, 
         </div>
       )}
 
-      {/* Actions */}
-      <div className="flex items-center gap-3 justify-end">
-        <button type="button" onClick={onCancel} className="btn-secondary">Cancel</button>
-        <button type="submit" className="btn-primary">
-          {isEdit ? 'Save Changes' : 'Add Property'}
-        </button>
-      </div>
+      {/* Actions — desktop inline, mobile sticky footer */}
+      {isMobile ? (
+        <div className="fixed bottom-0 left-0 right-0 z-20 px-4 pb-6 pt-3"
+          style={{ background: 'linear-gradient(to top, rgba(11,15,25,0.98) 70%, transparent)' }}>
+          <div className="flex gap-3 max-w-lg mx-auto">
+            <button type="button" onClick={onCancel} className="btn-secondary flex-1">Cancel</button>
+            <button type="submit" className="btn-primary flex-[2]">
+              {isEdit ? 'Save Changes' : 'Add Property'}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="flex items-center gap-3 justify-end">
+          <button type="button" onClick={onCancel} className="btn-secondary">Cancel</button>
+          <button type="submit" className="btn-primary">
+            {isEdit ? 'Save Changes' : 'Add Property'}
+          </button>
+        </div>
+      )}
     </form>
   )
 }

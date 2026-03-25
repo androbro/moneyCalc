@@ -172,7 +172,7 @@ function Tooltip({ point, anchorPct, visible }) {
       </div>
       {/* Arrow */}
       <div className="w-0 h-0 mx-auto"
-        style={{ borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderTop: '6px solid #475569' }} />
+        style={{ borderLeft: '6px solid transparent', borderRight: '6px solid transparent', borderTop: '6px solid #131926' }} />
     </div>
   )
 }
@@ -294,11 +294,11 @@ export default function PropertyTimeline({ property, compact = false }) {
   const hoveredPoint = hoveredY !== null ? points[hoveredY] : null
 
   const PHASE_STYLE = {
-    'loan-only':  'bg-red-100 border-red-200/80 shadow-neo-inset-sm',
-    'loan+rent':  'bg-amber-100 border-amber-200/80 shadow-neo-inset-sm',
-    'rent-only':  'bg-emerald-100 border-emerald-200/80 shadow-neo-inset-sm',
-    'no-income':  'bg-neo-bg border-neo-border/50 shadow-neo-inset-sm',
-    'profit':     'bg-emerald-100 border-emerald-300/70 shadow-neo-inset-sm',
+    'loan-only':  'bg-red-400/20 border-red-400/30',
+    'loan+rent':  'bg-amber-400/20 border-amber-400/30',
+    'rent-only':  'bg-emerald-400/20 border-emerald-400/30',
+    'no-income':  'bg-white/5 border-white/[0.07]',
+    'profit':     'bg-emerald-400/30 border-emerald-400/40',
   }
   const PHASE_LABEL = {
     'loan-only':  'Loan repayment',
@@ -340,13 +340,11 @@ export default function PropertyTimeline({ property, compact = false }) {
           {/* Legend */}
           <div className="flex flex-wrap gap-2 justify-end">
             {[
-              { key: 'loan-only', label: 'Loan only' },
-              { key: 'loan+rent', label: 'Loan + rent' },
-              { key: 'profit',    label: 'Pure profit' },
-            ].map(({ key, label }) => (
-              <span key={key} className={`text-[10px] px-2 py-0.5 rounded-full border font-medium ${PHASE_STYLE[key]} ${
-                key === 'loan-only' ? 'text-red-300' : key === 'loan+rent' ? 'text-amber-300' : 'text-emerald-300'
-              }`}>
+              { key: 'loan-only', label: 'Loan only',   text: 'text-red-300' },
+              { key: 'loan+rent', label: 'Loan + rent', text: 'text-amber-300' },
+              { key: 'profit',    label: 'Pure profit',  text: 'text-emerald-300' },
+            ].map(({ key, label, text }) => (
+              <span key={key} className={`text-[10px] px-2 py-0.5 rounded-full border font-medium ${PHASE_STYLE[key]} ${text}`}>
                 {label}
               </span>
             ))}
