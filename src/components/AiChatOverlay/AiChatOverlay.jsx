@@ -467,10 +467,13 @@ function ModelSelector({ apiKey, selectedModel, onSelect }) {
   const handleToggle = () => {
     if (!open && btnRef.current) {
       const rect = btnRef.current.getBoundingClientRect()
-      // Position the dropdown above the button, aligned to its right edge
+      // Anchor to the right edge of the button, but clamp so the 256px-wide
+      // dropdown never overflows the left side of the viewport (8px min margin).
+      const anchoredRight = window.innerWidth - rect.right
+      const maxRight      = window.innerWidth - 256 - 8
       setDropdownPos({
         bottom: window.innerHeight - rect.top + 6,
-        right:  window.innerWidth - rect.right,
+        right:  Math.min(anchoredRight, maxRight),
       })
     }
     setOpen((o) => !o)
