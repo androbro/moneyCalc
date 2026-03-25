@@ -948,12 +948,10 @@ export default function Dashboard({
       <div className="flex-1 flex flex-col gap-5 sm:gap-5 min-w-0">
 
         {/* Header */}
-        <div className="flex flex-wrap items-start justify-between gap-4">
-          <div>
-            <h1 className="text-2xl font-bold text-neo-text tracking-tight">My Dashboard</h1>
-            <p className="text-sm text-neo-muted mt-1">Real estate portfolio overview</p>
-          </div>
-        </div>
+        <h1 className="text-5xl text-neo-text tracking-wide"
+            style={{ fontFamily: "'Bebas Neue', sans-serif", textShadow: '0 0 30px rgba(234,88,12,0.25)' }}>
+          wenLambo
+        </h1>
 
         {/* ── Investment Ready Capital hero ── */}
         <motion.div {...cardReveal}>
