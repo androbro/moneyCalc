@@ -20,6 +20,7 @@ import {
 } from 'recharts'
 import PropertyTimeline from '../PropertyTimeline'
 import { getLoanPaymentSplit, getRemainingBalance } from '../../utils/projectionUtils'
+import { useMediaQuery } from '../../hooks/useMediaQuery'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -318,12 +319,12 @@ function ChartTooltip({ active, payload, label }) {
 
 function KpiCard({ label, value, sub, color = 'text-neo-text', highlight = false }) {
   return (
-    <div className={`rounded-xl p-4 text-center ${highlight
+    <div className={`rounded-2xl p-3 sm:p-4 ${highlight
       ? 'bg-gradient-to-br from-brand-600/30 to-brand-700/20 border border-brand-500/30'
       : 'bg-neo-sunken/55'}`}>
       <p className="text-xs text-neo-muted mb-1">{label}</p>
-      <p className={`text-xl font-bold ${color}`}>{value}</p>
-      {sub && <p className="text-xs text-neo-subtle mt-0.5">{sub}</p>}
+      <p className={`text-base sm:text-xl font-bold ${color}`}>{value}</p>
+      {sub && <p className="text-xs text-neo-subtle mt-0.5 leading-tight">{sub}</p>}
     </div>
   )
 }
@@ -361,6 +362,7 @@ function StatusBadge({ status }) {
 // ─── Main component ───────────────────────────────────────────────────────────
 
 export default function PropertyDetail({ property, onEdit, onBack }) {
+  const isMobile = useMediaQuery('(max-width: 767px)')
   const today = new Date()
   today.setHours(0, 0, 0, 0)
 
@@ -465,41 +467,45 @@ export default function PropertyDetail({ property, onEdit, onBack }) {
   const myShare = Number(myOwner?.share ?? 1)
 
   return (
-    <div className="space-y-6 pb-8">
+    <div className="space-y-5 pb-8">
 
       {/* ── Header ── */}
-      <div className="flex items-start justify-between gap-4 flex-wrap">
-        <div className="flex items-center gap-3">
-          <button
-            onClick={onBack}
-            className="text-neo-muted hover:text-neo-text transition-colors p-1 rounded-lg hover:bg-neo-sunken"
-            title="Back to properties"
-          >
-            <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-          </button>
-          <div>
-            <div className="flex items-center gap-2 flex-wrap">
-              <h1 className="text-2xl font-bold text-neo-text">{property.name}</h1>
-              <StatusBadge status={property.status} />
-            </div>
-            {property.address && (
-              <p className="text-neo-muted text-sm mt-0.5">{property.address}</p>
-            )}
+      <div className="flex items-start gap-3">
+        {/* Back button */}
+        <button
+          onClick={onBack}
+          className="text-neo-muted hover:text-neo-text transition-colors p-2 rounded-xl hover:bg-neo-sunken shrink-0 mt-0.5 active:scale-95"
+          title="Back to properties"
+        >
+          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+          </svg>
+        </button>
+
+        {/* Title + status */}
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2 flex-wrap">
+            <h1 className="text-xl font-bold text-neo-text leading-tight">{property.name}</h1>
+            <StatusBadge status={property.status} />
           </div>
+          {property.address && (
+            <p className="text-neo-muted text-sm mt-0.5 truncate">{property.address}</p>
+          )}
         </div>
-        <button onClick={onEdit} className="btn-primary shrink-0">
+
+        {/* Edit button */}
+        <button onClick={onEdit} className="btn-primary shrink-0 active:scale-95">
           <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
               d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
           </svg>
-          Edit Property
+          <span className="hidden sm:inline">Edit Property</span>
+          <span className="sm:hidden">Edit</span>
         </button>
       </div>
 
       {/* ── KPI strip ── */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5">
         <KpiCard
           label="Market Value"
           value={fmt(property.currentValue)}
@@ -560,8 +566,8 @@ export default function PropertyDetail({ property, onEdit, onBack }) {
           )}
         </div>
 
-        <ResponsiveContainer width="100%" height={320}>
-          <AreaChart data={allYears} margin={{ top: 10, right: 8, left: 0, bottom: 0 }}>
+        <ResponsiveContainer width="100%" height={isMobile ? 220 : 320}>
+          <AreaChart data={allYears} margin={{ top: 10, right: 4, left: 0, bottom: 0 }}>
             <defs>
               <linearGradient id="gVal" x1="0" y1="0" x2="0" y2="1">
                 <stop offset="5%"  stopColor="#10b981" stopOpacity={0.35} />
@@ -589,7 +595,7 @@ export default function PropertyDetail({ property, onEdit, onBack }) {
               tick={{ fill: '#94a3b8', fontSize: 10 }}
               axisLine={false}
               tickLine={false}
-              width={68}
+              width={isMobile ? 52 : 68}
             />
             <RechartsTooltip content={<ChartTooltip />} />
             <ReferenceLine

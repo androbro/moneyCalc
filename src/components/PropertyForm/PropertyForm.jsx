@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { v4 as uuidv4 } from 'uuid'
 import CSVImporter from '../CSVImporter'
 import PropertyTimeline from '../PropertyTimeline'
+import { useMediaQuery } from '../../hooks/useMediaQuery'
 
 // ─── Property status options ───────────────────────────────────────────────────
 
@@ -291,6 +292,7 @@ const STATUS_ICONS = {
 // ─── Main form ────────────────────────────────────────────────────────────────
 
 export default function PropertyForm({ property: editProperty, profile, onSave, onCancel }) {
+  const isMobile = useMediaQuery('(max-width: 767px)')
   // Names available to pick from: household members + a fallback "Other"
   const memberNames = (profile?.members || []).map((m) => m.name).filter(Boolean)
   const [form, setForm] = useState(EMPTY_PROPERTY)
@@ -445,14 +447,14 @@ export default function PropertyForm({ property: editProperty, profile, onSave, 
   const isEdit = Boolean(editProperty)
 
   return (
-    <form onSubmit={handleSubmit} className="space-y-6 pb-8">
+    <form onSubmit={handleSubmit} className={`space-y-6 ${isMobile ? 'pb-28' : 'pb-8'}`}>
 
       {/* Header */}
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-bold text-neo-text">
           {isEdit ? 'Edit Property' : 'Add Property'}
         </h2>
-        <button type="button" onClick={onCancel} className="text-neo-muted hover:text-neo-text">
+        <button type="button" onClick={onCancel} className="text-neo-muted hover:text-neo-text p-1 rounded-lg hover:bg-neo-sunken transition-colors">
           <CloseIcon />
         </button>
       </div>
@@ -900,13 +902,25 @@ export default function PropertyForm({ property: editProperty, profile, onSave, 
         </div>
       )}
 
-      {/* Actions */}
-      <div className="flex items-center gap-3 justify-end">
-        <button type="button" onClick={onCancel} className="btn-secondary">Cancel</button>
-        <button type="submit" className="btn-primary">
-          {isEdit ? 'Save Changes' : 'Add Property'}
-        </button>
-      </div>
+      {/* Actions — desktop inline, mobile sticky footer */}
+      {isMobile ? (
+        <div className="fixed bottom-0 left-0 right-0 z-20 px-4 pb-6 pt-3"
+          style={{ background: 'linear-gradient(to top, rgba(11,15,25,0.98) 70%, transparent)' }}>
+          <div className="flex gap-3 max-w-lg mx-auto">
+            <button type="button" onClick={onCancel} className="btn-secondary flex-1">Cancel</button>
+            <button type="submit" className="btn-primary flex-[2]">
+              {isEdit ? 'Save Changes' : 'Add Property'}
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="flex items-center gap-3 justify-end">
+          <button type="button" onClick={onCancel} className="btn-secondary">Cancel</button>
+          <button type="submit" className="btn-primary">
+            {isEdit ? 'Save Changes' : 'Add Property'}
+          </button>
+        </div>
+      )}
     </form>
   )
 }

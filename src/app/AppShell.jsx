@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { motion } from "motion/react";
 import Layout from "../components/Layout";
 import MobileLayout from "../components/MobileLayout";
 import { useMediaQuery } from "../hooks/useMediaQuery";
@@ -60,6 +61,7 @@ import {
 import { Analytics } from "@vercel/analytics/react";
 import { computePositions } from "../calculations/trading/tradingUtils";
 import GrowthPlanner from "../components/GrowthPlanner";
+import { getRemainingBalance, getLoanPaymentSplit } from "../utils/projectionUtils";
 
 // ─── Loading screen ───────────────────────────────────────────────────────────
 
@@ -671,18 +673,56 @@ export default function App() {
 				{/* ── Properties list ── */}
 				{activeTab === "properties" && !showForm && !detailProperty && (
 					<div className="space-y-4">
-						<div className="flex items-center justify-between">
+						{/* Header */}
+						<div className="flex items-center justify-between gap-3">
 							<div>
 								<h1 className="text-2xl font-bold text-neo-text">Properties</h1>
 								<p className="text-neo-muted text-sm mt-0.5">
-									Manage your real estate portfolio
+									{properties.length > 0
+										? `${properties.length} propert${properties.length === 1 ? "y" : "ies"} in your portfolio`
+										: "Manage your real estate portfolio"}
 								</p>
 							</div>
-							<button onClick={handleAddProperty} className="btn-primary">
+							<button onClick={handleAddProperty} className="btn-primary shrink-0">
 								<PlusIcon />
-								Add Property
+								<span className="hidden sm:inline">Add Property</span>
+								<span className="sm:hidden">Add</span>
 							</button>
 						</div>
+
+						{/* Portfolio summary strip */}
+						{properties.length > 0 && (() => {
+							const todayISO = new Date().toISOString();
+							const totalValue = properties.reduce((s, p) => s + (p.currentValue || 0), 0);
+							const totalDebt  = properties.reduce((s, p) =>
+								s + (p.loans || []).reduce((ls, l) => ls + getRemainingBalance(l, todayISO), 0), 0);
+							const totalEquity = totalValue - totalDebt;
+							const rentedProps = properties.filter((p) => p.status === "rented");
+							const totalRent   = rentedProps.reduce((s, p) =>
+								s + (Number(p.startRentalIncome) || Number(p.monthlyRentalIncome) || 0), 0);
+							const fmtK = (n) => {
+								const abs = Math.abs(n);
+								if (abs >= 1_000_000) return `€${(n / 1_000_000).toFixed(1)}M`;
+								if (abs >= 1_000)     return `€${(n / 1_000).toFixed(0)}k`;
+								return new Intl.NumberFormat("nl-BE", { style: "currency", currency: "EUR", maximumFractionDigits: 0 }).format(n);
+							};
+							return (
+								<div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+									{[
+										{ label: "Total Value",  value: fmtK(totalValue),  color: "text-neo-text" },
+										{ label: "Total Equity", value: fmtK(totalEquity), color: totalEquity >= 0 ? "text-emerald-400" : "text-red-400" },
+										{ label: "Loan Balance", value: fmtK(totalDebt),   color: "text-amber-300" },
+										{ label: "Monthly Rent", value: totalRent > 0 ? fmtK(totalRent) : "—", color: "text-brand-400" },
+									].map((s) => (
+										<div key={s.label} className="rounded-2xl border border-white/[0.06] px-3 py-2.5"
+											style={{ background: "rgba(10,14,24,0.38)", backdropFilter: "blur(14px)" }}>
+											<p className="text-xs text-neo-muted mb-0.5">{s.label}</p>
+											<p className={`font-bold text-sm ${s.color}`}>{s.value}</p>
+										</div>
+									))}
+								</div>
+							);
+						})()}
 
 						{properties.length === 0 ? (
 							<div className="card flex flex-col items-center justify-center py-16 text-center">
@@ -1089,104 +1129,126 @@ function PropertyListCard({ property, onView, onEdit, onDelete }) {
 			style: "currency",
 			currency: "EUR",
 			maximumFractionDigits: 0,
-		}).format(n);
+		}).format(n ?? 0);
 
-	const STATUS_COLORS = {
-		owner_occupied: "bg-sky-100 text-sky-800 border-sky-200/80 shadow-neo-inset-sm",
-		rented: "bg-emerald-100 text-emerald-800 border-emerald-200/80 shadow-neo-inset-sm",
-		vacant: "bg-neo-bg text-neo-muted border-neo-border shadow-neo-inset-sm",
-		for_sale: "bg-amber-100 text-amber-900 border-amber-200/80 shadow-neo-inset-sm",
-		renovation: "bg-orange-100 text-orange-900 border-orange-200/80 shadow-neo-inset-sm",
+	const STATUS_CONFIG = {
+		owner_occupied: { label: "Owner-occupied", bg: "bg-sky-100 text-sky-800 border-sky-200/80 shadow-neo-inset-sm", icon: "🏠" },
+		rented:         { label: "Rented out",     bg: "bg-emerald-100 text-emerald-800 border-emerald-200/80 shadow-neo-inset-sm", icon: "🔑" },
+		vacant:         { label: "Vacant",         bg: "bg-neo-bg text-neo-muted border-neo-border shadow-neo-inset-sm", icon: "⬜" },
+		for_sale:       { label: "For sale",       bg: "bg-amber-100 text-amber-900 border-amber-200/80 shadow-neo-inset-sm", icon: "🏷️" },
+		renovation:     { label: "Renovation",     bg: "bg-orange-100 text-orange-900 border-orange-200/80 shadow-neo-inset-sm", icon: "🔨" },
+		planned:        { label: "Planned",        bg: "bg-sky-50 text-sky-900 border-sky-200/80 shadow-neo-inset-sm", icon: "💡" },
 	};
-	const STATUS_LABELS = {
-		owner_occupied: "Owner-occupied",
-		rented: "Rented out",
-		vacant: "Vacant",
-		for_sale: "For sale",
-		renovation: "Renovation",
-	};
-	const sc = STATUS_COLORS[property.status] ?? STATUS_COLORS.owner_occupied;
-	const sl = STATUS_LABELS[property.status] ?? property.status;
+
+	const cfg = STATUS_CONFIG[property.status] ?? STATUS_CONFIG.owner_occupied;
+	const todayISO = new Date().toISOString();
+	const todayDate = new Date();
+
+	const totalDebt = (property.loans || []).reduce(
+		(s, l) => s + getRemainingBalance(l, todayISO), 0
+	);
+	const equity = (property.currentValue || 0) - totalDebt;
+
+	const totalMonthlyLoan = (property.loans || []).reduce((s, l) => {
+		const { monthlyTotal } = getLoanPaymentSplit(l, todayDate);
+		return s + monthlyTotal;
+	}, 0);
+
+	const isRented = property.status === "rented";
+	const monthlyRent = isRented
+		? (Number(property.startRentalIncome) || Number(property.monthlyRentalIncome) || 0)
+		: 0;
+	const monthlyRunning =
+		(property.monthlyExpenses || 0) +
+		((property.annualMaintenanceCost || 0) +
+			(property.annualInsuranceCost || 0) +
+			(property.annualPropertyTax || 0)) / 12;
+	const monthlyCF = monthlyRent - monthlyRunning - totalMonthlyLoan;
+
+	// Decide which 4 stats to show
+	const stats = [
+		{ label: "Market Value", value: fmt(property.currentValue), color: "text-neo-text" },
+		{ label: "Equity", value: fmt(equity), color: equity >= 0 ? "text-emerald-400" : "text-red-400" },
+	];
+	if (totalDebt > 0) {
+		stats.push({ label: "Loan Balance", value: fmt(totalDebt), color: "text-amber-300" });
+	} else {
+		stats.push({ label: "Appreciation", value: `${((property.appreciationRate || 0.02) * 100).toFixed(1)}%/yr`, color: "text-neo-text" });
+	}
+	if (isRented) {
+		stats.push({ label: "Monthly CF", value: fmt(monthlyCF), color: monthlyCF >= 0 ? "text-emerald-400" : "text-red-400" });
+	} else {
+		stats.push({
+			label: "Renovations",
+			value: String(property.plannedInvestments?.length || 0),
+			color: "text-neo-text",
+		});
+	}
 
 	return (
-		<div
-			className="card space-y-3 cursor-pointer hover:shadow-neo hover:bg-neo-raised/90 transition-all group"
+		<motion.div
+			initial={{ opacity: 0, y: 14 }}
+			animate={{ opacity: 1, y: 0 }}
+			transition={{ duration: 0.22 }}
+			className="card group cursor-pointer hover:bg-neo-raised/90 transition-all duration-200"
 			onClick={onView}
 			role="button"
 			tabIndex={0}
 			onKeyDown={(e) => e.key === "Enter" && onView()}
 		>
-			<div className="flex items-start justify-between gap-2">
+			{/* ── Header ── */}
+			<div className="flex items-start gap-3 mb-4">
+				<div className="w-11 h-11 rounded-2xl bg-brand-600/15 border border-brand-500/20 flex items-center justify-center text-xl shrink-0">
+					{cfg.icon}
+				</div>
 				<div className="min-w-0 flex-1">
-					<div className="flex items-center gap-2 flex-wrap">
-						<h3 className="font-semibold text-neo-text truncate group-hover:text-brand-600 transition-colors">
-							{property.name}
-						</h3>
-						<span
-							className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium border shrink-0 ${sc}`}
-						>
-							{sl}
-						</span>
-					</div>
+					<h3 className="font-semibold text-neo-text group-hover:text-brand-400 transition-colors text-base leading-tight truncate">
+						{property.name}
+					</h3>
 					{property.address && (
-						<p className="text-xs text-neo-muted truncate mt-0.5">
-							{property.address}
-						</p>
+						<p className="text-xs text-neo-muted truncate mt-0.5">{property.address}</p>
 					)}
 				</div>
-				<div className="flex gap-2 shrink-0">
-					<button
-						onClick={(e) => {
-							e.stopPropagation();
-							onEdit();
-						}}
-						className="text-neo-muted hover:text-brand-400 transition-colors"
-						title="Edit"
-					>
-						<EditIcon />
-					</button>
-					<button
-						onClick={(e) => {
-							e.stopPropagation();
-							onDelete();
-						}}
-						className="text-neo-muted hover:text-red-400 transition-colors"
-						title="Delete"
-					>
-						<TrashIcon />
-					</button>
-				</div>
+				<span className={`inline-flex items-center px-2.5 py-1 rounded-full text-xs font-semibold border shrink-0 ${cfg.bg}`}>
+					{cfg.label}
+				</span>
 			</div>
-			<div className="grid grid-cols-2 gap-2 text-sm">
-				<div>
-					<span className="text-neo-muted">Value </span>
-					<span className="text-neo-text font-medium">
-						{fmt(property.currentValue)}
-					</span>
-				</div>
-				<div>
-					<span className="text-neo-muted">Loans </span>
-					<span className="text-neo-text font-medium">
-						{property.loans?.length || 0}
-					</span>
-				</div>
-				<div>
-					<span className="text-neo-muted">Appreciation </span>
-					<span className="text-neo-text font-medium">
-						{((property.appreciationRate || 0.02) * 100).toFixed(1)}%
-					</span>
-				</div>
-				<div>
-					<span className="text-neo-muted">Renovations </span>
-					<span className="text-neo-text font-medium">
-						{property.plannedInvestments?.length || 0}
-					</span>
-				</div>
+
+			{/* ── Stats grid ── */}
+			<div className="grid grid-cols-2 gap-2 mb-4">
+				{stats.map((s) => (
+					<div key={s.label} className="rounded-2xl bg-neo-sunken/60 px-3 py-2.5">
+						<p className="text-xs text-neo-muted mb-0.5">{s.label}</p>
+						<p className={`font-bold text-sm ${s.color}`}>{s.value}</p>
+					</div>
+				))}
 			</div>
-			<p className="text-xs text-brand-400 opacity-0 group-hover:opacity-100 transition-opacity">
-				Click to view full property details →
-			</p>
-		</div>
+
+			{/* ── Action row (stops card click) ── */}
+			<div
+				className="flex items-center gap-2 border-t border-white/[0.06] pt-3"
+				onClick={(e) => e.stopPropagation()}
+			>
+				<button
+					onClick={(e) => { e.stopPropagation(); onEdit(); }}
+					className="flex-1 py-2.5 rounded-xl text-xs font-medium text-neo-muted hover:text-brand-400 border border-white/[0.06] hover:border-brand-500/30 transition-all active:scale-95"
+				>
+					Edit
+				</button>
+				<button
+					onClick={(e) => { e.stopPropagation(); onDelete(); }}
+					className="py-2.5 px-4 rounded-xl text-xs font-medium text-neo-muted hover:text-red-400 border border-white/[0.06] hover:border-red-500/30 transition-all active:scale-95"
+				>
+					Delete
+				</button>
+				<button
+					onClick={(e) => { e.stopPropagation(); onView(); }}
+					className="flex-1 py-2.5 rounded-xl text-xs font-medium text-brand-400 bg-brand-600/10 border border-brand-500/20 hover:bg-brand-600/20 transition-all active:scale-95"
+				>
+					Details →
+				</button>
+			</div>
+		</motion.div>
 	);
 }
 
