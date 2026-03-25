@@ -1229,8 +1229,10 @@ export default function AiChatOverlay({ properties, profile, activeTab, simState
                   <input
                     ref={inputRef}
                     type="text"
+                    enterKeyHint="done"
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === 'Enter') e.preventDefault() }}
                     placeholder={
                       !canChat         ? 'Configure API key…'
                       : !selectedModel ? 'Loading models…'
