@@ -21,7 +21,8 @@ import { computeSummary, formatEUR, getRemainingBalance } from '../../utils/proj
 // ─── Config ───────────────────────────────────────────────────────────────────
 
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY
-const IS_DEV         = !import.meta.env.PROD          // true in dev / preview / test
+// true on the local dev server OR when VITE_DEMO_MODE=true is set (e.g. Vercel preview env)
+const IS_DEV         = import.meta.env.DEV || import.meta.env.VITE_DEMO_MODE === 'true'
 const DEMO_MODEL_ID  = '__demo__'
 const DEMO_OPTION    = { id: DEMO_MODEL_ID, displayName: 'Demo LLM (returns "sup")' }
 
