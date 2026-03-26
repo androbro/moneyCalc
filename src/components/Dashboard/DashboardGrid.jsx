@@ -11,12 +11,10 @@
  */
 
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { Responsive, WidthProvider } from 'react-grid-layout'
+import { ResponsiveGridLayout, useContainerWidth } from 'react-grid-layout'
 import 'react-grid-layout/css/styles.css'
 import 'react-resizable/css/styles.css'
 import { WIDGET_REGISTRY, getDefaultLayouts } from './widgetRegistry'
-
-const ResponsiveGridLayout = WidthProvider(Responsive)
 
 const BREAKPOINTS = { lg: 1200, md: 996, sm: 768, xs: 0 }
 const COLS        = { lg: 12, md: 8, sm: 4, xs: 4 }
@@ -32,6 +30,7 @@ const SAVE_DELAY  = 800  // ms debounce before persisting layout changes
 export default function DashboardGrid({ ctx, onSaveProfile }) {
   const { profile } = ctx
   const saveTimerRef = useRef(null)
+  const { width: containerWidth, containerRef } = useContainerWidth({ initialWidth: 1200 })
 
   // ── Initialise / seed layout ───────────────────────────────
   const [layouts, setLayouts] = useState(() => {
@@ -87,30 +86,33 @@ export default function DashboardGrid({ ctx, onSaveProfile }) {
   )
 
   return (
-    <ResponsiveGridLayout
-      className="layout"
-      layouts={filteredLayouts}
-      breakpoints={BREAKPOINTS}
-      cols={COLS}
-      rowHeight={ROW_HEIGHT}
-      draggableHandle=".widget-drag-handle"
-      isDraggable={!isMobile}
-      isResizable={!isMobile}
-      margin={[16, 16]}
-      containerPadding={[0, 0]}
-      onLayoutChange={handleLayoutChange}
-      resizeHandles={['se', 'sw']}
-    >
-      {visibleIds.map((id) => {
-        const entry = WIDGET_REGISTRY[id]
-        if (!entry) return null
-        const { Component } = entry
-        return (
-          <div key={id}>
-            <Component ctx={ctx} />
-          </div>
-        )
-      })}
-    </ResponsiveGridLayout>
+    <div ref={containerRef} style={{ width: '100%' }}>
+      <ResponsiveGridLayout
+        width={containerWidth ?? 1200}
+        className="layout"
+        layouts={filteredLayouts}
+        breakpoints={BREAKPOINTS}
+        cols={COLS}
+        rowHeight={ROW_HEIGHT}
+        draggableHandle=".widget-drag-handle"
+        isDraggable={!isMobile}
+        isResizable={!isMobile}
+        margin={[16, 16]}
+        containerPadding={[0, 0]}
+        onLayoutChange={handleLayoutChange}
+        resizeHandles={['se', 'sw']}
+      >
+        {visibleIds.map((id) => {
+          const entry = WIDGET_REGISTRY[id]
+          if (!entry) return null
+          const { Component } = entry
+          return (
+            <div key={id}>
+              <Component ctx={ctx} />
+            </div>
+          )
+        })}
+      </ResponsiveGridLayout>
+    </div>
   )
 }
