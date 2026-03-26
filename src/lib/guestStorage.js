@@ -163,7 +163,13 @@ function ensureOwnerMember(profile) {
 }
 
 export async function getHouseholdProfile() {
-  return ensureOwnerMember(read(HOUSEHOLD_KEY, getMockHousehold()))
+  const profile = ensureOwnerMember(read(HOUSEHOLD_KEY, getMockHousehold()))
+  // Seed dashboardLayout on first load (lazy import to avoid circular deps)
+  if (!profile.dashboardLayout) {
+    const { getDefaultLayouts } = await import('../components/Dashboard/widgetRegistry')
+    return { ...profile, dashboardLayout: getDefaultLayouts() }
+  }
+  return profile
 }
 
 export async function saveHouseholdProfile(profile) {
