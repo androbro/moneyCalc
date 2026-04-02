@@ -223,6 +223,32 @@ function FloatingSidebar({ active, onNav, isLoggedIn, user, onSignOut, onResetDe
 
       {/* Bottom actions */}
       <div className="flex flex-col items-center gap-0.5 pt-3 border-t border-white/[0.07]">
+        {!isLoggedIn && (
+          <div className="relative w-full group/login">
+            <button
+              onClick={() => { window.history.pushState(null,'','/login'); window.dispatchEvent(new PopStateEvent('popstate')) }}
+              className="w-full flex flex-col items-center gap-1 py-2 rounded-2xl border border-transparent
+                         hover:bg-brand-500/10 transition-all duration-200"
+            >
+              <div className="w-9 h-9 rounded-xl flex items-center justify-center text-brand-400
+                              group-hover/login:text-brand-300 group-hover/login:scale-110 transition-all duration-200">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2}
+                    d="M11 16l-4-4m0 0l4-4m-4 4h14m-5 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h7a3 3 0 013 3v1" />
+                </svg>
+              </div>
+              <span className="text-[8px] text-brand-400 group-hover/login:text-brand-300 transition-colors">Sign In</span>
+            </button>
+            <div className="pointer-events-none absolute left-full top-1/2 -translate-y-1/2 ml-3 z-[60]
+                           opacity-0 -translate-x-2 group-hover/login:opacity-100 group-hover/login:translate-x-0
+                           transition-all duration-200">
+              <div className="px-3 py-1.5 rounded-xl text-xs font-semibold text-brand-300 whitespace-nowrap"
+                   style={{ background: 'rgba(8,12,22,0.92)', backdropFilter: 'blur(12px)', border: '1px solid rgba(234,88,12,0.2)', boxShadow: '0 4px 20px rgba(0,0,0,0.5)' }}>
+                Sign In / Register
+              </div>
+            </div>
+          </div>
+        )}
         {isLoggedIn && (
           <div className="relative w-full group/share">
             <button
