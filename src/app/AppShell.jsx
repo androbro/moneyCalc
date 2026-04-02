@@ -121,16 +121,17 @@ function Toast({ message, type = "error", onDismiss }) {
 
 	return (
 		<div
-			className={`fixed bottom-5 right-5 z-50 flex items-center gap-3 px-4 py-3 rounded-2xl shadow-neo-lg
-                     text-sm font-medium border border-white/60
+			className={`fixed top-5 right-5 z-50 flex items-center gap-3 px-4 py-3 rounded-2xl shadow-neo-lg
+                     text-sm font-medium border backdrop-blur-xl
                      ${
 												type === "error"
-													? "bg-red-50 text-red-800 shadow-neo"
-													: "bg-emerald-50 text-emerald-800 shadow-neo"
+													? "bg-red-500/14 border-red-400/25 text-red-200 shadow-neo"
+													: "bg-emerald-500/14 border-emerald-400/25 text-emerald-200 shadow-neo"
 											}`}
+			style={{ WebkitBackdropFilter: "blur(20px)" }}
 		>
 			{message}
-			<button onClick={onDismiss} className="ml-2 opacity-60 hover:opacity-100">
+			<button onClick={onDismiss} className="ml-2 opacity-70 hover:opacity-100 transition-opacity">
 				✕
 			</button>
 		</div>
